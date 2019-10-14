@@ -211,8 +211,8 @@ d_windows, a_windows = get_donor_acceptor_windows_from_intron_locations(intron_p
 write_true_train_splice_sites(d_windows, csv_donors_train)
 write_true_train_splice_sites(a_windows, csv_acceptor_train)
 
-# append_positive_train_examples(false_acceptor_file, csv_acceptor_train, acceptor_lwindow, acceptor_rwindow)
-# append_positive_train_examples(false_donor_file, csv_donors_train, donor_lwindow, donor_rwindow)
+# append_positive_train_examples(true_acceptor_file, csv_acceptor_train, acceptor_lwindow, acceptor_rwindow)
+# append_positive_train_examples(true_donor_file, csv_donors_train, donor_lwindow, donor_rwindow)
 
 append_negative_train_examples(false_acceptor_file, csv_acceptor_train, acceptor_lwindow, acceptor_rwindow)
 append_negative_train_examples(false_donor_file, csv_donors_train, donor_lwindow, donor_rwindow)
