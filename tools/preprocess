@@ -1,0 +1,18 @@
+#!/bin/bash
+
+
+INT_TRAIN_NAMES='intron_train_names.txt'
+INT_TEST_NAMES='intron_test_names.txt'
+SPLICE_TRAIN_NAMES='splice_sites_train_names.txt'
+SPLICE_TEST_NAMES='splice_sites_test_names.txt'
+
+
+bash split_shrooms_to_train_test.sh ../basidiomycotas.txt $INT_TRAIN_NAMES $INT_TEST_NAMES $SPLICE_TRAIN_NAMES $SPLICE_TEST_NAMES
+
+bash generate_trains.sh $SPLICE_TRAIN_NAMES ~/Desktop/mykointrons-data 150 150 ../data train
+bash generate_trains.sh $SPLICE_TEST_NAMES ~/Desktop/mykointrons-data 150 150 ../data test
+
+
+rm $INT_TRAIN_NAMES $INT_TEST_NAMES $SPLICE_TRAIN_NAMES $SPLICE_TEST_NAMES
+
+# bash generate_trains.sh $INT_TRAIN_NAMES ~/Desktop/mykointrons-data 150 150 ../data train

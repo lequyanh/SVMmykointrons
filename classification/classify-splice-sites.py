@@ -1,8 +1,22 @@
 import sys
 from contextlib import closing
 
+import numpy as np
 import pandas as pd
 import shogun as sg
+
+
+def read_data(filename, window):
+    # center - lwin = start of the window (inclusively)
+    # center + rwin + 2 = end of the window (exclusively)
+    center = 150
+    lwin = window[0]
+    rwin = window[1]
+
+    data = pd.read_csv(filename, sep=';')
+    data.sequence = data.sequence.str[center - lwin: center + rwin + 2]
+
+    return data
 
 
 def read_model(filename):
@@ -24,6 +38,9 @@ def parser():
                    help='filename of the input')
     p.add_argument('model_filename', metavar='MODEL', type=str,
                    help='filename of the model')
+    p.add_argument('window_inner', type=int)
+    p.add_argument('window_outer', type=int)
+    p.add_argument('site', type=str, help='donor or acceptor')
     p.add_argument('-c', '--cpus', type=int, default=1,
                    dest='ncpus',
                    help='number of CPUs')
@@ -35,12 +52,26 @@ if __name__ == "__main__":
 
     sg.Parallel().set_num_threads(argparser.ncpus)
 
-    data = pd.read_csv(argparser.data_filename, sep=';')
+    win_in = argparser.window_inner
+    win_out = argparser.window_outer
+    window = (win_out, win_in) if argparser.site == 'donor' else (win_in, win_out)
+
+    data = read_data(argparser.data_filename, window=window)
+    print(set([len(s) for s in data.loc[:, 'sequence']]))
+    features = sg.StringCharFeatures(data.sequence.tolist(), sg.RAWBYTE)
+    labels = sg.BinaryLabels(np.array(data.label))
     model = read_model(argparser.model_filename)
 
-    features = sg.StringCharFeatures(data.sequence.tolist(), sg.RAWBYTE)
-
+    print(model.get_kernel())
     predict = model.apply_binary(features)
+
+
+    acc = sg.AccuracyMeasure()
+    print("Accuracy: {}".format(acc.evaluate(predict, labels)))
+    print(" -TP: {}".format(acc.get_TP()))
+    print(" -FP: {}".format(acc.get_FP()))
+    print(" -TN: {}".format(acc.get_TN()))
+    print(" -FN: {}".format(acc.get_FN()))
 
     data.assign(pred=pd.Series(list(predict.get_int_labels()))) \
         .to_csv(sys.stdout, sep=';', index=False)
