@@ -1,5 +1,6 @@
 import csv
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import List, Iterable
@@ -9,22 +10,25 @@ import numpy as np
 from fastalib import read_fasta, complementary
 
 # Use standalone to extract train data for a single shroom, or in a batch mode using a script:
-# >bash generate_trains.sh ../basidiomycotas.txt 60 70
+# >bash generate_trains.sh $SPLICE_TRAIN_NAMES ~/Desktop/mykointrons-data 150 150 ../data train
 
-base_loc = sys.argv[1]
-shroom_name = sys.argv[2]
-
-donor_lwindow, donor_rwindow = int(sys.argv[3]), int(sys.argv[4])
-acceptor_lwindow, acceptor_rwindow = int(sys.argv[5]), int(sys.argv[6])
-
-csv_target_folder = sys.argv[7]
-
-# base_loc = '/home/anhvu/Desktop/mykointrons-data'
-# shroom_name = 'Fompi3'
-# csv_target_folder = '../data/splice-sites-train'
+# base_loc = sys.argv[1]
+# shroom_name = sys.argv[2]
 #
-# donor_lwindow, donor_rwindow = 150, 150
-# acceptor_lwindow, acceptor_rwindow = 150, 150
+# donor_lwindow, donor_rwindow = int(sys.argv[3]), int(sys.argv[4])
+# acceptor_lwindow, acceptor_rwindow = int(sys.argv[5]), int(sys.argv[6])
+#
+# csv_target_folder = sys.argv[7]
+# test_train = sys.argv[8]
+
+base_loc = '/home/anhvu/Desktop/mykointrons-data'
+shroom_name = 'Ramac1'
+csv_target_folder = '../data/'
+
+donor_lwindow, donor_rwindow = 150, 150
+acceptor_lwindow, acceptor_rwindow = 150, 150
+
+test_train = 'train'
 
 assembly = f'{base_loc}/data/Assembly/{shroom_name}_AssemblyScaffolds.fasta'
 introns_locs = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-introns.fasta'
@@ -32,16 +36,25 @@ introns_locs = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-introns.fa
 false_donor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-donor-false.fasta'
 false_acceptor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-acceptor-false.fasta'
 
-csv_donors_train = f'{csv_target_folder}/donor/{shroom_name}-donor-dataset-splice-site-train.csv'
-csv_acceptor_train = f'{csv_target_folder}/acceptor/{shroom_name}-acceptor-dataset-splice-site-train.csv'
+donor_dir = f'{csv_target_folder}/{test_train}/donor'
+acceptor_dir = f'{csv_target_folder}/{test_train}/acceptor'
+
+if not os.path.isdir(donor_dir):
+    os.makedirs(donor_dir)
+if not os.path.isdir(acceptor_dir):
+    os.makedirs(acceptor_dir)
+
+donor_csv = f'{donor_dir}/{shroom_name}-donor-windows.csv'
+acceptor_csv = f'{csv_target_folder}/{test_train}/acceptor/{shroom_name}-acceptor-windows.csv'
+logging.info(f'Splice site training/testing CSV will be saved to {donor_dir} and {acceptor_dir}')
 
 logging.getLogger().setLevel(logging.INFO)
 
 POSITIVE_LABEL = '+1'
 NEGATIVE_LABEL = '-1'
 
-ACCEPTOR_DIMER = 'AG'
 DONOR_DIMER = 'GT'
+ACCEPTOR_DIMER = 'AG'
 
 
 def get_donor_acceptor_windows_from_intron_locations(position_infos, scaffold_dict):
@@ -77,8 +90,16 @@ def get_donor_acceptor_windows_from_intron_locations(position_infos, scaffold_di
         donor_dimer = donor_window[donor_lwindow: donor_lwindow + 2]
         acceptor_dimer = acceptor_window[acceptor_lwindow: acceptor_lwindow + 2]
 
-        assert donor_dimer == intron[0:2]
-        assert acceptor_dimer == intron[-2:]
+        try:
+            assert donor_dimer == intron[0:2]
+            assert acceptor_dimer == intron[-2:]
+        except AssertionError:
+            if not (donor_dimer.isupper() and acceptor_dimer.isupper()):
+                continue
+            if len(intron) < 10:
+                continue
+            print(f'Error on parsing assembly of {shroom_name}')
+            exit(1)
 
         # We know the dimers are OK thanks to asserts above
         if donor_dimer != DONOR_DIMER or acceptor_dimer != ACCEPTOR_DIMER:
@@ -116,7 +137,7 @@ def get_introns_position_info(introns_locs_fasta: str) -> Iterable[List]:
         return position_infos
 
 
-def write_true_train_splice_sites(
+def write_true_splice_site_windows(
         train_windows: List[str],
         splice_windows_train_csv: str
 ):
@@ -144,7 +165,7 @@ def append_positive_train_examples(
     append_train_examples(true_donor_acceptor_file, train_csv, lwindow, rwindow, POSITIVE_LABEL)
 
 
-def append_negative_train_examples(
+def append_false_splice_site_windows(
         false_donor_acceptor_file: str,
         train_csv: str,
         lwindow: int,
@@ -164,7 +185,8 @@ def append_train_examples(
         # Read sequences from FASTA file
         false_splice_windows = f.readlines()[1::2]
 
-        window_mid = int(0.5 * (len(false_splice_windows[0]) - 2))  # -2 for GT/AG dimers
+        # TODO Ramac1 is empty and failing here
+        window_mid = int(0.5 * (len(false_splice_windows[1]) - 2))  # -2 for GT/AG dimers
 
         # Adjust the sequences so they have the same length as positive examples
         adjusted_range = slice(window_mid - lwindow, window_mid + rwindow + 2)
@@ -199,6 +221,10 @@ if not Path(assembly).is_file():
     logging.warning(f'Assembly data for shroom {shroom_name} not found. Directory {assembly}')
     exit(1)
 
+if os.path.isfile(donor_csv) and os.path.isfile(acceptor_csv):
+    logging.warning(f'Files {donor_csv} and {acceptor_csv} already exist')
+    exit(0)
+
 scaffold_dict = {}
 with open(assembly, 'r') as assembly_f:
     for desc, sequence in read_fasta(assembly_f):
@@ -208,14 +234,15 @@ intron_positions = get_introns_position_info(introns_locs)
 
 d_windows, a_windows = get_donor_acceptor_windows_from_intron_locations(intron_positions, scaffold_dict)
 
-write_true_train_splice_sites(d_windows, csv_donors_train)
-write_true_train_splice_sites(a_windows, csv_acceptor_train)
+write_true_splice_site_windows(d_windows, donor_csv)
+append_false_splice_site_windows(false_donor_file, donor_csv, donor_lwindow, donor_rwindow)
 
-# append_positive_train_examples(false_acceptor_file, csv_acceptor_train, acceptor_lwindow, acceptor_rwindow)
-# append_positive_train_examples(false_donor_file, csv_donors_train, donor_lwindow, donor_rwindow)
+write_true_splice_site_windows(a_windows, acceptor_csv)
+append_false_splice_site_windows(false_acceptor_file, acceptor_csv, acceptor_lwindow, acceptor_rwindow)
 
-append_negative_train_examples(false_acceptor_file, csv_acceptor_train, acceptor_lwindow, acceptor_rwindow)
-append_negative_train_examples(false_donor_file, csv_donors_train, donor_lwindow, donor_rwindow)
+# append_positive_train_examples(true_acceptor_file, csv_acceptor_train, acceptor_lwindow, acceptor_rwindow)
+# append_positive_train_examples(true_donor_file, csv_donors_train, donor_lwindow, donor_rwindow)
+
 
 # tar -zcvf Agahy1-donor-train.csv.tar.gz ../data/splice-sites-train/donor/Agahy1-donor-dataset-splice-site-train.csv
 # scp Agahy1-donor-train.csv.tar.gz lequyanh@skirit.metacentrum.cz:/storage/praha1/home/lequyanh
