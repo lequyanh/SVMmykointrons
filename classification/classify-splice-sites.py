@@ -14,6 +14,7 @@ def read_data(filename, window):
     rwin = window[1]
 
     data = pd.read_csv(filename, sep=';')
+    data = data.dropna(axis=0, how='any', inplace=False)
     data.sequence = data.sequence.str[center - lwin: center + rwin + 2]
 
     return data
@@ -57,14 +58,11 @@ if __name__ == "__main__":
     window = (win_out, win_in) if argparser.site == 'donor' else (win_in, win_out)
 
     data = read_data(argparser.data_filename, window=window)
-    print(set([len(s) for s in data.loc[:, 'sequence']]))
     features = sg.StringCharFeatures(data.sequence.tolist(), sg.RAWBYTE)
     labels = sg.BinaryLabels(np.array(data.label))
     model = read_model(argparser.model_filename)
 
-    print(model.get_kernel())
     predict = model.apply_binary(features)
-
 
     acc = sg.AccuracyMeasure()
     print("Accuracy: {}".format(acc.evaluate(predict, labels)))
