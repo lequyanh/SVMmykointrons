@@ -7,25 +7,35 @@ NO_EXAMPLES=$2
 SHUFF_FILENAME=$3
 OUTPUT_FOLDER=$4
 
-TEMP_FOLDER='temp'
-mkdir -p $TEMP_FOLDER
+echo "Examples in [$DATA_LOC] will be merged and shuffled."
+echo "[$NO_EXAMPLES] is the target number of examples in an aggregated train/test set"
 
-ls $DATA_LOC |sort -R |tail -20 | while read file; do
-  cp $DATA_LOC/$file $TEMP_FOLDER
+TEMP_FOLDER='temp'
+rm -r $TEMP_FOLDER
+mkdir $TEMP_FOLDER
+
+NO_REPR=$(( $NO_EXAMPLES/$(ls $DATA_LOC | wc -l) ))
+echo "[$NO_REPR] random representatives will be chosen from each CSV file for merging a shuffling"
+
+ls $DATA_LOC | while read file; do
+  # Read sequences in file
+  # Read all lines except for the first one containing headers
+  tail -n +2 $DATA_LOC/$file > temp_seqs.txt
+  shuf temp_seqs.txt | head -n $NO_REPR >> $TEMP_FOLDER/merged.csv
 done
 
-mkdir -p $TEMP_FOLDER/final
-tail -n +2 $TEMP_FOLDER/*.csv > $TEMP_FOLDER/final/merged.csv
-cd $TEMP_FOLDER/final
+cd $TEMP_FOLDER/
 
 shuf -o shuffled.csv merged.csv
 echo "sequence;label" > ${SHUFF_FILENAME}
 head -n ${NO_EXAMPLES} shuffled.csv >> ${SHUFF_FILENAME}
 
+echo "Examples saved to [$SHUFF_FILENAME]"
+
 #tar -czvf ${SHUFF_FILENAME}.tar.gz  ${SHUFF_FILENAME}
 #cp ${SHUFF_FILENAME}.tar.gz /storage/praha1/home/lequyanh/data/
 
-cd ../../
-cp $TEMP_FOLDER/final/$SHUFF_FILENAME $OUTPUT_FOLDER
+cd ../
+cp $TEMP_FOLDER/$SHUFF_FILENAME $OUTPUT_FOLDER
 rm -r $TEMP_FOLDER
 

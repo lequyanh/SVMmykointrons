@@ -25,7 +25,8 @@ SHUFFLED_DONOR_SITE_TESTSET_NAME='shuff_aggreg_donor_site_test.csv'
 SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME='shuff_aggreg_acceptor_site_test.csv'
 bash merge_shuffle_datasets.sh ../data/test/donor $NO_TEST $SHUFFLED_DONOR_SITE_TESTSET_NAME ./
 bash merge_shuffle_datasets.sh ../data/test/acceptor $NO_TEST $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME ./
-# python ../pipeline/classify-splice-sites.py $SHUFFLED_DONOR_SITE_TESTSET_NAME ~/Desktop/model.hd5 70 60 donor -c 5 >> output.txt
+
+# python ../pipeline/classify-splice-sites.py $SHUFFLED_DONOR_SITE_TESTSET_NAME ~/Desktop/model.hd5 70 60 donor -c 5 >> donor_testing_results.txt
 # python ../pipeline/classify-splice-sites.py $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME ~/Desktop/model.hd5 70 60 donor -c 5 >> output.txt
 
 

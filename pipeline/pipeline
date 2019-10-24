@@ -110,60 +110,60 @@ $PYTHON extract-donor-acceptor.py $assembly_filepath \
 echo "Donors extracted to [$DONOR_FILE]."
 echo "Acceptors extracted to [$ACCEPTOR_FILE]."
 echo ""
-#
-## determine the number of CPUs available for each classification task
-#donor_cpus=$((NUMBER_CPUS/2))
-#acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
-#
-#echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
-#
-## prepare files for the donor and acceptor classification results
-#echo "scaffold;position" > $DONOR_RESULT
-#echo "scaffold;position" > $ACCEPTOR_RESULT
-#
-## classify the donors and acceptors in parallel
-## keep only the positively classified samples
-## keep only the columns `scaffold`, and `position` (1st and 2nd)
-#$PYTHON classify-splice-sites.py -c $donor_cpus \
-#                                $DONOR_FILE \
-#                                $splice_site_donor_model \
-#        | grep $positive_splice_sites \
-#        | cut -d ';' -f -2 >> $DONOR_RESULT &
-#classify_donor_pid=$!
-#$PYTHON classify-splice-sites.py -c $acceptor_cpus \
-#                                $ACCEPTOR_FILE \
-#                                $splice_site_acceptor_model \
-#        | grep $positive_splice_sites \
-#        | cut -d ';' -f -2 >> $ACCEPTOR_RESULT &
-#classify_acceptor_pid=$!
-#
-## wait for both the classification tasks to finish
-#wait $classify_donor_pid $classify_acceptor_pid
-#
-#echo "Positively classified donors are in [$DONOR_RESULT]."
-#echo "Positively classified acceptors are in [$ACCEPTOR_RESULT]."
-#echo ""
-#
-#echo "Getting intron positions..."
-#
-## given the splice sites classification, output positions of possible introns
-#$PYTHON generate-pairs.py $DONOR_RESULT $ACCEPTOR_RESULT \
-#                          $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH > $INTRON_POSITIONS_FILE
-#
-#echo "Intron positions are in [$INTRON_POSITIONS_FILE]."
-#echo "Extracting introns from the positions..."
-#
-## extract introns from the positions from the previous step
-#$PYTHON extract-introns.py $assembly_filepath $INTRON_POSITIONS_FILE > $INTRON_FILE
-#
-#echo "Intron sequences are extracted in [$INTRON_FILE]."
-#echo ""
-#
-#echo "Starting classification of the introns..."
-#
-## prepare a file for the intron classification results
-#echo "scaffold;start;end" > $INTRON_RESULT
-#
+
+# determine the number of CPUs available for each classification task
+donor_cpus=$((NUMBER_CPUS/2))
+acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
+
+echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
+
+# prepare files for the donor and acceptor classification results
+echo "scaffold;position" > $DONOR_RESULT
+echo "scaffold;position" > $ACCEPTOR_RESULT
+
+# classify the donors and acceptors in parallel
+# keep only the positively classified samples
+# keep only the columns `scaffold`, and `position` (1st and 2nd)
+$PYTHON classify-splice-sites.py -c $donor_cpus \
+                                $DONOR_FILE \
+                                $splice_site_donor_model \
+        | grep $positive_splice_sites \
+        | cut -d ';' -f -2 >> $DONOR_RESULT &
+classify_donor_pid=$!
+$PYTHON classify-splice-sites.py -c $acceptor_cpus \
+                                $ACCEPTOR_FILE \
+                                $splice_site_acceptor_model \
+        | grep $positive_splice_sites \
+        | cut -d ';' -f -2 >> $ACCEPTOR_RESULT &
+classify_acceptor_pid=$!
+
+# wait for both the classification tasks to finish
+wait $classify_donor_pid $classify_acceptor_pid
+
+echo "Positively classified donors are in [$DONOR_RESULT]."
+echo "Positively classified acceptors are in [$ACCEPTOR_RESULT]."
+echo ""
+
+echo "Getting intron positions..."
+
+# given the splice sites classification, output positions of possible introns
+$PYTHON generate-pairs.py $DONOR_RESULT $ACCEPTOR_RESULT \
+                          $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH > $INTRON_POSITIONS_FILE
+
+echo "Intron positions are in [$INTRON_POSITIONS_FILE]."
+echo "Extracting introns from the positions..."
+
+# extract introns from the positions from the previous step
+$PYTHON extract-introns.py $assembly_filepath $INTRON_POSITIONS_FILE > $INTRON_FILE
+
+echo "Intron sequences are extracted in [$INTRON_FILE]."
+echo ""
+
+echo "Starting classification of the introns..."
+
+# prepare a file for the intron classification results
+echo "scaffold;start;end" > $INTRON_RESULT
+
 ## classify the introns
 ## keep only the positively classified samples
 ## keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
