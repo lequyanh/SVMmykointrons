@@ -1,18 +1,34 @@
 #!/bin/bash
 
+# ----------- SPLITS MUSHROOM CLASSES TO 4 SETS -----------------
+#INT_TRAIN_NAMES='intron_train_names.txt'
+#INT_TEST_NAMES='intron_test_names.txt'
+#SPLICE_TRAIN_NAMES='splice_sites_train_names.txt'
+#SPLICE_TEST_NAMES='splice_sites_test_names.txt'
+#bash split_shrooms_to_train_test.sh ../basidiomycotas.txt $INT_TRAIN_NAMES $INT_TEST_NAMES $SPLICE_TRAIN_NAMES $SPLICE_TEST_NAMES
 
-INT_TRAIN_NAMES='intron_train_names.txt'
-INT_TEST_NAMES='intron_test_names.txt'
-SPLICE_TRAIN_NAMES='splice_sites_train_names.txt'
-SPLICE_TEST_NAMES='splice_sites_test_names.txt'
+# ----------- FOR MUSHROOMS USED FOR SPLICE SITE TRAINING/TESTING, GENERATE WINDOWS -----------------
+#bash generate_trains.sh $SPLICE_TRAIN_NAMES ~/Desktop/mykointrons-data 150 150 ../data train
+#bash generate_trains.sh $SPLICE_TEST_NAMES ~/Desktop/mykointrons-data 150 150 ../data test
 
+NO_TRAIN=600000
+SHUFFLED_DONOR_SITE_TRAINSET_NAME='shuff_aggreg_donor_site_train.csv'
+SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME='shuff_aggreg_acceptor_site_train.csv'
+bash merge_shuffle_datasets.sh ../data/train/donor $NO_TRAIN $SHUFFLED_DONOR_SITE_TRAINSET_NAME ./
+bash merge_shuffle_datasets.sh ../data/train/acceptor $NO_TRAIN $SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME ./
 
-bash split_shrooms_to_train_test.sh ../basidiomycotas.txt $INT_TRAIN_NAMES $INT_TEST_NAMES $SPLICE_TRAIN_NAMES $SPLICE_TEST_NAMES
+# ------------ UPLOAD TO METACENTRUM, TRAIN AND OBTAIN MODEL ---------------------
+#....
+# ------------------------- TEST MODELS ACCURACY ---------------------
+NO_TEST=600000
+SHUFFLED_DONOR_SITE_TESTSET_NAME='shuff_aggreg_donor_site_test.csv'
+SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME='shuff_aggreg_acceptor_site_test.csv'
+bash merge_shuffle_datasets.sh ../data/test/donor $NO_TEST $SHUFFLED_DONOR_SITE_TESTSET_NAME ./
+bash merge_shuffle_datasets.sh ../data/test/acceptor $NO_TEST $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME ./
 
-bash generate_trains.sh $SPLICE_TRAIN_NAMES ~/Desktop/mykointrons-data 150 150 ../data train
-bash generate_trains.sh $SPLICE_TEST_NAMES ~/Desktop/mykointrons-data 150 150 ../data test
+# python ../pipeline/classify-splice-sites.py $SHUFFLED_DONOR_SITE_TESTSET_NAME ~/Desktop/model.hd5 70 60 donor -c 5 >> donor_testing_results.txt
+# python ../pipeline/classify-splice-sites.py $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME ~/Desktop/model.hd5 70 60 donor -c 5 >> output.txt
 
-
-rm $INT_TRAIN_NAMES $INT_TEST_NAMES $SPLICE_TRAIN_NAMES $SPLICE_TEST_NAMES
 
 # bash generate_trains.sh $INT_TRAIN_NAMES ~/Desktop/mykointrons-data 150 150 ../data train
+#rm $INT_TRAIN_NAMES $INT_TEST_NAMES $SPLICE_TRAIN_NAMES $SPLICE_TEST_NAMES
