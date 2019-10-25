@@ -20,8 +20,8 @@ echo "[$NO_REPR] random representatives will be chosen from each CSV file for me
 ls $DATA_LOC | while read file; do
   # Read sequences in file
   # Read all lines except for the first one containing headers
-  tail -n +2 $DATA_LOC/$file > temp_seqs.txt
-  shuf temp_seqs.txt | head -n $NO_REPR >> $TEMP_FOLDER/merged.csv
+  tail -n +2 $DATA_LOC/$file > $TEMP_FOLDER/temp_seqs.txt
+  shuf $TEMP_FOLDER/temp_seqs.txt | head -n $NO_REPR >> $TEMP_FOLDER/merged.csv
 done
 
 cd $TEMP_FOLDER/
