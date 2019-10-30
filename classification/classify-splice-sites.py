@@ -1,3 +1,4 @@
+import os
 import sys
 from contextlib import closing
 
@@ -42,6 +43,7 @@ def parser():
     p.add_argument('window_inner', type=int)
     p.add_argument('window_outer', type=int)
     p.add_argument('site', type=str, help='donor or acceptor')
+    p.add_argument('output_folder', type=str)
     p.add_argument('-c', '--cpus', type=int, default=1,
                    dest='ncpus',
                    help='number of CPUs')
@@ -65,11 +67,16 @@ if __name__ == "__main__":
     predict = model.apply_binary(features)
 
     acc = sg.AccuracyMeasure()
-    print("Accuracy: {}".format(acc.evaluate(predict, labels)))
-    print(" -TP: {}".format(acc.get_TP()))
-    print(" -FP: {}".format(acc.get_FP()))
-    print(" -TN: {}".format(acc.get_TN()))
-    print(" -FN: {}".format(acc.get_FN()))
+
+    model_name = os.path.split(argparser.model_filename)[0].split('/')[-1]
+    with open(f'{argparser.output_folder}/{argparser.data_filename}-{model_name}-results.txt', 'w') as f:
+        f.writelines(
+            ["Accuracy: {}".format(acc.evaluate(predict, labels)),
+             " -TP: {}".format(acc.get_TP()),
+             " -FP: {}".format(acc.get_FP()),
+             " -TN: {}".format(acc.get_TN()),
+             " -FN: {}".format(acc.get_FN()),
+             ])
 
     data.assign(pred=pd.Series(list(predict.get_int_labels()))) \
         .to_csv(sys.stdout, sep=';', index=False)

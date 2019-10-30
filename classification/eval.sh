@@ -1,4 +1,4 @@
- #!/bin/bash
+#!/bin/bash
 
 # bash eval.sh -f ~/Desktop/results/ -r 0.025 -t 0.25 -a 0.5 -g
 # bash eval.sh -f ~/Desktop/results/Argma1-train/result.txt -r 0.025 -t 0.25 -a 0.5
@@ -40,6 +40,8 @@ function get_metrics() {
 
   ADJ_PREC=$(awk "BEGIN {print ($p_real/$p_test)*$TPs/(($p_real/$p_test)*$TPs + (1-$p_real/1-$p_test)*$FPs)}")
   SCORE=$(awk "BEGIN {print $alpha*$ADJ_PREC + (1-$alpha)*$RECALL}")
+
+  echo "$SCORE"
 }
 
 function best_model_metrics(){
@@ -50,6 +52,7 @@ function best_model_metrics(){
   for f in $1/*/
   do
     cd $f
+    echo "$f"
     get_metrics result.txt
 
     if (( $(echo "$RECALL > $MAXRC" |bc -l) )); then
