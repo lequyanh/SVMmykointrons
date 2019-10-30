@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# bash eval.sh -f ~/Desktop/results/ -r 0.025 -t 0.25 -a 0.5 -g
-# bash eval.sh -f ~/Desktop/results/Argma1-train/result.txt -r 0.025 -t 0.25 -a 0.5
+# bash evaluate_models.sh -f ~/Desktop/results/ -r 0.025 -t 0.25 -a 0.5 -g
+# bash evaluate_models.sh -f ~/Desktop/results/Argma1-train/result.txt -r 0.025 -t 0.25 -a 0.5
 
 g_flag=""
 p_real=1

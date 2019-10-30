@@ -1,6 +1,6 @@
-import os
 import sys
 from contextlib import closing
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -63,20 +63,21 @@ if __name__ == "__main__":
     features = sg.StringCharFeatures(data.sequence.tolist(), sg.RAWBYTE)
     labels = sg.BinaryLabels(np.array(data.label))
     model = read_model(argparser.model_filename)
+    model_name = Path(argparser.model_filename).parts[-2]
 
     predict = model.apply_binary(features)
 
     acc = sg.AccuracyMeasure()
+    metrics = ["Accuracy: {}".format(acc.evaluate(predict, labels)),
+               " -TP: {}".format(acc.get_TP()),
+               " -FP: {}".format(acc.get_FP()),
+               " -TN: {}".format(acc.get_TN()),
+               " -FN: {}".format(acc.get_FN()),
+               ]
+    print(metrics)
 
-    model_name = os.path.split(argparser.model_filename)[0].split('/')[-1]
     with open(f'{argparser.output_folder}/{argparser.data_filename}-{model_name}-results.txt', 'w') as f:
-        f.writelines(
-            ["Accuracy: {}".format(acc.evaluate(predict, labels)),
-             " -TP: {}".format(acc.get_TP()),
-             " -FP: {}".format(acc.get_FP()),
-             " -TN: {}".format(acc.get_TN()),
-             " -FN: {}".format(acc.get_FN()),
-             ])
+        f.writelines(metrics)
 
     data.assign(pred=pd.Series(list(predict.get_int_labels()))) \
         .to_csv(sys.stdout, sep=';', index=False)
