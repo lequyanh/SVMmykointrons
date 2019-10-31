@@ -50,6 +50,14 @@ def parser():
     return p
 
 
+def get_result_path(model_filename, data_filename, output_folder):
+    model_name = Path(model_filename).parts[-2]
+    data_filename = Path(data_filename).parts[-1]
+    result_path = f'{output_folder}/{data_filename}--{model_name}-results.txt'
+
+    return result_path
+
+
 if __name__ == "__main__":
     argparser = parser().parse_args()
 
@@ -63,7 +71,6 @@ if __name__ == "__main__":
     features = sg.StringCharFeatures(data.sequence.tolist(), sg.RAWBYTE)
     labels = sg.BinaryLabels(np.array(data.label))
     model = read_model(argparser.model_filename)
-    model_name = Path(argparser.model_filename).parts[-2]
 
     predict = model.apply_binary(features)
 
@@ -74,9 +81,15 @@ if __name__ == "__main__":
                " -TN: {}".format(acc.get_TN()),
                " -FN: {}".format(acc.get_FN()),
                ]
+    metrics = '\n'.join(metrics)
     print(metrics)
 
-    with open(f'{argparser.output_folder}/{argparser.data_filename}-{model_name}-results.txt', 'w') as f:
+    result_file_path = get_result_path(
+        argparser.model_filename,
+        argparser.data_filename,
+        argparser.output_folder
+    )
+    with open(result_file_path, 'w') as f:
         f.writelines(metrics)
 
     data.assign(pred=pd.Series(list(predict.get_int_labels()))) \

@@ -38,6 +38,8 @@ function get_metrics() {
   PREC=$(awk "BEGIN {print $TPs/($TPs + $FPs)}")
   RECALL=$(awk "BEGIN {print $TPs/($TPs + $FNs)}")
 
+  echo "Metrics for model $1: TPs: $TPs, FPs: $FPs, FNs = $FNs"
+
   ADJ_PREC=$(awk "BEGIN {print ($p_real/$p_test)*$TPs/(($p_real/$p_test)*$TPs + (1-$p_real/1-$p_test)*$FPs)}")
   SCORE=$(awk "BEGIN {print $alpha*$ADJ_PREC + (1-$alpha)*$RECALL}")
 
@@ -49,11 +51,10 @@ function best_model_metrics(){
   MAXPREC=0
   MAXSCORE=0
 
-  for f in $1/*/
+  for f in $1/*.txt
   do
-    cd $f
-    echo "$f"
-    get_metrics result.txt
+
+    get_metrics "$f"
 
     if (( $(echo "$RECALL > $MAXRC" |bc -l) )); then
         MAXRC=$RECALL
@@ -73,12 +74,12 @@ function best_model_metrics(){
 }
 
 if [ "$g_flag" = "true" ]; then
-  best_model_metrics $FOLDERS
+  best_model_metrics "$FOLDERS"
   echo "Max score of $MAXSCORE at $MAXSCORE_SOURCE"
   echo "Max adjusted precision of $MAXPREC at $MAXPREC_SOURCE"
   echo "Max recall of $MAXRC at $MAXRC_SOURCE"
 else
-  get_metrics $FOLDERS
+  get_metrics "$FOLDERS"
   echo "Score $SCORE, recall $RECALL, adjusted precision $ADJ_PREC"
 fi
 
