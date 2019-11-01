@@ -26,9 +26,12 @@ scp ${ROOT}/results/train-splice-site-shuffeled_train_${shroom}-${site}* $models
 bash validate_grid_models.sh $site "shuffeled_valid_$shroom_csv" $models_folder
 
 # train the overall model with the discovered parameters (on metacenter)
-qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v DEGREE=30,LWINDOW=70,RWINDOW=70,C=1,SITE=donors,DATAFILE=data.csv,CPU=10 train-splice-site.sh
+train_file="shuff_aggreg_${site}_site_train.csv"
+scp ../data/train/${train_file} ${ROOT}/data/${site}s
+qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v DEGREE=30,LWINDOW=70,RWINDOW=70,C=1,SITE=donors,DATAFILE=${train_file},CPU=10 train-splice-site.sh
 # retrieve the model
 
 # validate the model using the mixed shuffeled dataset (created during preprocessing step)
-scp ../data/test/shuff_aggreg_donor_site_test.csv lequyanh@skirit.metacentrum.cz:/~
+test_file="shuff_aggreg_${site}_site_test.csv"
+scp ../data/test/${test_file} lequyanh@skirit.metacentrum.cz:/~
 qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v VALIDATION_CSV=shuff_aggreg_donor_site_test.csv,MODEL=model.hd5,WIN_IN=70,SUBJECT=$site classify-splice-site.sh

@@ -3,7 +3,7 @@
 # System settings:
 #  - path to python
 PYTHON=~/anaconda3/envs/mykointron/bin/python
-#  - number of CPUs to be used in total 
+#  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
 NUMBER_CPUS=10
 #  - memory limit for caching (in MB)
@@ -21,6 +21,9 @@ DONOR_LWINDOW=70
 DONOR_RWINDOW=70
 ACCEPTOR_LWINDOW=70
 ACCEPTOR_RWINDOW=70
+
+# Number of scaffolds taken from each shroom for intron model training
+NO_SCAFF=5
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
 INTRON_MIN_LENGTH=10
@@ -28,14 +31,14 @@ INTRON_MAX_LENGTH=600
 #  - order of the spectrum kernel
 #    it is used in the intron prediction and it must be equal to the order used while training
 SPECT_KERNEL_ORDER=2
-#  - names of the splice site datasets 
+#  - names of the splice site datasets
 #    it will be created before the splice sites classification
 DONOR_FILE="splice-site-donor-dataset.csv"
 ACCEPTOR_FILE="splice-site-acceptor-dataset.csv"
 #  - names of the files for splice site classification results
 DONOR_RESULT="splice-site-donor-result.csv"
 ACCEPTOR_RESULT="splice-site-acceptor-result.csv"
-#  - name of the file that contains positions of alleged introns 
+#  - name of the file that contains positions of alleged introns
 #    it will be created after the splice sites classification
 INTRON_POSITIONS_FILE="intron-positions-dataset.csv"
 #  - name of the file that contains extracted intron sequences
@@ -79,7 +82,7 @@ fi
 #  3. Run two classification tasks in parallel:
 #     a) classify donors (given the donor dataset),
 #     b) classify acceptors (given the acceptor dataset).
-#  4. Wait until both the classification tasks finish. Then find all possible pairs GT-AG given 
+#  4. Wait until both the classification tasks finish. Then find all possible pairs GT-AG given
 #     positively classified donors and acceptors, and use them to create an intron dataset.
 #  5. Run a classification task to identify introns.
 # -------------------------------------------------------------
@@ -95,12 +98,13 @@ echo "Extracting donors and acceptors from [$assembly_filepath]..."
 echo "scaffold;position;sequence" > $DONOR_FILE
 echo "scaffold;position;sequence" > $ACCEPTOR_FILE
 
-# extract the splice site sequences and then use awk to separate the sequences into 
+# extract the splice site sequences and then use awk to separate the sequences into
 # the donor and acceptor dataset, respectively
 $PYTHON extract-donor-acceptor.py $assembly_filepath \
                                   $DONOR $ACCEPTOR \
                                   $DONOR_LWINDOW $DONOR_RWINDOW \
                                   $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
+                                  $NO_SCAFF \
         | gawk -v donor=$donor_regex \
               -v acceptor=$acceptor_regex \
               -v donor_file=$DONOR_FILE \
@@ -141,37 +145,3 @@ classify_acceptor_pid=$!
 
 # wait for both the classification tasks to finish
 wait $classify_donor_pid $classify_acceptor_pid
-
-echo "Positively classified donors are in [$DONOR_RESULT]."
-echo "Positively classified acceptors are in [$ACCEPTOR_RESULT]."
-echo ""
-
-echo "Getting intron positions..."
-
-# given the splice sites classification, output positions of possible introns
-$PYTHON generate-pairs.py $DONOR_RESULT $ACCEPTOR_RESULT \
-                          $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH > $INTRON_POSITIONS_FILE
-
-echo "Intron positions are in [$INTRON_POSITIONS_FILE]."
-echo "Extracting introns from the positions..."
-
-# extract introns from the positions from the previous step
-$PYTHON extract-introns.py $assembly_filepath $INTRON_POSITIONS_FILE > $INTRON_FILE
-
-echo "Intron sequences are extracted in [$INTRON_FILE]."
-echo ""
-
-echo "Starting classification of the introns..."
-
-# prepare a file for the intron classification results
-echo "scaffold;start;end" > $INTRON_RESULT
-
-## classify the introns
-## keep only the positively classified samples
-## keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-#$PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE $intron_model $SPECT_KERNEL_ORDER \
-#        | grep $positive_introns \
-#        | cut -d ';' -f -3 >> $INTRON_RESULT
-#
-#echo "Detected introns are in [$INTRON_RESULT]."
-#
