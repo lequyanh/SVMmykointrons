@@ -166,12 +166,12 @@ echo "Starting classification of the introns..."
 # prepare a file for the intron classification results
 echo "scaffold;start;end" > $INTRON_RESULT
 
-## classify the introns
-## keep only the positively classified samples
-## keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-#$PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE $intron_model $SPECT_KERNEL_ORDER \
-#        | grep $positive_introns \
-#        | cut -d ';' -f -3 >> $INTRON_RESULT
-#
-#echo "Detected introns are in [$INTRON_RESULT]."
-#
+# classify the introns
+# keep only the positively classified samples
+# keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
+$PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE $intron_model $SPECT_KERNEL_ORDER \
+        | grep $positive_introns \
+        | cut -d ';' -f -3 >> $INTRON_RESULT
+
+echo "Detected introns are in [$INTRON_RESULT]."
+
