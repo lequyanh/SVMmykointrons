@@ -9,7 +9,9 @@ WIN_OUT=$4
 OUTPUT_FOLDER=$5
 TRAIN_TEST=$6
 
+BASEDIR=$(dirname "$0")
+
 for shroom in $(<$SHROOMS_FILE)
 do
-    $PYTHON ./extract-train-donor-acceptors.py $DATA_LOC $shroom $WIN_OUT $WIN_IN $WIN_IN $WIN_OUT $OUTPUT_FOLDER $TRAIN_TEST
+    $PYTHON $BASEDIR/create_splice_site_windows.py $DATA_LOC $shroom $WIN_OUT $WIN_IN $WIN_IN $WIN_OUT $OUTPUT_FOLDER $TRAIN_TEST
 done

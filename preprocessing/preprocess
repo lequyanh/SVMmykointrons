@@ -1,0 +1,34 @@
+#!/bin/bash
+
+ASSEMBLIES_LOC=~/Desktop/mykointrons-data
+
+# ----------- SPLITS MUSHROOM CLASSES TO 4 SETS -----------------
+split_dir="shroom_split"
+mkdir -p $split_dir
+
+INT_TRAIN_NAMES="$split_dir/intron_train_names.txt"
+INT_TEST_NAMES="$split_dir/intron_test_names.txt"
+SPLICE_TRAIN_NAMES="$split_dir/splice_sites_train_names.txt"
+SPLICE_TEST_NAMES="$split_dir/splice_sites_test_names.txt"
+bash split_shrooms_to_train_test.sh ../basidiomycotas.txt $INT_TRAIN_NAMES $INT_TEST_NAMES $SPLICE_TRAIN_NAMES $SPLICE_TEST_NAMES
+
+# ----------- FOR MUSHROOMS USED FOR SPLICE SITE TRAINING/TESTING, GENERATE WINDOWS -----------------
+# This should create 2 folders - test and train each containing donor and acceptor windows from a particular shroom
+bash splicesite/create_train_test_csvs.sh $SPLICE_TRAIN_NAMES $ASSEMBLIES_LOC 150 150 ../data train
+bash splicesite/create_train_test_csvs.sh $SPLICE_TEST_NAMES $ASSEMBLIES_LOC 150 150 ../data test
+
+NO_TRAIN=400000
+SHUFFLED_DONOR_SITE_TRAINSET_NAME='shuff_aggreg_donor_site_train.csv'
+SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME='shuff_aggreg_acceptor_site_train.csv'
+bash splicesite/merge_shuffle_datasets.sh ../data/train/donor $NO_TRAIN $SHUFFLED_DONOR_SITE_TRAINSET_NAME ./
+bash splicesite/merge_shuffle_datasets.sh ../data/train/acceptor $NO_TRAIN $SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME ./
+mv $SHUFFLED_DONOR_SITE_TRAINSET_NAME ../data/train
+mv $SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME ../data/train
+
+NO_TEST=500000
+SHUFFLED_DONOR_SITE_TESTSET_NAME='shuff_aggreg_donor_site_test.csv'
+SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME='shuff_aggreg_acceptor_site_test.csv'
+bash splicesite/merge_shuffle_datasets.sh ../data/test/donor $NO_TEST $SHUFFLED_DONOR_SITE_TESTSET_NAME ./
+bash splicesite/merge_shuffle_datasets.sh ../data/test/acceptor $NO_TEST $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME ./
+mv $SHUFFLED_DONOR_SITE_TESTSET_NAME ../data/test
+mv $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME ../data/test

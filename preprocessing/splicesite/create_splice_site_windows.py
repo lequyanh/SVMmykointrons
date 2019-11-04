@@ -7,28 +7,28 @@ from typing import List, Iterable
 
 import numpy as np
 
-from fastalib import read_fasta, complementary
+from fastalib import complementary, read_fasta
 
-# Use standalone to extract train data for a single shroom, or in a batch mode using a script:
-# >bash generate_trains.sh $SPLICE_TRAIN_NAMES ~/Desktop/mykointrons-data 150 150 ../data train
+# ==== Use standalone to extract train data for a single shroom, or in a batch mode using a script ====
+# >bash create_train_test_csvs.sh $SPLICE_TRAIN_NAMES ~/Desktop/mykointrons-data 150 150 ../data train
 
-# base_loc = sys.argv[1]
-# shroom_name = sys.argv[2]
+base_loc = sys.argv[1]
+shroom_name = sys.argv[2]
+
+donor_lwindow, donor_rwindow = int(sys.argv[3]), int(sys.argv[4])
+acceptor_lwindow, acceptor_rwindow = int(sys.argv[5]), int(sys.argv[6])
+
+csv_target_folder = sys.argv[7]
+test_train = sys.argv[8]
+
+# base_loc = '/home/anhvu/Desktop/mykointrons-data'
+# shroom_name = 'Ramac1'
+# csv_target_folder = '../data/'
 #
-# donor_lwindow, donor_rwindow = int(sys.argv[3]), int(sys.argv[4])
-# acceptor_lwindow, acceptor_rwindow = int(sys.argv[5]), int(sys.argv[6])
+# donor_lwindow, donor_rwindow = 150, 150
+# acceptor_lwindow, acceptor_rwindow = 150, 150
 #
-# csv_target_folder = sys.argv[7]
-# test_train = sys.argv[8]
-
-base_loc = '/home/anhvu/Desktop/mykointrons-data'
-shroom_name = 'Ramac1'
-csv_target_folder = '../data/'
-
-donor_lwindow, donor_rwindow = 150, 150
-acceptor_lwindow, acceptor_rwindow = 150, 150
-
-test_train = 'train'
+# test_train = 'train'
 
 assembly = f'{base_loc}/data/Assembly/{shroom_name}_AssemblyScaffolds.fasta'
 introns_locs = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-introns.fasta'
@@ -45,7 +45,7 @@ if not os.path.isdir(acceptor_dir):
     os.makedirs(acceptor_dir)
 
 donor_csv = f'{donor_dir}/{shroom_name}-donor-windows.csv'
-acceptor_csv = f'{csv_target_folder}/{test_train}/acceptor/{shroom_name}-acceptor-windows.csv'
+acceptor_csv = f'{acceptor_dir}/{shroom_name}-acceptor-windows.csv'
 logging.info(f'Splice site training/testing CSV will be saved to {donor_dir} and {acceptor_dir}')
 
 logging.getLogger().setLevel(logging.INFO)
@@ -156,27 +156,27 @@ def write_true_splice_site_windows(
     logging.info(f'Wrote {len(train_windows)} positive splice site windows to {splice_windows_train_csv}')
 
 
-def append_positive_train_examples(
+def append_true_splice_site_windows(
         true_donor_acceptor_file: str,
-        train_csv: str,
+        target_csv: str,
         lwindow: int,
         rwindow: int,
 ):
-    append_train_examples(true_donor_acceptor_file, train_csv, lwindow, rwindow, POSITIVE_LABEL)
+    append_examples(true_donor_acceptor_file, target_csv, lwindow, rwindow, POSITIVE_LABEL)
 
 
 def append_false_splice_site_windows(
         false_donor_acceptor_file: str,
-        train_csv: str,
+        target_csv: str,
         lwindow: int,
         rwindow: int,
 ):
-    append_train_examples(false_donor_acceptor_file, train_csv, lwindow, rwindow, NEGATIVE_LABEL)
+    append_examples(false_donor_acceptor_file, target_csv, lwindow, rwindow, NEGATIVE_LABEL)
 
 
-def append_train_examples(
+def append_examples(
         donor_acceptor_file: str,
-        train_csv: str,
+        target_csv: str,
         lwindow: int,
         rwindow: int,
         label: str,
@@ -203,18 +203,18 @@ def append_train_examples(
         assert np.all(splice_dimers_check)
 
         # Create CSV rows
-        train_data_negative = zip(
+        data_negative = zip(
             false_splice_windows,
             [label] * len(false_splice_windows)
         )
 
-        with open(train_csv, 'a') as f:
+        with open(target_csv, 'a') as f:
             w = csv.writer(f, delimiter=';')
 
-            for row in train_data_negative:
+            for row in data_negative:
                 w.writerow(row)
 
-        logging.info(f'Appended {len(false_splice_windows)} donor/acceptor windows to {train_csv}')
+        logging.info(f'Appended {len(false_splice_windows)} false splice site windows to {target_csv}')
 
 
 if not Path(assembly).is_file():
