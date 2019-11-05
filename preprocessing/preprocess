@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ASSEMBLIES_LOC=~/Desktop/mykointrons-data
+SHROOM_NAMES_ALL=../basidiomycotas.txt
 
 # ----------- SPLITS MUSHROOM CLASSES TO 4 SETS -----------------
 split_dir="shroom_split"
@@ -10,7 +11,19 @@ INT_TRAIN_NAMES="$split_dir/intron_train_names.txt"
 INT_TEST_NAMES="$split_dir/intron_test_names.txt"
 SPLICE_TRAIN_NAMES="$split_dir/splice_sites_train_names.txt"
 SPLICE_TEST_NAMES="$split_dir/splice_sites_test_names.txt"
-bash split_shrooms_to_train_test.sh ../basidiomycotas.txt $INT_TRAIN_NAMES $INT_TEST_NAMES $SPLICE_TRAIN_NAMES $SPLICE_TEST_NAMES
+
+no_shrooms=$(wc -l < ${SHROOM_NAMES_ALL})
+train_size=$(( no_shrooms / 2 * 6 / 10 ))
+test_size=$(( no_shrooms / 2 * 4 / 10 ))
+
+echo "Number of mushrooms ${no_shrooms}. Splitting to 2 train lists with ${train_size} and 2 test lists with ${test_size} classes"
+
+{
+    head -n ${train_size} >  $SPLICE_TRAIN_NAMES
+    head -n ${test_size} > $SPLICE_TEST_NAMES
+    head -n ${train_size} > $INT_TRAIN_NAMES
+    cat >  $INT_TEST_NAMES
+} < ${SHROOM_NAMES_ALL}
 
 # ----------- FOR MUSHROOMS USED FOR SPLICE SITE TRAINING/TESTING, GENERATE WINDOWS -----------------
 # This should create 2 folders - test and train each containing donor and acceptor windows from a particular shroom

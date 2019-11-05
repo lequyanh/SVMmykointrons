@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
         # for each donor find acceptors in allowed distance
 
-        acceptor_positions = get_near_positions(acceptor_positions.get_values(),
+        acceptor_positions = get_near_positions(acceptor_positions.array,
                                                 donor_position + intron_min_len,
                                                 donor_position + intron_max_len)
 

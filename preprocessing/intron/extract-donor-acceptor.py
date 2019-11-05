@@ -22,8 +22,8 @@ acceptor = sys.argv[3]
 donor_lwindow, donor_rwindow = int(sys.argv[4]), int(sys.argv[5])
 # window size for acceptors without the dimer: {lwindow}--acceptor--{rwindow}
 acceptor_lwindow, acceptor_rwindow = int(sys.argv[6]), int(sys.argv[7])
-# number of scaffolds to consider
-no_scaffolds = int(sys.argv[8])
+# max number of scaffolds splice site candidates to consider
+splice_sites_limit = int(sys.argv[8])
 
 assert len(donor) == 2, 'donor must be a dimer'
 assert len(acceptor) == 2, 'acceptor must be a dimer'
@@ -31,14 +31,18 @@ assert len(acceptor) == 2, 'acceptor must be a dimer'
 with open(assembly, 'r') as assembly_f:
     # Load scaffolds in assembly
     scaffolds = list(SeqIO.parse(assembly_f, 'fasta'))
-    logging.info(f'Loaded {len(scaffolds)} scaffolds in {assembly} FASTA file.')
+    no_scaffolds = len(scaffolds)
+    logging.info(f'Loaded {no_scaffolds} scaffolds in {assembly} FASTA file.')
 
     # Sample a set of assemblies
-    sel_scaff_idx = np.random.choice(len(scaffolds), no_scaffolds)
-    selected_scaffs = np.array(scaffolds)[sel_scaff_idx]
+    scaffolds = np.array(scaffolds)
+    np.random.shuffle(scaffolds)
 
-    for scaffold in selected_scaffs:
+    k = 0
+
+    for i, scaffold in enumerate(scaffolds):
         sequence = scaffold.seq
+
         for position, dimer in fl.dimers(sequence):
             if dimer == donor or dimer == acceptor:
                 lwindow = donor_lwindow if dimer == donor else acceptor_lwindow
@@ -53,5 +57,13 @@ with open(assembly, 'r') as assembly_f:
 
                 # print scaffold, position and the window separated with the given separator
                 shroom = Path(assembly).parts[-1][:-6]
-                scaffold_info = f'{shroom}:{scaffold.id}'
-                print(scaffold_info, position, window, sep=SEPARATOR)
+                print(scaffold.id, position, window, sep=SEPARATOR)
+
+                k += 1
+                # We don't want a donor to be without a candidate acceptor - must terminate on acceptor
+                # Can be enhanced by keeping track of last position, so we terminate on an acceptor in reasonable dist.
+                if k >= splice_sites_limit and dimer == acceptor:
+                    logging.info(f'Splice sites written {k} from {i} scaffolds')
+                    exit(0)
+
+    logging.info(f'Splice sites written {k} from {i} scaffolds')
