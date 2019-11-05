@@ -45,7 +45,7 @@ def parser():
     p.add_argument('site', type=str, help='donor or acceptor')
     p.add_argument('-o', '--output_folder', type=str, default='validation_results',
                    dest='output_folder',
-                   help='folder where validation results are stored')
+                   help='folder where validation results are stored (see -v flag)')
     p.add_argument('-v', action='store_true', help='validation mode - calculates accuracy metrics')
     p.add_argument('-c', '--cpus', type=int, default=1,
                    dest='ncpus',
@@ -67,6 +67,10 @@ if __name__ == "__main__":
     sg.Parallel().set_num_threads(argparser.ncpus)
 
     if argparser.v:
+        # In case of validation, this script expects a file with windows 150nt and 150nt around a donor/acceptor dimer.
+        # Models can be trained on different windows and therefore the window sizes must passed to validation script too
+        # This is handy in grid search, when we try different window sizes, but want to use only one dataset of windows.
+        # We therefore create overly large windows and slice them as we need
         win_in = argparser.window_inner
         win_out = argparser.window_outer
         window = (win_out, win_in) if argparser.site == 'donor' else (win_in, win_out)
@@ -79,6 +83,9 @@ if __name__ == "__main__":
     model = read_model(argparser.model_filename)
 
     predict = model.apply_binary(features)
+
+    data.assign(pred=pd.Series(list(predict.get_int_labels()))) \
+        .to_csv(sys.stdout, sep=';', index=False)
 
     if argparser.v:
         labels = sg.BinaryLabels(np.array(data.label))
@@ -99,6 +106,3 @@ if __name__ == "__main__":
         )
         with open(result_file_path, 'w') as f:
             f.writelines(metrics)
-
-    data.assign(pred=pd.Series(list(predict.get_int_labels()))) \
-        .to_csv(sys.stdout, sep=';', index=False)
