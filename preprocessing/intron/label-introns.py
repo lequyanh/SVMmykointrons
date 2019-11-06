@@ -24,6 +24,6 @@ if __name__ == '__main__':
         label = map(lambda flag: 1 if flag else -1, label)
         labeled_candidates = i_candidates.assign(label=list(label))
 
-        labeled_candidates.to_csv(intron_candidates_csv, sep=';')
+        labeled_candidates.to_csv(intron_candidates_csv, sep=';', index=False)
 
         logging.info(f'{no_positive}/{len(i_candidates)} candidates are positive introns')

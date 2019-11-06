@@ -28,16 +28,10 @@ EXAMPLES_LIMIT=40000
 #    considered when extracting introns from the positions of the positively classified splice sites
 INTRON_MIN_LENGTH=10
 INTRON_MAX_LENGTH=600
-#  - order of the spectrum kernel
-#    it is used in the intron prediction and it must be equal to the order used while training
-SPECT_KERNEL_ORDER=2
-#  - name of the file that contains positions of alleged introns
-#    it will be created after the splice sites classification
-INTRON_POSITIONS_FILE="intron-positions-dataset.csv"
-#  - name of the file that contains extracted intron sequences
-INTRON_FILE="intron-dataset.csv"
-#  - name of the file for intron classification results
-INTRON_RESULT="intron-result.csv"
+#  - name of the file that contains labeled training intron sequences
+INTRON_TRAIN_FILE="intron-train-dataset.csv"
+#  - name of the file that contain validation intron sequences
+INTRON_TEST_FILE="intron-test-dataset.csv"
 
 # -------------------------------------------------------------
 
@@ -47,8 +41,6 @@ donor_regex=";[ACGT]{$DONOR_LWINDOW}$DONOR[ACGT]{$DONOR_RWINDOW}$"
 acceptor_regex=";[ACGT]{$ACCEPTOR_LWINDOW}$ACCEPTOR[ACGT]{$ACCEPTOR_RWINDOW}$"
 # regex to filter positively classified splice sites
 positive_splice_sites=";1$"
-# regex to filter positively classified introns
-positive_introns=";1$"
 # -------------------------------------------------------------
 
 # Pipeline inputs:
@@ -240,12 +232,26 @@ function label_intron_candidates() {
 #echo "Pairing positive donors with appropriate positive acceptors to form introns"
 #generate_intron_candidates "train"
 #generate_intron_candidates "test"
+#
+#echo "Labeling intron candidates for training/testing purposes"
+#label_intron_candidates "train"
+#label_intron_candidates "test"
 
-echo "Labeling intron candidates for training/testing purposes"
-label_intron_candidates "train"
-label_intron_candidates "test"
+# Merge into one file
+cd ./intron_candidates/
 
-# For all shroom names, open new_sequences folder and process introns
-  # Python file accepting introns file and candidates file and labels them
+echo 'sequence;label' > $INTRON_TRAIN_FILE
+echo 'sequence;label' > $INTRON_TEST_FILE
 
-  # Merge into one file
+for file in ./train/*.csv
+do
+    tail -n +2 "$file" | cut -d ';' -f4,5>> $INTRON_TRAIN_FILE
+done
+
+for file in ./test/*.csv
+do
+    tail -n +2 "$file" | cut -d ';' -f4,5 >> $INTRON_TEST_FILE
+done
+
+scp $INTRON_TRAIN_FILE lequyanh@skirit.metacentrum.cz:~/
+scp $INTRON_TEST_FILE lequyanh@skirit.metacentrum.cz:~/
