@@ -1,3 +1,4 @@
+import logging
 import sys
 from bisect import bisect_left, bisect_right
 
@@ -54,7 +55,12 @@ if __name__ == '__main__':
 
     for _, row in donors.iterrows():
         scaffold, donor_position = row[['scaffold', 'position']]
-        acceptor_positions = acceptors.loc[[scaffold], 'position']
+        try:
+            acceptor_positions = acceptors.loc[[scaffold], 'position']
+        except KeyError:
+            logging.warning(f'{acceptor_predictions}: Donor candidate at scaffold {scaffold} '
+                            f'has no matching acceptor candidate. Skipping...')
+            continue
 
         # for each donor find acceptors in allowed distance
 

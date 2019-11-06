@@ -59,7 +59,7 @@ splice_site_donor_model=$2
 #  - acceptor splice site prediction model
 splice_site_acceptor_model=$3
 #  - intron prediction model
-intron_model=$4
+true_introns_location=$4
 
 if [ $# -ne 4 ]
 then
@@ -190,11 +190,6 @@ function generate_intron_candidates() {
     donor_result="donor_positions/${train_test}/${shroom_name}_results"
     acceptor_result="acceptor_positions/${train_test}/${shroom_name}_results"
 
-    if ! [ -f "$donor_result" ]; then
-      echo "$donor_result skipping..."
-      continue
-    fi
-
     # given the splice sites classification, output positions of possible introns
     $PYTHON generate-pairs.py "$donor_result" "$acceptor_result" \
                               $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH > "$intron_positions_file"
@@ -211,25 +206,46 @@ function generate_intron_candidates() {
   done < ../shroom_split/"intron_${train_test}_names.txt"
 }
 
-echo "Generate acceptor and donor candidates for intron training"
-generate_splice_site_candidates "train"
-echo "Generate acceptor and donor candidates for intron testing"
-generate_splice_site_candidates "test"
+function label_intron_candidates() {
+  train_test=$1
+
+  intron_candidates="intron_candidates/${train_test}"
+
+  while read shroom_name; do
+    introns_file="${intron_candidates}/${shroom_name}_introns.csv"
+    intron_source="${true_introns_location}/${shroom_name}/${shroom_name}-introns.fasta"
+
+    echo "Labeling intron candidates in ${introns_file} file. True introns from ${intron_source}"
+    $PYTHON label-introns.py "$introns_file" "$intron_source"
+
+  done < ../shroom_split/"intron_${train_test}_names.txt"
+}
+
+#echo "Generate acceptor and donor candidates for intron training"
+#generate_splice_site_candidates "train"
+#echo "Generate acceptor and donor candidates for intron testing"
+#generate_splice_site_candidates "test"
 
 # determine the number of CPUs available for each classification task
-donor_cpus=$((NUMBER_CPUS/2))
-acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
+#donor_cpus=$((NUMBER_CPUS/2))
+#acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
+#
+#echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
+#
+#echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating traning dataset"
+#get_positive_splice_site_candidates "train"
+#echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating testing dataset"
+#get_positive_splice_site_candidates "test"
 
-echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
+#echo "Pairing positive donors with appropriate positive acceptors to form introns"
+#generate_intron_candidates "train"
+#generate_intron_candidates "test"
 
-echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating traning dataset"
-get_positive_splice_site_candidates "train"
-echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating testing dataset"
-get_positive_splice_site_candidates "test"
+echo "Labeling intron candidates for training/testing purposes"
+label_intron_candidates "train"
+label_intron_candidates "test"
 
-echo "Pairing positive donors with appropriate positive acceptors to form introns"
-generate_intron_candidates "train"
-generate_intron_candidates "test"
+# For all shroom names, open new_sequences folder and process introns
+  # Python file accepting introns file and candidates file and labels them
 
-#TODO label the introns
-
+  # Merge into one file
