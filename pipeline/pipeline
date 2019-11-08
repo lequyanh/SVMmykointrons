@@ -23,8 +23,8 @@ ACCEPTOR_LWINDOW=70
 ACCEPTOR_RWINDOW=70
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
-INTRON_MIN_LENGTH=10
-INTRON_MAX_LENGTH=600
+INTRON_MIN_LENGTH=40
+INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
 #    it is used in the intron prediction and it must be equal to the order used while training
 SPECT_KERNEL_ORDER=2
@@ -91,32 +91,44 @@ set -o pipefail
 
 echo "Extracting donors and acceptors from [$assembly_filepath]..."
 
-# prepare files for the donor and acceptor datasets
-echo "scaffold;position;sequence" > $DONOR_FILE
-echo "scaffold;position;sequence" > $ACCEPTOR_FILE
-
-# extract the splice site sequences and then use awk to separate the sequences into 
-# the donor and acceptor dataset, respectively
-$PYTHON extract-donor-acceptor.py $assembly_filepath \
-                                  $DONOR $ACCEPTOR \
-                                  $DONOR_LWINDOW $DONOR_RWINDOW \
-                                  $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
-        | gawk -v donor=$donor_regex \
-              -v acceptor=$acceptor_regex \
-              -v donor_file=$DONOR_FILE \
-              -v acceptor_file=$ACCEPTOR_FILE \
-              '$0 ~ donor {print >> donor_file} $0 ~ acceptor {print >> acceptor_file}'
-
-echo "Donors extracted to [$DONOR_FILE]."
-echo "Acceptors extracted to [$ACCEPTOR_FILE]."
-echo ""
-
+## prepare files for the donor and acceptor datasets
+#echo "scaffold;position;sequence" > $DONOR_FILE
+#echo "scaffold;position;sequence" > $ACCEPTOR_FILE
+#
+## extract the splice site sequences and then use awk to separate the sequences into
+## the donor and acceptor dataset, respectively
+##EXAMPLES_LIMIT=10000
+##  $PYTHON ../preprocessing/intron/extract-donor-acceptor.py $assembly_filepath \
+##                                    $DONOR $ACCEPTOR \
+##                                    $DONOR_LWINDOW $DONOR_RWINDOW \
+##                                    $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
+##                                    $EXAMPLES_LIMIT \
+##          | gawk -v donor="$donor_regex" \
+##                -v acceptor="$acceptor_regex" \
+##                -v donor_file=$DONOR_FILE \
+##                -v acceptor_file=$ACCEPTOR_FILE \
+##                '$0 ~ donor {print >> donor_file} $0 ~ acceptor {print >> acceptor_file}'
+#
+#$PYTHON extract-donor-acceptor.py $assembly_filepath \
+#                                  $DONOR $ACCEPTOR \
+#                                  $DONOR_LWINDOW $DONOR_RWINDOW \
+#                                  $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
+#        | gawk -v donor=$donor_regex \
+#              -v acceptor=$acceptor_regex \
+#              -v donor_file=$DONOR_FILE \
+#              -v acceptor_file=$ACCEPTOR_FILE \
+#              '$0 ~ donor {print >> donor_file} $0 ~ acceptor {print >> acceptor_file}'
+#
+#echo "Donors extracted to [$DONOR_FILE]."
+#echo "Acceptors extracted to [$ACCEPTOR_FILE]."
+#echo ""
+#
 # determine the number of CPUs available for each classification task
 donor_cpus=$((NUMBER_CPUS/2))
 acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
 
 echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
-
+#
 # prepare files for the donor and acceptor classification results
 echo "scaffold;position" > $DONOR_RESULT
 echo "scaffold;position" > $ACCEPTOR_RESULT
@@ -163,15 +175,20 @@ echo ""
 
 echo "Starting classification of the introns..."
 
-# prepare a file for the intron classification results
-echo "scaffold;start;end" > $INTRON_RESULT
+## prepare a file for the intron classification results
+#echo "scaffold;start;end" > $INTRON_RESULT
+#
+## classify the introns
+## keep only the positively classified samples
+## keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
+#$PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE $intron_model $SPECT_KERNEL_ORDER \
+#        | grep $positive_introns \
+#        | cut -d ';' -f -3 >> $INTRON_RESULT
+#
+#echo "Detected introns are in [$INTRON_RESULT]."
 
-# classify the introns
-# keep only the positively classified samples
-# keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-$PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE $intron_model $SPECT_KERNEL_ORDER \
-        | grep $positive_introns \
-        | cut -d ';' -f -3 >> $INTRON_RESULT
+# Label and introns
+intron_source=~/Desktop/mykointrons-data/new-sequences/Kocim1/Kocim1-introns.fasta
+$PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source"
 
-echo "Detected introns are in [$INTRON_RESULT]."
-
+$PYTHON ../classification/train-introns.py $INTRON_FILE 4 4 -t 0.4 -c 10

@@ -26,8 +26,8 @@ ACCEPTOR_RWINDOW=70
 EXAMPLES_LIMIT=40000
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
-INTRON_MIN_LENGTH=10
-INTRON_MAX_LENGTH=600
+INTRON_MIN_LENGTH=40
+INTRON_MAX_LENGTH=100
 #  - name of the file that contains labeled training intron sequences
 INTRON_TRAIN_FILE="intron-train-dataset.csv"
 #  - name of the file that contain validation intron sequences
@@ -186,7 +186,7 @@ function generate_intron_candidates() {
     $PYTHON generate-pairs.py "$donor_result" "$acceptor_result" \
                               $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH > "$intron_positions_file"
 
-                              echo "Intron positions are in [$INTRON_POSITIONS_FILE]."
+    echo "Intron positions are in [$intron_positions_file]."
 
     echo "Extracting introns from the positions ${donor_result} and ${acceptor_result}"
     assembly_filepath="${assebmlies_loc}/${shroom_name}_AssemblyScaffolds.fasta"
@@ -252,6 +252,7 @@ for file in ./test/*.csv
 do
     tail -n +2 "$file" | cut -d ';' -f4,5 >> $INTRON_TEST_FILE
 done
+#
+#scp $INTRON_TRAIN_FILE lequyanh@skirit.metacentrum.cz:~/
+#scp $INTRON_TEST_FILE lequyanh@skirit.metacentrum.cz:~/
 
-scp $INTRON_TRAIN_FILE lequyanh@skirit.metacentrum.cz:~/
-scp $INTRON_TEST_FILE lequyanh@skirit.metacentrum.cz:~/
