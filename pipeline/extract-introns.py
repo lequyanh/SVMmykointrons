@@ -1,14 +1,20 @@
+import logging
 import sys
 from collections import defaultdict
+
+from Bio import SeqIO
+
 from fastalib import read_fasta
+
+logging.getLogger().setLevel(logging.INFO)
 
 
 def sequences(file):
     for line in file.readlines():
         words = line.strip().split(' ')
-        assert len(words) >= 3,\
+        assert len(words) >= 3, \
             'each line must contain at least scaffold with a start and stop position'
-        assert len(words) % 2 == 1,\
+        assert len(words) % 2 == 1, \
             'each line must contain a scaffold and pairs of start/end positions'
         yield words[0], [int(p) for p in words[1:]]
 
@@ -28,13 +34,21 @@ if __name__ == '__main__':
         for scaffold, positions in sequences(sequences_file):
             scaffold_sequences[scaffold].append(positions)
 
+    extracto_set = dict()
     print('scaffold;start;end;sequence')
     with open(fasta_filename, 'r') as fasta_file:
-        for scaffold, sequence in read_fasta(fasta_file):
-            to_extract = scaffold_sequences[scaffold]
+        for scaffold in SeqIO.parse(fasta_file, 'fasta'):
+            to_extract = scaffold_sequences[scaffold.id]
 
             for positions in to_extract:
-                extracted = ''.join(sequence[positions[i] - 1:positions[i+1]]
+                scaffold_seq = str(scaffold.seq)
+                extracted = ''.join(scaffold_seq[positions[i] - 1:positions[i + 1]]
                                     for i in range(0, len(positions), 2))
-                print(scaffold, *positions, extracted, sep=';')
 
+                existing = extracto_set.get(extracted, None)
+                if existing:
+                    logging.info(f'{existing} MATCH WITH {scaffold.id} -- {positions} -- {extracted}')
+                else:
+                    extracto_set[extracted] = f'{sequences_filename} -- {scaffold.id} -- {positions}'
+
+                print(scaffold.id, *positions, extracted, sep=';')

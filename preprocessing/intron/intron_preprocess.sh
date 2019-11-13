@@ -232,27 +232,29 @@ function label_intron_candidates() {
 #echo "Pairing positive donors with appropriate positive acceptors to form introns"
 #generate_intron_candidates "train"
 #generate_intron_candidates "test"
-#
+
 #echo "Labeling intron candidates for training/testing purposes"
 #label_intron_candidates "train"
 #label_intron_candidates "test"
 
-# Merge into one file
+## Merge into one file
 cd ./intron_candidates/
-
-echo 'sequence;label' > $INTRON_TRAIN_FILE
-echo 'sequence;label' > $INTRON_TEST_FILE
-
-for file in ./train/*.csv
-do
-    tail -n +2 "$file" | cut -d ';' -f4,5>> $INTRON_TRAIN_FILE
-done
-
-for file in ./test/*.csv
-do
-    tail -n +2 "$file" | cut -d ';' -f4,5 >> $INTRON_TEST_FILE
-done
 #
+#echo 'sequence;label' > $INTRON_TRAIN_FILE
+#echo 'sequence;label' > $INTRON_TEST_FILE
+#
+#for file in ./train/*.csv
+#do
+#    tail -n +2 "$file" | cut -d ';' -f4,5>> $INTRON_TRAIN_FILE
+#done
+#
+#for file in ./test/*.csv
+#do
+#    tail -n +2 "$file" | cut -d ';' -f4,5 >> $INTRON_TEST_FILE
+#done
+
 #scp $INTRON_TRAIN_FILE lequyanh@skirit.metacentrum.cz:~/
 #scp $INTRON_TEST_FILE lequyanh@skirit.metacentrum.cz:~/
+$PYTHON ../../../classification/train-introns.py $INTRON_TRAIN_FILE 4 1 3 -t 0.2 -c 10
+
 

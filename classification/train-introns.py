@@ -71,12 +71,18 @@ def test(model, features, labels):
 
     acc = sg.AccuracyMeasure()
     acc.evaluate(predict, labels)
+    TP = int(acc.get_TP())
+    FP = int(acc.get_FP())
+    FN = int(acc.get_FN())
+    TN = int(acc.get_TN())
 
     print("Test results:")
     print("TP", "FP", "TN", "FN", sep='\t')
-    print(int(acc.get_TP()), int(acc.get_FP()),
-          int(acc.get_TN()), int(acc.get_FN()), sep='\t')
+    print(TP, FP, TN, FN, sep='\t')
 
+    print(f'Precision: {TP / (TP + FP)}\n '
+          f'Recall: {TP / (TP + FN)}\n'
+          f'Accuracy: {(TP + TN) / (sum([TP, FP, FN, TN]))}')
     print()
 
 
