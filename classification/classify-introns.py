@@ -1,6 +1,7 @@
 import sys
 from contextlib import closing
 
+import numpy as np
 import pandas as pd
 import shogun as sg
 
@@ -60,3 +61,20 @@ if __name__ == "__main__":
 
     data.assign(pred=pd.Series(list(predict.get_int_labels()))) \
         .to_csv(sys.stdout, sep=';', index=False)
+
+    labels = sg.BinaryLabels(np.array(data.label))
+    acc = sg.AccuracyMeasure()
+    acc.evaluate(predict, labels)
+    TP = int(acc.get_TP())
+    FP = int(acc.get_FP())
+    FN = int(acc.get_FN())
+    TN = int(acc.get_TN())
+
+    print("Test results:")
+    print("TP", "FP", "TN", "FN", sep='\t')
+    print(TP, FP, TN, FN, sep='\t')
+
+    print(f'Precision: {TP / (TP + FP)}\n'
+          f'Recall: {TP / (TP + FN)}\n'
+          f'Accuracy: {(TP + TN) / (sum([TP, FP, FN, TN]))}')
+    print()

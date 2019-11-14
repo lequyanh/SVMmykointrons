@@ -213,6 +213,25 @@ function label_intron_candidates() {
   done < ../shroom_split/"intron_${train_test}_names.txt"
 }
 
+function merge_into_one_dataset() {
+    cd ./intron_candidates/
+
+    echo 'sequence;label' > $INTRON_TRAIN_FILE
+    echo 'sequence;label' > $INTRON_TEST_FILE
+
+    for file in ./train/*.csv
+    do
+        tail -n +2 "$file" | cut -d ';' -f4,5>> $INTRON_TRAIN_FILE
+    done
+
+    for file in ./test/*.csv
+    do
+        tail -n +2 "$file" | cut -d ';' -f4,5 >> $INTRON_TEST_FILE
+    done
+
+    cd ../
+}
+
 #echo "Generate acceptor and donor candidates for intron training"
 #generate_splice_site_candidates "train"
 #echo "Generate acceptor and donor candidates for intron testing"
@@ -230,31 +249,19 @@ function label_intron_candidates() {
 #get_positive_splice_site_candidates "test"
 
 #echo "Pairing positive donors with appropriate positive acceptors to form introns"
-#generate_intron_candidates "train"
-#generate_intron_candidates "test"
+generate_intron_candidates "train"
+generate_intron_candidates "test"
 
 #echo "Labeling intron candidates for training/testing purposes"
-#label_intron_candidates "train"
-#label_intron_candidates "test"
+label_intron_candidates "train"
+label_intron_candidates "test"
 
-## Merge into one file
-cd ./intron_candidates/
-#
-#echo 'sequence;label' > $INTRON_TRAIN_FILE
-#echo 'sequence;label' > $INTRON_TEST_FILE
-#
-#for file in ./train/*.csv
-#do
-#    tail -n +2 "$file" | cut -d ';' -f4,5>> $INTRON_TRAIN_FILE
-#done
-#
-#for file in ./test/*.csv
-#do
-#    tail -n +2 "$file" | cut -d ';' -f4,5 >> $INTRON_TEST_FILE
-#done
+# Merge into one file
+merge_into_one_dataset
 
 #scp $INTRON_TRAIN_FILE lequyanh@skirit.metacentrum.cz:~/
 #scp $INTRON_TEST_FILE lequyanh@skirit.metacentrum.cz:~/
-$PYTHON ../../../classification/train-introns.py $INTRON_TRAIN_FILE 4 1 3 -t 0.2 -c 10
 
+#bash grid_search_intron.sh $INTRON_TRAIN_FILE
+$PYTHON ../../../classification/train-introns.py $INTRON_TRAIN_FILE 4 1 3 -t 0.2 -c 10
 

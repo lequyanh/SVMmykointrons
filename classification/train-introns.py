@@ -80,7 +80,7 @@ def test(model, features, labels):
     print("TP", "FP", "TN", "FN", sep='\t')
     print(TP, FP, TN, FN, sep='\t')
 
-    print(f'Precision: {TP / (TP + FP)}\n '
+    print(f'Precision: {TP / (TP + FP)}\n'
           f'Recall: {TP / (TP + FN)}\n'
           f'Accuracy: {(TP + TN) / (sum([TP, FP, FN, TN]))}')
     print()
