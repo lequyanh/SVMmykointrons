@@ -174,13 +174,13 @@ set -o pipefail
 #echo ""
 
 # Label introns
-intron_source=~/Desktop/mykointrons-data/new-sequences/Kocim1/Kocim1-introns.fasta
-$PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source"
+#intron_source=~/Desktop/mykointrons-data/new-sequences/Kocim1/Kocim1-introns.fasta
+#$PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source"
+#
+#echo "Starting classification of the introns..."
 
-echo "Starting classification of the introns..."
-
-# prepare a file for the intron classification results
-echo "scaffold;start;end" > $INTRON_RESULT
+## prepare a file for the intron classification results
+#echo "scaffold;start;end" > $INTRON_RESULT
 
 # classify the introns
 # keep only the positively classified samples
