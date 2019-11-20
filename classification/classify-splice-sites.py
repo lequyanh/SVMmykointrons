@@ -1,10 +1,16 @@
+import logging
 import sys
 from contextlib import closing
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import shogun as sg
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename='classify-splice-sites.log',
+    filemode='w'
+)
 
 
 def read_data(filename, window):
@@ -43,22 +49,11 @@ def parser():
     p.add_argument('window_inner', type=int)
     p.add_argument('window_outer', type=int)
     p.add_argument('site', type=str, help='donor or acceptor')
-    p.add_argument('-o', '--output_folder', type=str, default='validation_results',
-                   dest='output_folder',
-                   help='folder where validation results are stored')
     p.add_argument('-v', action='store_true', help='validation mode - calculates accuracy metrics')
     p.add_argument('-c', '--cpus', type=int, default=1,
                    dest='ncpus',
                    help='number of CPUs')
     return p
-
-
-def get_result_path(model_filename, data_filename, output_folder):
-    model_name = Path(model_filename).parts[-2]
-    data_filename = Path(data_filename).parts[-1]
-    result_path = f'{output_folder}/{data_filename}--{model_name}-results.txt'
-
-    return result_path
 
 
 if __name__ == "__main__":
@@ -81,6 +76,8 @@ if __name__ == "__main__":
     predict = model.apply_binary(features)
 
     if argparser.v:
+        logging.info(f'Classification of file {argparser.data_filename} with model {argparser.model_filename}')
+
         labels = sg.BinaryLabels(np.array(data.label))
         acc = sg.AccuracyMeasure()
         metrics = ["Accuracy: {}".format(acc.evaluate(predict, labels)),
@@ -90,15 +87,7 @@ if __name__ == "__main__":
                    " -FN: {}".format(acc.get_FN()),
                    ]
         metrics = '\n'.join(metrics)
-        print(metrics)
-
-        result_file_path = get_result_path(
-            argparser.model_filename,
-            argparser.data_filename,
-            argparser.output_folder
-        )
-        with open(result_file_path, 'w') as f:
-            f.writelines(metrics)
+        logging.info(metrics)
 
     data.assign(pred=pd.Series(list(predict.get_int_labels()))) \
         .to_csv(sys.stdout, sep=';', index=False)

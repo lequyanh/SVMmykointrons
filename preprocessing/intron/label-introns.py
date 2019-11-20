@@ -4,7 +4,11 @@ import sys
 import pandas as pd
 from Bio import SeqIO, SeqRecord
 
-logging.getLogger().setLevel(logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    filename='label-introns.log',
+    filemode='w'
+)
 
 if __name__ == '__main__':
     # CSV file with intron candidates to label
@@ -25,14 +29,16 @@ if __name__ == '__main__':
         def intron_scaffold(seq_rec: SeqRecord):
             return seq_rec.id.split(' ')[0]
 
+
         def is_strand(seq_rec: SeqRecord, sign: str):
             return seq_rec.description.split(' ')[1] == sign
+
 
         introns = filter(lambda i_rec: intron_scaffold(i_rec) in candidate_scaffolds and is_strand(i_rec, '+'),
                          introns_seqrecords)
         introns = set([str(i.seq) for i in introns])
 
-        logging.info(f'Number of true introns on the given strand: {len(introns)}')
+        logging.info(f'Number of true introns on the given (+/-) strand: {len(introns)}')
 
         label = [candidate['sequence'] in introns for i, candidate in intron_candidates.iterrows()]
         no_positive = sum(label)

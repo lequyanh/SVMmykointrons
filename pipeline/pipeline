@@ -3,7 +3,7 @@
 # System settings:
 #  - path to python
 PYTHON=~/anaconda3/envs/mykointron/bin/python
-#  - number of CPUs to be used in total 
+#  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
 NUMBER_CPUS=10
 #  - memory limit for caching (in MB)
@@ -28,14 +28,14 @@ INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
 #    it is used in the intron prediction and it must be equal to the order used while training
 SPECT_KERNEL_ORDER=5
-#  - names of the splice site datasets 
+#  - names of the splice site datasets
 #    it will be created before the splice sites classification
 DONOR_FILE="splice-site-donor-dataset.csv"
 ACCEPTOR_FILE="splice-site-acceptor-dataset.csv"
 #  - names of the files for splice site classification results
 DONOR_RESULT="splice-site-donor-result.csv"
 ACCEPTOR_RESULT="splice-site-acceptor-result.csv"
-#  - name of the file that contains positions of alleged introns 
+#  - name of the file that contains positions of alleged introns
 #    it will be created after the splice sites classification
 INTRON_POSITIONS_FILE="intron-positions-dataset.csv"
 #  - name of the file that contains extracted intron sequences
@@ -79,7 +79,7 @@ fi
 #  3. Run two classification tasks in parallel:
 #     a) classify donors (given the donor dataset),
 #     b) classify acceptors (given the acceptor dataset).
-#  4. Wait until both the classification tasks finish. Then find all possible pairs GT-AG given 
+#  4. Wait until both the classification tasks finish. Then find all possible pairs GT-AG given
 #     positively classified donors and acceptors, and use them to create an intron dataset.
 #  5. Run a classification task to identify introns.
 # -------------------------------------------------------------
@@ -167,7 +167,7 @@ function pair_splice_sites_and_extract_introns_step() {
 
     echo "Getting intron positions..."
 
-     given the splice sites classification, output positions of possible introns
+    # given the splice sites classification, output positions of possible introns
     $PYTHON generate-pairs.py $DONOR_RESULT $ACCEPTOR_RESULT \
                               $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH > $INTRON_POSITIONS_FILE
 
@@ -201,15 +201,32 @@ function classify_introns_step() {
     echo "Detected introns are in [$INTRON_RESULT]."
 }
 
+function validate_introns_step() {
+    # Label introns
+    intron_source=~/Desktop/mykointrons-data/new-sequences/Kocim1/Kocim1-introns.fasta
+    $PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source"
+
+    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE $intron_model $SPECT_KERNEL_ORDER \
+            | grep $positive_introns \
+            | cut --complement -d ';' -f4 >> $INTRON_RESULT
+}
+
 extract_donor_acceptor_step
 classify_splice_sites_step
 pair_splice_sites_and_extract_introns_step
 
-# ===================================== VALIDATION ONLY =====================================
-## Label introns
-#intron_source=~/Desktop/mykointrons-data/new-sequences/Exova1/Exova1-introns.fasta
-#$PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source"
+## ===================================== VALIDATE =====================================
+validate_introns_step
+### =================================== or CLASIFY =====================================
+#classify_introns_step
 
-# ===================================== VALIDATION ONLY =====================================
+touch pipeline.output
+for p in ./*.log;
+do
+  {
+    echo "================================== ${p} ==========================================";
+    cat "$p";
+  } >> pipeline.output
+done
 
-classify_introns_step
+rm ./*.log

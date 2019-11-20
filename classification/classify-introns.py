@@ -1,9 +1,16 @@
+import logging
 import sys
 from contextlib import closing
 
 import numpy as np
 import pandas as pd
 import shogun as sg
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename='classify-introns.log',
+    filemode='w'
+)
 
 
 def read_model(filename):
@@ -71,11 +78,10 @@ if __name__ == "__main__":
         FN = int(acc.get_FN())
         TN = int(acc.get_TN())
 
-        print("Test results:")
-        print("TP", "FP", "TN", "FN", sep='\t')
-        print(TP, FP, TN, FN, sep='\t')
+        logging.info("Test results:")
+        logging.info('\t'.join(["TP", "FP", "TN", "FN"]))
+        logging.info('\t'.join(map(str, [TP, FP, TN, FN])))
 
-        print(f'Precision: {TP / (TP + FP)}\n'
-              f'Recall: {TP / (TP + FN)}\n'
-              f'Accuracy: {(TP + TN) / (sum([TP, FP, FN, TN]))}')
-        print()
+        logging.info(f'Precision: {TP / (TP + FP)}\n'
+                     f'Recall: {TP / (TP + FN)}\n'
+                     f'Accuracy: {(TP + TN) / (sum([TP, FP, FN, TN]))}')

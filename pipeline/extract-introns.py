@@ -4,10 +4,11 @@ from collections import defaultdict
 
 from Bio import SeqIO
 
-from fastalib import read_fasta
-
-logging.getLogger().setLevel(logging.INFO)
-
+logging.basicConfig(
+    level=logging.INFO,
+    filename='extract-introns.log',
+    filemode='w'
+)
 
 def sequences(file):
     for line in file.readlines():
@@ -45,10 +46,10 @@ if __name__ == '__main__':
                 extracted = ''.join(scaffold_seq[positions[i] - 1:positions[i + 1]]
                                     for i in range(0, len(positions), 2))
 
-                # existing = extracto_set.get(extracted, None)
-                # if existing:
-                #     logging.info(f'{existing} MATCHES {scaffold.id} -- {positions} -- {extracted}')
-                # else:
-                #     extracto_set[extracted] = f'{scaffold.id} -- {positions}'
+                existing = extracto_set.get(extracted, None)
+                if existing:
+                    logging.info(f'{existing} MATCHES {scaffold.id} -- {positions} -- {extracted}')
+                else:
+                    extracto_set[extracted] = f'{scaffold.id} -- {positions}'
 
                 print(scaffold.id, *positions, extracted, sep=';')
