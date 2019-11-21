@@ -27,7 +27,7 @@ EXAMPLES_LIMIT=40000
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
 INTRON_MIN_LENGTH=40
-INTRON_MAX_LENGTH=100
+INTRON_MAX_LENGTH=80
 #  - name of the file that contains labeled training intron sequences
 INTRON_TRAIN_FILE="intron-train-dataset.csv"
 #  - name of the file that contain validation intron sequences
@@ -51,7 +51,7 @@ splice_site_donor_model=$2
 #  - acceptor splice site prediction model
 splice_site_acceptor_model=$3
 #  - intron prediction model
-true_introns_location=$4
+true_introns_location=$4  #/home/anhvu/Desktop/mykointrons-data/new-sequences
 
 if [ $# -ne 4 ]
 then
@@ -263,5 +263,5 @@ merge_into_one_dataset
 #scp $INTRON_TEST_FILE lequyanh@skirit.metacentrum.cz:~/
 
 #bash grid_search_intron.sh $INTRON_TRAIN_FILE
-$PYTHON ../../../classification/train-introns.py $INTRON_TRAIN_FILE 4 1 3 -t 0.2 -c 10
+$PYTHON ../../../classification/train-introns.py $INTRON_TRAIN_FILE 5 1 3 -t 0.2 -c 10
 

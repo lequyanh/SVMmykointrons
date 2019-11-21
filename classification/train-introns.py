@@ -1,9 +1,16 @@
+import logging
 from contextlib import closing
 
 import numpy as np
 import pandas as pd
 import shogun as sg
 from sklearn.model_selection import StratifiedShuffleSplit
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename='train-introns.log',
+    filemode='w'
+)
 
 
 def split_data(data, test_size):
@@ -39,11 +46,9 @@ def create_features(order, train_dna, test_dna=None):
 
 def train(features, labels, cache, l, C_n, C_p=None):
     if C_p is None:
-        print("Training SVM(C={}, l={})".format(C_n, l))
+        logging.info("Training SVM(C={}, l={})".format(C_n, l))
     else:
-        print("Training SVM(C_neg={}, C_pos={}, l={})".format(C_n, C_p, l))
-
-    print()
+        logging.info("Training SVM(C_neg={}, C_pos={}, l={})".format(C_n, C_p, l))
 
     kernel = sg.CommWordStringKernel(features, features, False, cache)
     svm = sg.LibSVM(C_n, kernel, labels)
@@ -56,12 +61,16 @@ def train(features, labels, cache, l, C_n, C_p=None):
 
     acc = sg.AccuracyMeasure()
     acc.evaluate(predict, labels)
-    print("Train results:")
-    print("TP", "FP", "TN", "FN", sep='\t')
-    print(int(acc.get_TP()), int(acc.get_FP()),
-          int(acc.get_TN()), int(acc.get_FN()), sep='\t')
+    TP = int(acc.get_TP())
+    FP = int(acc.get_FP())
+    FN = int(acc.get_FN())
+    TN = int(acc.get_TN())
 
-    print()
+    logging.info("Train results:")
+    logging.info('\t'.join(["TP", "FP", "TN", "FN"]))
+    logging.info('\t'.join(map(str, [TP, FP, TN, FN])))
+
+    logging.info("")
 
     return svm
 
@@ -76,14 +85,13 @@ def test(model, features, labels):
     FN = int(acc.get_FN())
     TN = int(acc.get_TN())
 
-    print("Test results:")
-    print("TP", "FP", "TN", "FN", sep='\t')
-    print(TP, FP, TN, FN, sep='\t')
+    logging.info("Test results:")
+    logging.info('\t'.join(["TP", "FP", "TN", "FN"]))
+    logging.info('\t'.join(map(str, [TP, FP, TN, FN])))
 
-    print(f'Precision: {TP / (TP + FP)}\n'
-          f'Recall: {TP / (TP + FN)}\n'
-          f'Accuracy: {(TP + TN) / (sum([TP, FP, FN, TN]))}')
-    print()
+    logging.info(f'Precision: {TP / (TP + FP)}\n'
+                 f'Recall: {TP / (TP + FN)}\n'
+                 f'Accuracy: {(TP + TN) / (sum([TP, FP, FN, TN]))}')
 
 
 def parser():
@@ -136,6 +144,6 @@ if __name__ == "__main__":
     model_file = sg.SerializableHdf5File(argparser.model_filename, "w")
     with closing(model_file):
         if model.save_serializable(model_file):
-            print("Model saved: {}".format(argparser.model_filename))
+            logging.info("Model saved: {}".format(argparser.model_filename))
         else:
-            print("Model could not be saved")
+            logging.warning("Model could not be saved")

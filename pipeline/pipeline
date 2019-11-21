@@ -164,7 +164,6 @@ function classify_splice_sites_step() {
 }
 
 function pair_splice_sites_and_extract_introns_step() {
-
     echo "Getting intron positions..."
 
     # given the splice sites classification, output positions of possible introns
@@ -203,8 +202,11 @@ function classify_introns_step() {
 
 function validate_introns_step() {
     # Label introns
-    intron_source=~/Desktop/mykointrons-data/new-sequences/Kocim1/Kocim1-introns.fasta
+    intron_source=~/Desktop/mykointrons-data/new-sequences/Agahy1/Agahy1-introns.fasta
     $PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source"
+
+    # prepare a file for the intron classification results
+    echo "scaffold;start;end;label;prediction" > $INTRON_RESULT
 
     $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE $intron_model $SPECT_KERNEL_ORDER \
             | grep $positive_introns \
@@ -220,7 +222,7 @@ validate_introns_step
 ### =================================== or CLASIFY =====================================
 #classify_introns_step
 
-touch pipeline.output
+echo "Pipeline log for file ${assembly_filepath}" > pipeline.output
 for p in ./*.log;
 do
   {
