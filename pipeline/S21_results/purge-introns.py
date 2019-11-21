@@ -99,24 +99,29 @@ for scaffold, (non_overlap_introns, overlap_introns) in overlaps_dict.items():
     exon_seq = scaffold_dna[exon_begin:]
     purged_scaffold += exon_seq
 
-    purged_scaffolds[scaffold] = (purged_scaffold, position_converter)
+    def get_overlap_purge_version(
+            _position_converter,
+            overlap_intron_start: int,
+            overlap_intron_end:int
+    ):
+        bad_exon_start, bad_exon_converted_start = \
+            min(_position_converter, key=lambda original, purged: overlap_intron_start - original)
+
+        begin_converted = bad_exon_converted_start + (overlap_intron_start - bad_exon_start)  # start position of the
+        pre_exon = purged_scaffold[begin_converted - WINDOW:begin_converted]
+
+        end_converted = bad_exon_converted_start + (overlap_intron_end - bad_exon_start)
+        post_exon = purged_scaffold[end_converted:end_converted + WINDOW]
+
+        overlap_version = pre_exon + post_exon
+        return overlap_version, begin_converted, end_converted
 
     WINDOW = 100
     fragment_origin = 0
     for begin1, end1, begin2, end2 in overlap_introns:
-
-        # version1
-        bad_exon_start, bad_exon_converted_start = \
-            min(position_converter, key=lambda original, purged: begin1 - original)
-
-        begin1_converted = bad_exon_converted_start + (begin1 - bad_exon_start)  # start position of the
-        pre_exon = purged_scaffold[begin1_converted - WINDOW:begin1_converted]
-
-        end1_converted = bad_exon_converted_start + (end1 - bad_exon_start)
-        post_exon = purged_scaffold[end1_converted:end1_converted + WINDOW]
-
+        overlap_version1, begin1_converted, _ = get_overlap_purge_version(position_converter, begin1, end1)
+        overlap_version2, _, end2_converted = get_overlap_purge_version(position_converter, begin2, end2)
 
         unaffected = purged_scaffold[fragment_origin:begin1_converted]
-        # version2
         fragment_origin = end2_converted
 

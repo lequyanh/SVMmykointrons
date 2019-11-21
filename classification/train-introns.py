@@ -6,12 +6,6 @@ import pandas as pd
 import shogun as sg
 from sklearn.model_selection import StratifiedShuffleSplit
 
-logging.basicConfig(
-    level=logging.INFO,
-    filename='train-introns.log',
-    filemode='w'
-)
-
 
 def split_data(data, test_size):
     s = StratifiedShuffleSplit(n_splits=1, test_size=test_size)
@@ -121,6 +115,12 @@ def parser():
 
 if __name__ == "__main__":
     argparser = parser().parse_args()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        filename=f'train-introns-{argparser.l}-{argparser.C}.output',
+        filemode='w'
+    )
 
     sg.Parallel().set_num_threads(argparser.ncpus)
 
