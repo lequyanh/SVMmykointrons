@@ -4,6 +4,12 @@ from bisect import bisect_left, bisect_right
 
 import pandas as pd
 
+logging.basicConfig(
+    level=logging.INFO,
+    filename='generate-pairs.log',
+    filemode='w'
+)
+
 
 def get_near_positions(positions, min_pos, max_pos):
     """
@@ -63,7 +69,6 @@ if __name__ == '__main__':
             continue
 
         # for each donor find acceptors in allowed distance
-
         acceptor_positions = get_near_positions(acceptor_positions.array,
                                                 donor_position + intron_min_len,
                                                 donor_position + intron_max_len)

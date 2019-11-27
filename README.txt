@@ -5,9 +5,12 @@ CONTENTS
 (2) classification/
     (a) classify-introns.py
     (b) classify-splice-sites.py
+        python classify-splice-sites.py ../data/train/donor/Exova1-donor-windows.csv ../gridsearch/bestmodels/donor_model.hd5 70 70 donor -v -c 10
     (c) train-introns.py
     (d) train-splice-sites.py
 (3) pipeline/
+        bash pipeline ~/Desktop/mykointrons-data/data/Assembly/Exova1_AssemblyScaffolds.fasta ../gridsearch/bestmodels/donor_model.hd5 ../gridsearch/bestmodels/acceptor_model.hd5 intron-model-Cpos-3-deg-5.hd5
+
 (4) taxonomy.csv
 (5) tools/
     (a) extend-fasta.py

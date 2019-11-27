@@ -3,3 +3,5 @@ Accuracy: 0.947002161850424
  -FP: 13159.0
  -TN: 458588.0
  -FN: 18637.0
+
+Score 0.694588 (60:40 for precision), recall 0.854628, adjusted precision 0.534548

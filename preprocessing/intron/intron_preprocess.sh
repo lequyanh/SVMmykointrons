@@ -26,8 +26,8 @@ ACCEPTOR_RWINDOW=70
 EXAMPLES_LIMIT=40000
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
-INTRON_MIN_LENGTH=10
-INTRON_MAX_LENGTH=600
+INTRON_MIN_LENGTH=40
+INTRON_MAX_LENGTH=80
 #  - name of the file that contains labeled training intron sequences
 INTRON_TRAIN_FILE="intron-train-dataset.csv"
 #  - name of the file that contain validation intron sequences
@@ -51,7 +51,7 @@ splice_site_donor_model=$2
 #  - acceptor splice site prediction model
 splice_site_acceptor_model=$3
 #  - intron prediction model
-true_introns_location=$4
+true_introns_location=$4  #/home/anhvu/Desktop/mykointrons-data/new-sequences
 
 if [ $# -ne 4 ]
 then
@@ -186,7 +186,7 @@ function generate_intron_candidates() {
     $PYTHON generate-pairs.py "$donor_result" "$acceptor_result" \
                               $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH > "$intron_positions_file"
 
-                              echo "Intron positions are in [$INTRON_POSITIONS_FILE]."
+    echo "Intron positions are in [$intron_positions_file]."
 
     echo "Extracting introns from the positions ${donor_result} and ${acceptor_result}"
     assembly_filepath="${assebmlies_loc}/${shroom_name}_AssemblyScaffolds.fasta"
@@ -213,45 +213,55 @@ function label_intron_candidates() {
   done < ../shroom_split/"intron_${train_test}_names.txt"
 }
 
-#echo "Generate acceptor and donor candidates for intron training"
-#generate_splice_site_candidates "train"
-#echo "Generate acceptor and donor candidates for intron testing"
-#generate_splice_site_candidates "test"
+function merge_into_one_dataset() {
+    cd ./intron_candidates/
+
+    echo 'sequence;label' > $INTRON_TRAIN_FILE
+    echo 'sequence;label' > $INTRON_TEST_FILE
+
+    for file in ./train/*.csv
+    do
+        tail -n +2 "$file" | cut -d ';' -f4,5>> $INTRON_TRAIN_FILE
+    done
+
+    for file in ./test/*.csv
+    do
+        tail -n +2 "$file" | cut -d ';' -f4,5 >> $INTRON_TEST_FILE
+    done
+
+    cd ../
+}
+
+echo "Generate acceptor and donor candidates for intron training"
+generate_splice_site_candidates "train"
+echo "Generate acceptor and donor candidates for intron testing"
+generate_splice_site_candidates "test"
 
 # determine the number of CPUs available for each classification task
-#donor_cpus=$((NUMBER_CPUS/2))
-#acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
-#
-#echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
-#
-#echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating traning dataset"
-#get_positive_splice_site_candidates "train"
-#echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating testing dataset"
-#get_positive_splice_site_candidates "test"
+donor_cpus=$((NUMBER_CPUS/2))
+acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
 
-#echo "Pairing positive donors with appropriate positive acceptors to form introns"
-#generate_intron_candidates "train"
-#generate_intron_candidates "test"
-#
-#echo "Labeling intron candidates for training/testing purposes"
-#label_intron_candidates "train"
-#label_intron_candidates "test"
+echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
+
+echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating traning dataset"
+get_positive_splice_site_candidates "train"
+echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating testing dataset"
+get_positive_splice_site_candidates "test"
+
+echo "Pairing positive donors with appropriate positive acceptors to form introns"
+generate_intron_candidates "train"
+generate_intron_candidates "test"
+
+echo "Labeling intron candidates for training/testing purposes"
+label_intron_candidates "train"
+label_intron_candidates "test"
 
 # Merge into one file
-cd ./intron_candidates/
+merge_into_one_dataset
 
-echo 'sequence;label' > $INTRON_TRAIN_FILE
-echo 'sequence;label' > $INTRON_TEST_FILE
+#scp $INTRON_TRAIN_FILE lequyanh@skirit.metacentrum.cz:~/
+#scp $INTRON_TEST_FILE lequyanh@skirit.metacentrum.cz:~/
 
-for file in ./train/*.csv
-do
-    tail -n +2 "$file" | cut -d ';' -f4,5>> $INTRON_TRAIN_FILE
-done
+bash grid_search_intron.sh intron_candidates/$INTRON_TRAIN_FILE
+# $PYTHON ../../classification/train-introns.py intron_candidates/$INTRON_TRAIN_FILE 4 1 3 -t 0.2 -c 10
 
-for file in ./test/*.csv
-do
-    tail -n +2 "$file" | cut -d ';' -f4,5 >> $INTRON_TEST_FILE
-done
-
-scp $INTRON_TRAIN_FILE lequyanh@skirit.metacentrum.cz:~/
-scp $INTRON_TEST_FILE lequyanh@skirit.metacentrum.cz:~/
