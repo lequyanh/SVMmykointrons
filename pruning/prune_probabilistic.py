@@ -1,3 +1,5 @@
+import logging
+import sys
 from typing import List
 from typing import Tuple
 
@@ -5,11 +7,19 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from prune_tools import convert_coords
 from prune_tools import find_overlaps
 from prune_tools import load_as_dicts
 from prune_tools import load_length_counts_as_pdf
 from prune_tools import prune_non_overlap_introns
+
+
+def convert_coords(begin, end, start):
+    intron = scaffold_sequences[scaffold][begin - 1:end]
+
+    begin_converted = scaffold_prepruned.find(intron, start)
+    end_converted = begin_converted + len(intron)
+
+    return begin_converted, end_converted
 
 
 def pdf_length_compare(begin1, end1, begin2, end2):
@@ -23,7 +33,6 @@ def pdf_length_compare(begin1, end1, begin2, end2):
 def prune(
         scaffold_prepruned,
         _overlap_introns: List[Tuple[int, int, int, int]],
-        _exon_coord_mapping: List[Tuple[int, int]],
 ) -> List[str]:
     prev_fragment_origin, fragment_origin = 0, 0
     length_check = 0
@@ -36,6 +45,7 @@ def prune(
         next_cut_coords = pdf_length_compare(begin1, end1, begin2, end2)
 
         if not cut_coords:
+            begin_converted, old_begin = 0, 0
             cut_coords = next_cut_coords
             continue
 
@@ -49,12 +59,21 @@ def prune(
                 multioverlap_flag = False
                 continue
 
-        multioverlap_flag = cut_coords[1] > next_cut_coords[0]
+        multioverlap_flag = cut_coords[1] >= next_cut_coords[0]
         if multioverlap_flag:
             # re-evaluate the best cut
             cut_coords = pdf_length_compare(cut_coords[0], cut_coords[1], next_cut_coords[0], next_cut_coords[1])
 
-        begin_converted, end_converted = convert_coords(_exon_coord_mapping, cut_coords[0], cut_coords[1])
+        # Shift the area of search for intron as find() function finds only first occurrence.
+        # In case of multi-overlap, when 3 introns can start at the same position, keep the old start
+        find_start = begin_converted + 1 if old_begin < cut_coords[0] else begin_converted
+        begin_converted, end_converted = convert_coords(cut_coords[0], cut_coords[1], find_start)
+
+        if begin_converted == -1:
+            logging.warning(f'Could not locate intron of coords {begin1, end1} or {begin2, end2} in '
+                            f'pre-pruned scaffold {scaffold}')
+            continue
+
         pre_exon_frags = scaffold_prepruned[fragment_origin:begin_converted]
         purged_fragments += [pre_exon_frags]
 
@@ -65,12 +84,17 @@ def prune(
         backup_fragment_origin = fragment_origin
         fragment_origin = end_converted
 
+        assert scaffold_prepruned[begin_converted:begin_converted + 2] == 'GT'
+        assert scaffold_prepruned[end_converted - 2:end_converted] == 'AG'
         assert length_check == fragment_origin
 
+        old_begin = cut_coords[0]
         cut_coords = next_cut_coords
 
     if _overlap_introns and not multioverlap_flag:
-        begin_converted, end_converted = convert_coords(_exon_coord_mapping, cut_coords[0], cut_coords[1])
+        find_start = begin_converted + 1 if old_begin < cut_coords[0] else begin_converted
+        begin_converted, end_converted = convert_coords(cut_coords[0], cut_coords[1], find_start)
+
         pre_exon_frags = scaffold_prepruned[fragment_origin:begin_converted]
         purged_fragments += [pre_exon_frags]
 
@@ -95,13 +119,13 @@ def prune(
 
 
 if __name__ == "__main__":
-    # fasta_to_purge = sys.argv[1]  # /home/anhvu/Desktop/Desktop/S21_contigs.fasta
-    # intron_locs = sys.argv[2]   # CSV with intron locations
-    # counts_file = int(sys.argv[3])  # file with typical intron counts. Used to create prob. dens. function
+    fasta_to_purge = sys.argv[1]  # /home/anhvu/Desktop/Desktop/S21_contigs.fasta
+    intron_locs = sys.argv[2]  # CSV with intron locations
+    counts_file = sys.argv[3]  # file with typical intron counts. Used to create prob. dens. function
 
-    fasta_to_purge = 'test'  # '/home/anhvu/Desktop/Desktop/S21_contigs.fasta'
-    intron_locs = 'positions.csv'
-    counts_file = 'sample.txt'
+    # fasta_to_purge = 'test'  # '/home/anhvu/Desktop/Desktop/S21_contigs.fasta'
+    # intron_locs = 'positions.csv'
+    # counts_file = 'sample.txt'
 
     scaffold_sequences, intron_coords = load_as_dicts(fasta_to_purge, intron_locs)
     LENGTH_PDF = load_length_counts_as_pdf(counts_file)
@@ -112,13 +136,13 @@ if __name__ == "__main__":
         print(f'Processing scaffold {scaffold}')
         scaffold_dna = scaffold_sequences[scaffold]
 
-        scaffold_pruned, exon_coord_mapping = prune_non_overlap_introns(scaffold_dna, non_overlap_introns)
-        exon_fragments = prune(scaffold_pruned, overlap_introns, exon_coord_mapping)
+        scaffold_prepruned, exon_coord_mapping = prune_non_overlap_introns(scaffold_dna, non_overlap_introns)
+        exon_fragments = prune(scaffold_prepruned, overlap_introns)
 
         # Each scaffold will be fragmented to exon pieces and overlap alternative windows
         pruned_scaffolds[scaffold] = exon_fragments
 
-    with open(f'prunned-{fasta_to_purge}', 'w') as f:
+    with open(f'pruned-{fasta_to_purge}', 'w') as f:
         to_save = [SeqRecord(id=scaffold, seq=Seq(''.join(sequences))) for scaffold, sequences in
                    pruned_scaffolds.items()]
         SeqIO.write(to_save, f, 'fasta')

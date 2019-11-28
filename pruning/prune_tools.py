@@ -25,7 +25,7 @@ def load_as_dicts(fasta_to_purge: str, intron_locs: str):
     # Load FASTA with DNA to cleanse introns from.
     # Load as dictionary where keys are scaffold names
     with open(fasta_to_purge, 'r') as f:
-        _scaffolds_input = {desc: seq for desc, seq in read_fasta(f)}
+        scaffolds_input = {desc: seq for desc, seq in read_fasta(f)}
 
     # Load intron location data
     intron_coords = dict()
@@ -41,7 +41,7 @@ def load_as_dicts(fasta_to_purge: str, intron_locs: str):
 
             intron_coords[scaff] = positions
 
-    return _scaffolds_input, intron_coords
+    return scaffolds_input, intron_coords
 
 
 def find_overlaps(_intron_coords: dict):
@@ -58,7 +58,7 @@ def find_overlaps(_intron_coords: dict):
 
         for i, (start, end) in enumerate(positions):
 
-            if start < last_end:
+            if start <= last_end:
                 positions_overlap.append((last_start, last_end, start, end))
 
                 if (last_start, last_end) in positions_non_overlap:
@@ -67,7 +67,7 @@ def find_overlaps(_intron_coords: dict):
                     correction += 1  # correction for multi-overlap
 
                 overlap_ratio = (last_end - start) / (last_end - last_start)
-                logging.info(f'{scaffold}-{last_start}-{last_end}---{start}-{end}-{overlap_ratio}')
+                logging.info(f'{scaffold}> simple overlap ratio {overlap_ratio}')
             else:
                 positions_non_overlap += [(start, end)]
 
@@ -112,28 +112,3 @@ def prune_non_overlap_introns(
     purged_scaffold += exon_seq
 
     return purged_scaffold, exon_coord_mapping
-
-
-def convert_coords(
-        exon_coord_mapping: List[Tuple[int, int]],
-        overlap_intron_start: int,
-        overlap_intron_end: int
-):
-    """"
-    Converts the overlapped intron coordinates in the original FASTA to coordinates in pruned scaffolds.
-    The overlapped introns lie in some of the exons.
-    @:param _exon_coord_mapping: Map, with (exon_coordinates_unprunned : exon_coordinates_pruned)
-    """
-
-    def closest_smaller(cord_mapping):
-        if overlap_intron_start > cord_mapping[0]:
-            return overlap_intron_start - 1 - cord_mapping[0]
-        return 9999999999999999999999
-
-    # Find the coordinate mappings of the "bad" exon, that contain the overlapped intron
-    bad_exon_start, bad_exon_converted_start = min(exon_coord_mapping, key=closest_smaller)
-
-    begin_converted = bad_exon_converted_start + (overlap_intron_start - 1 - bad_exon_start)
-    end_converted = bad_exon_converted_start + (overlap_intron_end - bad_exon_start)
-
-    return begin_converted, end_converted
