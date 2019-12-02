@@ -118,7 +118,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(
         level=logging.INFO,
-        filename=f'train-introns-{argparser.l}-{argparser.C}.output',
+        filename=f'train-introns-d{argparser.l}-C{argparser.C}.output',
         filemode='w'
     )
 

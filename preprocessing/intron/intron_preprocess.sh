@@ -265,3 +265,5 @@ merge_into_one_dataset
 bash grid_search_intron.sh intron_candidates/$INTRON_TRAIN_FILE
 # $PYTHON ../../classification/train-introns.py intron_candidates/$INTRON_TRAIN_FILE 4 1 3 -t 0.2 -c 10
 
+rm *.log
+
