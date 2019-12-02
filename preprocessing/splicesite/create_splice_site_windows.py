@@ -67,7 +67,7 @@ def get_donor_acceptor_windows_from_intron_locations(position_infos, scaffold_di
     for pos_info in position_infos:
         scaffold, strand, start, end, intron = pos_info[0], pos_info[1], int(pos_info[2]), int(pos_info[3]), pos_info[4]
 
-        seq = scaffold_dict[scaffold[1:]]  # remove the > at the beginning
+        seq = scaffold_dict[scaffold[1:]]  # remove the > at the beginning of the scaffold id line
 
         if strand == '+':
             donor_wind_interval = slice(start - donor_lwindow - 1, start + donor_rwindow + 1)
@@ -185,7 +185,6 @@ def append_examples(
         # Read sequences from FASTA file
         false_splice_windows = f.readlines()[1::2]
 
-        # TODO Ramac1 is empty and failing here
         window_mid = int(0.5 * (len(false_splice_windows[1]) - 2))  # -2 for GT/AG dimers
 
         # Adjust the sequences so they have the same length as positive examples
@@ -242,8 +241,3 @@ append_false_splice_site_windows(false_acceptor_file, acceptor_csv, acceptor_lwi
 
 # append_positive_train_examples(true_acceptor_file, csv_acceptor_train, acceptor_lwindow, acceptor_rwindow)
 # append_positive_train_examples(true_donor_file, csv_donors_train, donor_lwindow, donor_rwindow)
-
-
-# tar -zcvf Agahy1-donor-train.csv.tar.gz ../data/splice-sites-train/donor/Agahy1-donor-dataset-splice-site-train.csv
-# scp Agahy1-donor-train.csv.tar.gz lequyanh@skirit.metacentrum.cz:/storage/praha1/home/lequyanh
-# qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v DEGREE=15,LWINDOW=60,RWINDOW=70,C=1,DATAFILE=Armga1-donor-train.csv.tar.gz,CPU=10 train-splice-site.sh

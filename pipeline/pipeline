@@ -218,9 +218,9 @@ classify_splice_sites_step
 pair_splice_sites_and_extract_introns_step
 
 ## ===================================== VALIDATE =====================================
-validate_introns_step
+# validate_introns_step
 ### =================================== or CLASIFY =====================================
-#classify_introns_step
+classify_introns_step
 
 echo "Pipeline log for file ${assembly_filepath}" > pipeline.output
 for p in ./*.log;

@@ -1,10 +1,11 @@
 #!/bin/bash
 
 ASSEMBLIES_LOC=~/Desktop/mykointrons-data
-SHROOM_NAMES_ALL=../basidiomycotas.txt
+SHROOM_NAMES_ALL=../ascomycotas.txt
+SHROOM_SPECIES=ascomycotas
 
 # ----------- SPLITS MUSHROOM CLASSES TO 4 SETS -----------------
-split_dir="shroom_split"
+split_dir="shroom_split/$SHROOM_SPECIES/"
 mkdir -p $split_dir
 
 INT_TRAIN_NAMES="$split_dir/intron_train_names.txt"
@@ -27,21 +28,27 @@ echo "Number of mushrooms ${no_shrooms}. Splitting to 2 train lists with ${train
 
 # ----------- FOR MUSHROOMS USED FOR SPLICE SITE TRAINING/TESTING, GENERATE WINDOWS -----------------
 # This should create 2 folders - test and train each containing donor and acceptor windows from a particular shroom
-bash splicesite/create_train_test_csvs.sh $SPLICE_TRAIN_NAMES $ASSEMBLIES_LOC 150 150 ../data train
-bash splicesite/create_train_test_csvs.sh $SPLICE_TEST_NAMES $ASSEMBLIES_LOC 150 150 ../data test
+splicesite_dataloc="../data/$SHROOM_SPECIES"
+mkdir -p $splicesite_dataloc
 
+echo "Generating train and test splice site windows for mushroom $SHROOM_SPECIES. Data will be saved to $splicesite_dataloc"
+
+bash splicesite/create_train_test_csvs.sh $SPLICE_TRAIN_NAMES $ASSEMBLIES_LOC 150 150 $splicesite_dataloc train
+bash splicesite/create_train_test_csvs.sh $SPLICE_TEST_NAMES $ASSEMBLIES_LOC 150 150 $splicesite_dataloc test
+
+# ----------- MIX WINDOWS FROM ALL MUSHROOMS AND SAMPLE A SINGLE TRAIN/TEST CSV FILE -----------------
 NO_TRAIN=400000
 SHUFFLED_DONOR_SITE_TRAINSET_NAME='shuff_aggreg_donor_site_train.csv'
 SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME='shuff_aggreg_acceptor_site_train.csv'
-bash splicesite/merge_shuffle_datasets.sh ../data/train/donor $NO_TRAIN $SHUFFLED_DONOR_SITE_TRAINSET_NAME ./
-bash splicesite/merge_shuffle_datasets.sh ../data/train/acceptor $NO_TRAIN $SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME ./
-mv $SHUFFLED_DONOR_SITE_TRAINSET_NAME ../data/train
-mv $SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME ../data/train
+bash splicesite/merge_shuffle_datasets.sh $splicesite_dataloc/train/donor $NO_TRAIN $SHUFFLED_DONOR_SITE_TRAINSET_NAME ./
+bash splicesite/merge_shuffle_datasets.sh $splicesite_dataloc/train/acceptor $NO_TRAIN $SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME ./
+mv $SHUFFLED_DONOR_SITE_TRAINSET_NAME $splicesite_dataloc/train
+mv $SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME $splicesite_dataloc/train
 
 NO_TEST=500000
 SHUFFLED_DONOR_SITE_TESTSET_NAME='shuff_aggreg_donor_site_test.csv'
 SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME='shuff_aggreg_acceptor_site_test.csv'
-bash splicesite/merge_shuffle_datasets.sh ../data/test/donor $NO_TEST $SHUFFLED_DONOR_SITE_TESTSET_NAME ./
-bash splicesite/merge_shuffle_datasets.sh ../data/test/acceptor $NO_TEST $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME ./
-mv $SHUFFLED_DONOR_SITE_TESTSET_NAME ../data/test
-mv $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME ../data/test
+bash splicesite/merge_shuffle_datasets.sh $splicesite_dataloc/test/donor $NO_TEST $SHUFFLED_DONOR_SITE_TESTSET_NAME ./
+bash splicesite/merge_shuffle_datasets.sh $splicesite_dataloc/test/acceptor $NO_TEST $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME ./
+mv $SHUFFLED_DONOR_SITE_TESTSET_NAME $splicesite_dataloc/test
+mv $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME $splicesite_dataloc/test
