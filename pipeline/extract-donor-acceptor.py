@@ -32,6 +32,10 @@ with open(assembly, 'r') as assembly_f:
                 win_start = position - lwindow - 1
                 win_end = position + rwindow + 1
 
+                if win_start < 0:
+                    logging.warning(f'Insufficient bases for window. Skipping')
+                    continue
+
                 # extract the window
                 window = sequence[win_start:win_end]
 

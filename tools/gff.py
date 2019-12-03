@@ -1,6 +1,7 @@
 import random
+import sys
 
-import gffutils
+import gfflib
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -11,32 +12,24 @@ MARGIN_SIZE = 150
 DONOR = 'GT'
 ACCEPTOR = 'AG'
 
-fn = gffutils.example_filename('/home/anhvu/Desktop/ascomycota-data/GFFS/Aciaci1_GeneCatalog_genes_20160228.gff')
-assembly_fasta = '/home/anhvu/Desktop/mykointrons-data/data/Assembly/Aciaci1_AssemblyScaffolds.fasta'
+# shroom_name = sys.argv[1]
+# assembly_fasta = sys.argv[2]
+# gff_file = sys.argv[3]
+# output_folder = sys.argv[4]
 
+# ---------------------------
+shroom_name = 'Aciaci1'
+gff_file = f'/home/anhvu/Desktop/ascomycota-data/GFFS/{shroom_name}_GeneCatalog_genes_20160228.gff'
+assembly_fasta = f'/home/anhvu/Desktop/mykointrons-data/data/Assembly/{shroom_name}_AssemblyScaffolds.fasta'
 
-def transform_func(d):
-    try:
-        d['transcriptId'] = d['proteinId']
-    except KeyError:
-        pass
-    return d
-
-
-db = gffutils.create_db(
-    fn, ":memory:",
-    id_spec={'transcript': 'transcriptId', 'gene': 'name'},
-    gtf_transcript_key='transcriptId',
-    gtf_gene_key='name',
-    transform=transform_func
-)
+db = gfflib.parse_gff(gff_file)
 
 intergenic_pseudo_donors = []
 intergenic_pseudo_acceptors = []
 
 for gene in db.all_features(featuretype='gene'):
 
-    if random.randint(0, 10) <= 9:
+    if random.randint(0, 10) < 9:
         continue
 
     for f in db.children(gene['name'][0], featuretype='exon'):
@@ -75,8 +68,8 @@ for gene in db.all_features(featuretype='gene'):
                 else:
                     intergenic_pseudo_acceptors.append(pseudosplicesite)
 
-with open('sadfasd-false-donor', 'w') as f:
+with open(f'{shroom_name}-false-donor', 'w') as f:
     SeqIO.write(intergenic_pseudo_donors, f, 'fasta')
 
-with open('sadfasd-false-acceptor', 'w') as f:
+with open(f'{shroom_name}-false-acceptor', 'w') as f:
     SeqIO.write(intergenic_pseudo_acceptors, f, 'fasta')
