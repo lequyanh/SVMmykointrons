@@ -1,4 +1,4 @@
-import gfflib
+import gffutils
 
 MARGIN_SIZE = 150
 DONOR = 'GT'
@@ -14,9 +14,9 @@ def transform_func(d):
 
 
 def parse_gff(gff_file: str):
-    fn = gfflib.example_filename(gff_file)
+    fn = gffutils.example_filename(gff_file)
 
-    db = gfflib.create_db(
+    db = gffutils.create_db(
         fn, ":memory:",
         id_spec={'transcript': 'transcriptId', 'gene': 'name'},
         gtf_transcript_key='transcriptId',

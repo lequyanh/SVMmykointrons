@@ -9,7 +9,7 @@ from fastalib import read_fasta
 
 logging.basicConfig(
     level=logging.INFO,
-    filename='prune-introns.log',
+    filename='prune-tools.log',
     filemode='w'
 )
 
@@ -112,3 +112,9 @@ def prune_non_overlap_introns(
     purged_scaffold += exon_seq
 
     return purged_scaffold, exon_coord_mapping
+
+
+def get_scaffold_without_introns(original_scaffolds: dict, to_prune_scaffolds: dict):
+    scaffold_no_intron = set(original_scaffolds.keys()) - set(to_prune_scaffolds.keys())
+
+    return {sf: original_scaffolds[sf] for sf in scaffold_no_intron}

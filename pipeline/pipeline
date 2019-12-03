@@ -213,6 +213,10 @@ function validate_introns_step() {
             | cut --complement -d ';' -f4 >> $INTRON_RESULT
 }
 
+function cut_introns_step() {
+    $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} /home/anhvu/PycharmProjects/mycointrons/pruning/basidiomycota_lens.txt
+}
+
 extract_donor_acceptor_step
 classify_splice_sites_step
 pair_splice_sites_and_extract_introns_step
@@ -221,6 +225,8 @@ pair_splice_sites_and_extract_introns_step
 # validate_introns_step
 ### =================================== or CLASIFY =====================================
 classify_introns_step
+
+cut_introns_step
 
 echo "Pipeline log for file ${assembly_filepath}" > pipeline.output
 for p in ./*.log;
