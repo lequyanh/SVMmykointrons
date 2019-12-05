@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Iterable
 
 import numpy as np
+from Bio import SeqIO
 
 from fastalib import complementary, read_fasta
 
@@ -183,7 +184,7 @@ def append_examples(
 ):
     with open(donor_acceptor_file, 'r') as f:
         # Read sequences from FASTA file
-        false_splice_windows = f.readlines()[1::2]
+        false_splice_windows = [str(sr.seq) for sr in SeqIO.parse(f, 'fasta')]
 
         window_mid = int(0.5 * (len(false_splice_windows[1]) - 2))  # -2 for GT/AG dimers
 

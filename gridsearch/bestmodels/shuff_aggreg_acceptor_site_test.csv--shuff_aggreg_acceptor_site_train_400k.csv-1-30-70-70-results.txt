@@ -1,7 +1,0 @@
-Accuracy: 0.9273768529969632
- -TP: 81450.0
- -FP: 14297.0
- -TN: 474952.0
- -FN: 29275.0
-
-Score 0.587816 (60:40 in favor of precision), recall 0.735606, adjusted precision 0.440025

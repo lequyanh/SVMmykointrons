@@ -1,0 +1,14 @@
+INFO:root:Classification of file ../data/ascomycota/test/shuff_aggreg_acceptor_site_test.csv with model acceptor-model.hd5
+INFO:root:Accuracy: 0.9430963096309631
+ -TP: 74651.0
+ -FP: 4429.0
+ -TN: 396850.0
+ -FN: 24020.0
+
+401279 negative examples, 98671 positive examples (4.1:1)
+Negative examples are intergenic GT and AG windows sampled with probability 10%
+In an actual genome dataset, the ratio is therefore 41:1
+Score 0.721381, recall 0.756565, adjusted precision 0.697925
+
+If we also consider intra-genec regions, the ration of false:true examples rises to 40:1
+and adjusted precision drops to 0.64276

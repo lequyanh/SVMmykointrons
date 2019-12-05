@@ -2,7 +2,29 @@
 
 ASSEMBLIES_LOC=~/Desktop/mykointrons-data
 SHROOM_NAMES_ALL=../ascomycotas.txt
-SHROOM_SPECIES=ascomycotas
+SHROOM_SPECIES=ascomycota
+GFF_LOC=/home/anhvu/Desktop/ascomycota-data/GFFS/
+
+# ----------- CREATE FALSE SPLICE SITE WINDOWS FOR EACH SHROOM -----------------
+#OUTPUT_LOC="/home/anhvu/Desktop/mykointrons-data/new-sequences/"
+#
+#while read shroom; do
+#  echo "${shroom}"
+#
+#  if [ -f "$OUTPUT_LOC/${shroom}/${shroom}-acceptor-false.fasta" ]
+#  then
+#    continue
+#  fi
+#
+#  shroom_assembly="$ASSEMBLIES_LOC/data/Assembly/${shroom}_AssemblyScaffolds.fasta"
+#
+#  find $GFF_LOC -name "${shroom}*.gff" -print0 |
+#  xargs -I{} python ../tools/gff.py "${shroom}" "${shroom_assembly}" {} "$OUTPUT_LOC/${shroom}"
+#
+#  mv "${shroom}-acceptor-false.fasta" $OUTPUT_LOC/"${shroom}"/
+#  mv "${shroom}-donor-false.fasta" $OUTPUT_LOC/"${shroom}"/
+#
+#done < $SHROOM_NAMES_ALL
 
 # ----------- SPLITS MUSHROOM CLASSES TO 4 SETS -----------------
 split_dir="shroom_split/$SHROOM_SPECIES/"
@@ -29,7 +51,10 @@ echo "Number of mushrooms ${no_shrooms}. Splitting to 2 train lists with ${train
 # ----------- FOR MUSHROOMS USED FOR SPLICE SITE TRAINING/TESTING, GENERATE WINDOWS -----------------
 # This should create 2 folders - test and train each containing donor and acceptor windows from a particular shroom
 splicesite_dataloc="../data/$SHROOM_SPECIES"
-mkdir -p $splicesite_dataloc
+mkdir -p $splicesite_dataloc/train/donor/
+mkdir -p $splicesite_dataloc/train/acceptor/
+mkdir -p $splicesite_dataloc/test/donor/
+mkdir -p $splicesite_dataloc/test/acceptor/
 
 echo "Generating train and test splice site windows for mushroom $SHROOM_SPECIES. Data will be saved to $splicesite_dataloc"
 
