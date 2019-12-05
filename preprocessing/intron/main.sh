@@ -5,7 +5,7 @@
 PYTHON=~/anaconda3/envs/mykointron/bin/python
 #  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
-NUMBER_CPUS=10
+NUMBER_CPUS=12
 #  - memory limit for caching (in MB)
 #    this is used in the intron prediction
 CACHE_LIMIT=1024
@@ -51,7 +51,7 @@ assebmlies_loc=$1   #/home/anhvu/Desktop/mykointrons-data/data/Assembly
 splice_site_donor_model=$2
 #  - acceptor splice site prediction model
 splice_site_acceptor_model=$3
-#  - intron prediction model
+#  - location of true intron sequences
 true_introns_location=$4  #/home/anhvu/Desktop/mykointrons-data/new-sequences
 
 if [ $# -ne 4 ]

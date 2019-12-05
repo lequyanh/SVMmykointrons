@@ -1,5 +1,7 @@
 #!/bin/bash
 
+PYTHON=/home/anhvu/anaconda3/envs/mykointron/bin/python
+
 ASSEMBLIES_LOC=~/Desktop/mykointrons-data
 SHROOM_NAMES_ALL=../ascomycotas.txt
 SHROOM_SPECIES=ascomycota
@@ -58,8 +60,17 @@ mkdir -p $splicesite_dataloc/test/acceptor/
 
 echo "Generating train and test splice site windows for mushroom $SHROOM_SPECIES. Data will be saved to $splicesite_dataloc"
 
-bash splicesite/create_train_test_csvs.sh $SPLICE_TRAIN_NAMES $ASSEMBLIES_LOC 150 150 $splicesite_dataloc train
-bash splicesite/create_train_test_csvs.sh $SPLICE_TEST_NAMES $ASSEMBLIES_LOC 150 150 $splicesite_dataloc test
+function create_train_test_csvs() {
+    shroom_names=$1
+    train_test=$2
+    for shroom in $(<"$shroom_names")
+    do
+        $PYTHON ./splicesite/create_splice_site_windows.py $ASSEMBLIES_LOC "${shroom}" 150 150 150 150 $splicesite_dataloc "${train_test}"
+    done
+}
+
+create_train_test_csvs $SPLICE_TRAIN_NAMES train
+create_train_test_csvs $SPLICE_TEST_NAMES test
 
 # ----------- MIX WINDOWS FROM ALL MUSHROOMS AND SAMPLE A SINGLE TRAIN/TEST CSV FILE -----------------
 NO_TRAIN=400000
