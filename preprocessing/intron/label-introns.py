@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 import pandas as pd
@@ -15,9 +16,19 @@ if __name__ == '__main__':
     intron_candidates_csv = sys.argv[1]
     # FASTA file with true introns
     true_introns_fasta = sys.argv[2]
+    len_range_start = int(sys.argv[3])
+    len_range_end = int(sys.argv[4])
+
+    if not os.path.isfile(true_introns_fasta):
+        logging.warning(f'Introns file {true_introns_fasta} cannot be found. '
+                        f'Candidates in {intron_candidates_csv} will be deleted')
+
+        os.remove(intron_candidates_csv)
+        exit(0)
 
     with open(true_introns_fasta, 'r') as intron_fasta_f:
         introns_seqrecords = list(SeqIO.parse(intron_fasta_f, 'fasta'))
+        logging.info(f'Parsing introns from {true_introns_fasta} file.')
         logging.info(f'Total number of introns: {len(introns_seqrecords)}')
 
         # List which scaffolds the candidates come from
@@ -39,6 +50,8 @@ if __name__ == '__main__':
         introns = set([str(i.seq) for i in introns])
 
         logging.info(f'Number of true introns on the given (+/-) strand: {len(introns)}')
+        right_length_introns = list(filter(lambda seq: len_range_start < len(seq) < len_range_end, introns))
+        logging.info(f'Number of introns in the range {len_range_start} - {len_range_end}: {len(right_length_introns)}')
 
         label = [candidate['sequence'] in introns for i, candidate in intron_candidates.iterrows()]
         no_positive = sum(label)

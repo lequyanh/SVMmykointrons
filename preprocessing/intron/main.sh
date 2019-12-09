@@ -9,6 +9,8 @@ NUMBER_CPUS=12
 #  - memory limit for caching (in MB)
 #    this is used in the intron prediction
 CACHE_LIMIT=1024
+#   - path to data storage on the remote metacenter
+ROOT="lequyanh@skirit.metacentrum.cz:/storage/praha1/home/lequyanh"
 # -------------------------------------------------------------
 
 # Pipeline settings:
@@ -223,7 +225,7 @@ function label_intron_candidates() {
 }
 
 function merge_into_one_dataset() {
-    cd ./$DIVISION/intron_candidates/
+    cd "$1"
 
     echo 'sequence;label' > $INTRON_TRAIN_FILE
     echo 'sequence;label' > $INTRON_TEST_FILE
@@ -241,10 +243,10 @@ function merge_into_one_dataset() {
     cd ../
 }
 
-#echo "Generate acceptor and donor candidates for intron training"
-#generate_splice_site_candidates "train"
-#echo "Generate acceptor and donor candidates for intron testing"
-#generate_splice_site_candidates "test"
+echo "Generate acceptor and donor candidates for intron training"
+generate_splice_site_candidates "train"
+echo "Generate acceptor and donor candidates for intron testing"
+generate_splice_site_candidates "test"
 
 # determine the number of CPUs available for each classification task
 donor_cpus=$((NUMBER_CPUS/2))
@@ -257,22 +259,18 @@ get_positive_splice_site_candidates "train"
 echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating testing dataset"
 get_positive_splice_site_candidates "test"
 
-#echo "Pairing positive donors with appropriate positive acceptors to form introns"
-#generate_intron_candidates "train"
-#generate_intron_candidates "test"
-#
-#echo "Labeling intron candidates for training/testing purposes"
-#label_intron_candidates "train"
-#label_intron_candidates "test"
-#
-## Merge into one file
-#merge_into_one_dataset
+echo "Pairing positive donors with appropriate positive acceptors to form introns"
+generate_intron_candidates "train"
+generate_intron_candidates "test"
 
-#scp $INTRON_TRAIN_FILE lequyanh@skirit.metacentrum.cz:~/
-#scp $INTRON_TEST_FILE lequyanh@skirit.metacentrum.cz:~/
+echo "Labeling intron candidates for training/testing purposes"
+label_intron_candidates "train"
+label_intron_candidates "test"
 
-# bash grid_search_intron.sh intron_candidates/$INTRON_TRAIN_FILE
-# $PYTHON ../../classification/train-introns.py intron_candidates/$INTRON_TRAIN_FILE 4 1 3 -t 0.2 -c 10
+output_loc=./$DIVISION/intron_candidates/
+echo "Merging labeled intron dataset into one file ${INTRON_TRAIN_FILE} and ${INTRON_TEST_FILE} at ${output_loc}"
+merge_into_one_dataset ${output_loc}
 
-# rm *.log
+echo "Copying the overal intron train file to ${ROOT}/data/intron"
+scp "${output_loc}/$INTRON_TRAIN_FILE" $ROOT/data/intron
 

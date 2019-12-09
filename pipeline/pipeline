@@ -202,8 +202,8 @@ function classify_introns_step() {
 
 function validate_introns_step() {
     # Label introns
-    intron_source=~/Desktop/mykointrons-data/new-sequences/Agahy1/Agahy1-introns.fasta
-    $PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source"
+    intron_source=~/Desktop/mykointrons-data/new-sequences/Canar1/Canar1-introns.fasta
+    $PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
     # prepare a file for the intron classification results
     echo "scaffold;start;end;label;prediction" > $INTRON_RESULT
@@ -222,8 +222,8 @@ classify_splice_sites_step
 pair_splice_sites_and_extract_introns_step
 
 ## ===================================== VALIDATE =====================================
-# validate_introns_step
-### =================================== or CLASIFY =====================================
+#validate_introns_step
+## =================================== or CLASIFY =====================================
 classify_introns_step
 
 cut_introns_step
