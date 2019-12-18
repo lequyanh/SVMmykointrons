@@ -54,7 +54,7 @@ def prune(
         try:
             assert length_check == end_converted
         except AssertionError:
-            logging.warning(f'Fragment origin is {fragment_start} but length check is {length_check}'
+            logging.warning(f'Fragment origin is {fragment_start} but length check is {length_check} '
                             f'Scaffold {scaffold}')
 
         return purged_fragments, introns, fragment_start, prev_fragment_origin
@@ -100,7 +100,12 @@ def prune(
         rest_of_exon = scaffold_prepruned[fragment_origin:]
         purged_fragments.append(rest_of_exon)
 
-        assert len(''.join(purged_fragments)) + len(''.join(introns)) == len(scaffold_prepruned)
+        try:
+            assert len(''.join(purged_fragments)) + len(''.join(introns)) == len(scaffold_prepruned)
+        except AssertionError:
+            logging.warning(
+                f'Fragment length is {len(scaffold_prepruned)} but length check is {len("".join(purged_fragments)) + len("".join(introns))} '
+                f'Scaffold {scaffold}')
 
         return purged_fragments
     else:
@@ -126,14 +131,20 @@ if __name__ == "__main__":
         scaffold_prepruned, _ = prune_non_overlap_introns(scaffold_dna, non_overlap_introns)
         exon_fragments = prune(scaffold_prepruned, overlap_introns)
 
-        pruned_scaffolds[scaffold] = exon_fragments
+        pruned_scaffolds[scaffold] = ''.join(exon_fragments)
+        assert len(scaffold_dna) >= len(pruned_scaffolds[scaffold])
+
+    assert set(pruned_scaffolds.keys()).intersection(set(no_intron_scaffolds.keys())) == set()
+    assert scaffold_sequences.keys() == {**pruned_scaffolds, **no_intron_scaffolds}.keys()
+    assert len(''.join(pruned_scaffolds.values())) + len(''.join(no_intron_scaffolds.values())) < len(
+        ''.join(scaffold_sequences.values()))
 
     filename = os.path.basename(fasta_to_purge)
     with open(f'pruned-{filename}', 'w') as f:
         # Create SeqRecords from joined dictionaries - purged scaffolds and scaffolds with no introns
         to_save = [
-            SeqRecord(id=scaffold, seq=Seq(''.join(sequences)))
-            for scaffold, sequences in
+            SeqRecord(id=scaffold, seq=Seq(sequence))
+            for scaffold, sequence in
             {**pruned_scaffolds, **no_intron_scaffolds}.items()
         ]
 

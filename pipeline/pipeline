@@ -214,7 +214,7 @@ function validate_introns_step() {
 }
 
 function cut_introns_step() {
-    $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} /home/anhvu/PycharmProjects/mycointrons/pruning/basidiomycota_lens.txt
+    $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ../statistics/basidiomycota-intron-lens.txt
 }
 
 extract_donor_acceptor_step
