@@ -6,12 +6,6 @@ import numpy as np
 import pandas as pd
 import shogun as sg
 
-logging.basicConfig(
-    level=logging.INFO,
-    filename='classify-introns.log',
-    filemode='w'
-)
-
 
 def read_model(filename):
     svm = sg.LibSVM()
@@ -70,6 +64,16 @@ if __name__ == "__main__":
         .to_csv(sys.stdout, sep=';', index=False)
 
     if 'label' in data:
+        logging.basicConfig(
+            level=logging.INFO,
+            filename=f'classification-d{argparser.l}.log',
+            filemode='w'
+        )
+
+        logging.info(
+            f'Validation of model {argparser.model_filename} on testset {argparser.data_filename}; d={argparser.l}'
+        )
+
         labels = sg.BinaryLabels(np.array(data.label))
         acc = sg.AccuracyMeasure()
         acc.evaluate(predict, labels)

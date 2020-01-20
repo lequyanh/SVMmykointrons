@@ -51,8 +51,8 @@ function best_model_metrics(){
   MAXPREC=0
   MAXSCORE=0
 
-  for f in $1/*.txt
-  do
+for f in ${1}/*txt; do
+#for f in ${1}/*/*txt; do   # version for a case, where results.txt are nested in appropriate folders
 
     get_metrics "$f"
 

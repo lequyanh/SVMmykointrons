@@ -3,7 +3,7 @@ from Bio import SeqIO
 
 splice_sites_windows = pd.read_csv('Tripe1_results/splice-site-donor-dataset.csv', delimiter=';')
 
-with open("/home/anhvu/Desktop/mykointrons-data/new-sequences/Tripe1/Tripe1-introns.fasta", 'r') as f:
+with open("/home/anhvu/Desktop/mykointrons-data/new-sequences/Blade1/Blade1-introns.fasta", 'r') as f:
     pos_strand_introns = list(filter(lambda sr: sr.description.split(' ')[1] == '+', SeqIO.parse(f, 'fasta')))
     print(f'Number of positive strand introns: {len(pos_strand_introns)}')
 

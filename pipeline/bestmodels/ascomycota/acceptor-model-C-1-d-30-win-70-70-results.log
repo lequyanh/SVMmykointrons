@@ -1,0 +1,11 @@
+INFO:root:Classification of file ../data/ascomycota/test/shuff_aggreg_acceptor_site_test.csv with model amodel.hd5
+INFO:root:Accuracy: 0.9068786878687869
+ -TP: 164508.0
+ -FP: 12065.0
+ -TN: 288886.0
+ -FN: 34491.0
+
+>> bash evaluate_models.sh -f ~/PycharmProjects/mycointrons/pipeline/bestmodels/ascomycota/classify-splice-sites-acceptor-model.log -r 0.003 -t 0.66 -a 0.5
+Score 0.462433, recall 0.826678, adjusted precision 0.155342
+(the adjustment ratio taken from ./statistics//splice-site-performance-metrics/ascomycota/adjusting-precision-methodology)
+

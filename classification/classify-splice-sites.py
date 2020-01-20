@@ -1,16 +1,11 @@
 import logging
+import os
 import sys
 from contextlib import closing
 
 import numpy as np
 import pandas as pd
 import shogun as sg
-
-logging.basicConfig(
-    level=logging.INFO,
-    filename='classify-splice-sites.log',
-    filemode='w'
-)
 
 
 def read_data(filename, window):
@@ -76,6 +71,13 @@ if __name__ == "__main__":
     predict = model.apply_binary(features)
 
     if argparser.v:
+        mod_name = os.path.basename(argparser.model_filename)
+        logging.basicConfig(
+            level=logging.INFO,
+            filename=f'classify-splice-sites-{mod_name}.log',
+            filemode='w'
+        )
+
         logging.info(f'Classification of file {argparser.data_filename} with model {argparser.model_filename}')
 
         labels = sg.BinaryLabels(np.array(data.label))

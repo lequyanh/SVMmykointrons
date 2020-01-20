@@ -5,7 +5,7 @@
 PYTHON=~/anaconda3/envs/mykointron/bin/python
 #  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
-NUMBER_CPUS=10
+NUMBER_CPUS=12
 #  - memory limit for caching (in MB)
 #    this is used in the intron prediction
 CACHE_LIMIT=1024
@@ -27,7 +27,7 @@ INTRON_MIN_LENGTH=40
 INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
 #    it is used in the intron prediction and it must be equal to the order used while training
-SPECT_KERNEL_ORDER=5
+SPECT_KERNEL_ORDER=6
 #  - names of the splice site datasets
 #    it will be created before the splice sites classification
 DONOR_FILE="splice-site-donor-dataset.csv"
@@ -64,6 +64,8 @@ splice_site_donor_model=$2
 splice_site_acceptor_model=$3
 #  - intron prediction model
 intron_model=$4
+#  - in case of validation
+intron_source="/home/anhvu/Desktop/mykointrons-data/new-sequences/Blade1/Blade1-introns.fasta"
 
 if [ $# -ne 4 ]
 then
@@ -202,7 +204,6 @@ function classify_introns_step() {
 
 function validate_introns_step() {
     # Label introns
-    intron_source=~/Desktop/mykointrons-data/new-sequences/Canar1/Canar1-introns.fasta
     $PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
     # prepare a file for the intron classification results
@@ -217,12 +218,12 @@ function cut_introns_step() {
     $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ../statistics/basidiomycota-intron-lens.txt
 }
 
-extract_donor_acceptor_step
+#extract_donor_acceptor_step
 classify_splice_sites_step
 pair_splice_sites_and_extract_introns_step
 
 ## ===================================== VALIDATE =====================================
-#validate_introns_step
+# validate_introns_step
 ## =================================== or CLASIFY =====================================
 classify_introns_step
 

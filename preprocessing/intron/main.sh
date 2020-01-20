@@ -219,7 +219,7 @@ function label_intron_candidates() {
     intron_source="${true_introns_location}/${shroom_name}/${shroom_name}-introns.fasta"
 
     echo "Labeling intron candidates in ${introns_file} file. True introns from ${intron_source}"
-    $PYTHON label-introns.py "$introns_file" "$intron_source"
+    $PYTHON label-introns.py "$introns_file" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
   done < "${baseloc}/../shroom_split/${DIVISION}/intron_${train_test}_names.txt"
 }
@@ -243,25 +243,25 @@ function merge_into_one_dataset() {
     cd ../
 }
 
-echo "Generate acceptor and donor candidates for intron training"
-generate_splice_site_candidates "train"
-echo "Generate acceptor and donor candidates for intron testing"
-generate_splice_site_candidates "test"
+#echo "Generate acceptor and donor candidates for intron training"
+#generate_splice_site_candidates "train"
+#echo "Generate acceptor and donor candidates for intron testing"
+#generate_splice_site_candidates "test"
 
 # determine the number of CPUs available for each classification task
 donor_cpus=$((NUMBER_CPUS/2))
 acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
+#
+#echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
+#
+#echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating traning dataset"
+#get_positive_splice_site_candidates "train"
+#echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating testing dataset"
+#get_positive_splice_site_candidates "test"
 
-echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
-
-echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating traning dataset"
-get_positive_splice_site_candidates "train"
-echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating testing dataset"
-get_positive_splice_site_candidates "test"
-
-echo "Pairing positive donors with appropriate positive acceptors to form introns"
-generate_intron_candidates "train"
-generate_intron_candidates "test"
+#echo "Pairing positive donors with appropriate positive acceptors to form introns"
+#generate_intron_candidates "train"
+#generate_intron_candidates "test"
 
 echo "Labeling intron candidates for training/testing purposes"
 label_intron_candidates "train"
