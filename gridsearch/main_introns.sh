@@ -7,10 +7,10 @@ division=ascomycota
 echo "Assuming, the file ${INTRON_TRAIN_FILE} exist at ${ROOT}/data/intron, run this command on metacentrum"
 echo "bash grid_search_intron.sh $INTRON_TRAIN_FILE"
 
-# ------------------------------------- wait for gridsearch to finish -----------------------------------------
+# ------------------------------------- wait for gridsearch to finish... -----------------------------------------
 
 # this will produce model files, which will be downloaded
-models_folder="intron_gridmodels/${division}"
+models_folder="${division}/intron/models"
 mkdir -p ./$models_folder
 scp ${ROOT}/results/train-introns-* $models_folder
 
@@ -22,5 +22,5 @@ C_pos=200
 C_neg=1
 order=6
 
-# Train the overall intron model with them
-$PYTHON ../classification/train-introns.py ../preprocessing/intron/${division}/intron_candidates/$INTRON_TRAIN_FILE ${order} ${C_neg} ${C_pos} -c ${NCPUS}
+# Train the overall intron model with them using all data
+$PYTHON ../classification/train-introns.py "../preprocessing/intron/${division}/intron_candidates/$INTRON_TRAIN_FILE" ${order} ${C_neg} ${C_pos} -c ${NCPUS}

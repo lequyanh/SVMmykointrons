@@ -3,9 +3,9 @@
     
 2. Validate the models on test set
 
-3. Using the script `evaluate-models.sh` with a minor alterations, print recall&precision of each validated model to a separate files:
-    * ./gridsearch-acceptor-precisions.txt
-    * ./gridsearch-acceptor-recalls.txt
+3. Using the script `evaluate-models.sh` with a minor alterations, print recall&precision of each validated model to a separate files (e.g.):
+    * ./ascomycota/data/gridsearch-acceptor-precisions.txt
+    * ./ascomycota/data/gridsearch-acceptor-recalls.txt
     * command to extract metrics from grid search using *Blade1*  data:
     
            bash evaluate_models.sh -f ../gridsearch/grid_validation_results/ascomycota/donor/ -r 0.00254 -t 0.188 -a 0.5 -g

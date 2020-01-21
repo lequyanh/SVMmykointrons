@@ -2,16 +2,16 @@ Donor/Acceptor model performance metrics cannot be used as they are - specifical
 This is due to the fact we trained (and tested) the models on data, that have different ratio of +/- classes, than
 there is in actual data (meaning the test and train sets have more positive donor and acceptor sites, than there is
 in mushrooms). To address this positive-negative examples imbalance we need to find the true ratio of positive vs. negative
-AG/GT dimers in mushrooms. This file documents just that.
+AG/GT dimers in mushrooms. This file documents just that (process is demonstrated on *Ascomycota* division).
 
 #### ACCEPTOR SITE ####
-First we determine the +/- ratio in our test set:
+First we determine the +/- ratio in our test (or validation) set:
 
-```
->> cat ../data/ascomycota/test/shuff_aggreg_acceptor_site_test.csv | grep ";+1" | wc -l
+```shell script
+>> grep -c ";+1" < ../data/ascomycota/test/shuff_aggreg_acceptor_site_test.csv 
 198999 positive candidates
 
->> cat ../data/ascomycota/test/shuff_aggreg_acceptor_site_test.csv | grep ";-1" | wc -l
+>> grep -c ";-1" < ../data/ascomycota/test/shuff_aggreg_acceptor_site_test.csv
 300951 negative candidates
 ```
 set the
@@ -22,7 +22,7 @@ Then we estimate the true positive/negative acceptor ratio from results of 2 mus
 True ratio estimation taken from *Tripe1* and *Chafi1* pipeline results (*Tripe1* for caluclation demo). First calculate how many
 AG pair there are:
 
-```
+```shell script
 >> wc -l < ../pipeline/Tripe1_results/splice-site-acceptor-dataset.csv
 876865
 ```
@@ -44,10 +44,10 @@ Score 0.462433, recall 0.826678, adjusted precision 0.155342
 First we determine the +/- ratio in our test set:
 
 ```shell script
->> cat ../data/ascomycota/test/shuff_aggreg_donor_site_test.csv | grep ";+1" | wc -l
+>> grep -c ";+1" < ../data/ascomycota/test/shuff_aggreg_donor_site_test.csv
 211187 positive candidates
 
->> cat ../data/ascomycota/test/shuff_aggreg_donor_site_test.csv | grep ";-1" | wc -l
+>> grep -c ";-1" < ../data/ascomycota/test/shuff_aggreg_donor_site_test.csv
 300951 negative candidates
 ```
 
@@ -58,7 +58,6 @@ True ratio estimation taken from combined *Tripe1* and *Chafi1* pipeline results
 ```shell script
 >> wc -l < ../pipeline/Tripe1_results/splice-site-donor-dataset.csv
 819784
-
 ```
 
 where **number of true introns on positive strand is 1563** (see ../pipeline/Tripe1_results/pipeline.output)

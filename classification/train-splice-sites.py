@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 import sys
@@ -14,9 +16,6 @@ def read_data(filename, window):
 
     data = pd.read_csv(filename, sep=';')
     data.sequence = data.sequence.str[center - lwin: center + rwin + 2]
-
-    #    print("Loaded {} samples".format(len(data)))
-    #    print("Using sequence window [{}, {}]".format(lwin, rwin))
 
     return data
 
@@ -48,11 +47,23 @@ if __name__ == "__main__":
     predict = svm.apply_binary(features)
 
     acc = sg.AccuracyMeasure()
-    print("Accuracy: {}".format(acc.evaluate(predict, labels)))
-    print(" -TP: {}".format(acc.get_TP()))
-    print(" -FP: {}".format(acc.get_FP()))
-    print(" -TN: {}".format(acc.get_TN()))
-    print(" -FN: {}".format(acc.get_FN()))
+
+    TP = int(acc.get_TP())
+    FP = int(acc.get_FP())
+    FN = int(acc.get_FN())
+    TN = int(acc.get_TN())
+
+    logging.basicConfig(
+        level=logging.INFO,
+        filename=f'classification-d{kernel_degree}-C{C}-{lWindow}-{rWindow}.log',
+        filemode='w'
+    )
+
+    logging.info(f'Model of trained on {data_file}')
+
+    logging.info("Train results:")
+    logging.info('\t'.join(["TP", "FP", "TN", "FN"]))
+    logging.info('\t'.join(map(str, [TP, FP, TN, FN])))
 
     output = sg.SerializableHdf5File(model_file, "w")
     with closing(output):
