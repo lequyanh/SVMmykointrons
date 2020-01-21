@@ -1,24 +1,11 @@
 import logging
-
-import numpy as np
-import pandas as pd
 import sys
 from contextlib import closing
+
+import numpy as np
 import shogun as sg
 
-
-def read_data(filename, window):
-    # center - lwin = start of the window (inclusively)
-    # center + rwin + 2 = end of the window (exclusively)
-    center = 150
-    lwin = window[0]
-    rwin = window[1]
-
-    data = pd.read_csv(filename, sep=';')
-    data.sequence = data.sequence.str[center - lwin: center + rwin + 2]
-
-    return data
-
+from tools import read_data
 
 if __name__ == "__main__":
     data_file = sys.argv[1]

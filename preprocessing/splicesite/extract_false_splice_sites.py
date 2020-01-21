@@ -13,7 +13,6 @@ logging.basicConfig(
     filemode='w'
 )
 
-MARGIN_SIZE = 150
 DONOR = 'GT'
 ACCEPTOR = 'AG'
 
@@ -90,7 +89,7 @@ def retrieve_false_splice_sites(donor_positions: dict, acceptor_positions: dict)
                         false_acceptors.append(false_splice_site)
 
                     k += 1
-                    if k >= false_examples_limit:
+                    if k >= FALSE_EXAMPLES_LIMIT:
                         logging.info(f'Splice sites written: {k}')
                         return false_donors, false_acceptors
 
@@ -102,7 +101,9 @@ if __name__ == '__main__':
     shroom_name = sys.argv[1]
     assembly_folder = sys.argv[2]
     introns_folder = sys.argv[3]
-    false_examples_limit = int(sys.argv[4])
+
+    FALSE_EXAMPLES_LIMIT = int(sys.argv[4])
+    MARGIN_SIZE = int(sys.argv[5])
     # ---------------------------
     # shroom_name = 'Aciaci1'
     # assembly_folder = "/home/anhvu/Desktop/mykointrons-data/data/Assembly"
@@ -113,8 +114,8 @@ if __name__ == '__main__':
     _donor_positions, _acceptor_positions = retrieve_true_intron_positions(_introns_fasta)
     _false_donors, _false_acceptors = retrieve_false_splice_sites(_donor_positions, _acceptor_positions)
 
-    with open(f'{introns_folder}/{shroom_name}/{shroom_name}-donor-false2.fasta', 'w') as f:
+    with open(f'{introns_folder}/{shroom_name}/{shroom_name}-donor-false.fasta', 'w') as f:
         SeqIO.write(_false_donors, f, 'fasta')
 
-    with open(f'{introns_folder}/{shroom_name}/{shroom_name}-acceptor-false2.fasta', 'w') as f:
+    with open(f'{introns_folder}/{shroom_name}/{shroom_name}-acceptor-false.fasta', 'w') as f:
         SeqIO.write(_false_acceptors, f, 'fasta')

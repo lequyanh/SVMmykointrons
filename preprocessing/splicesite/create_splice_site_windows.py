@@ -10,52 +10,15 @@ from Bio import SeqIO
 
 from fastalib import complementary, read_fasta
 
-# ==== Use standalone to extract train data for a single shroom, or in a batch mode using a script ====
-# >bash create_train_test_csvs.sh $SPLICE_TRAIN_NAMES ~/Desktop/mykointrons-data 150 150 ../data train
-
-base_loc = sys.argv[1]
-shroom_name = sys.argv[2]
-
-donor_lwindow, donor_rwindow = int(sys.argv[3]), int(sys.argv[4])
-acceptor_lwindow, acceptor_rwindow = int(sys.argv[5]), int(sys.argv[6])
-
-csv_target_folder = sys.argv[7]
-test_train = sys.argv[8]
-
-# base_loc = '/home/anhvu/Desktop/mykointrons-data'
-# shroom_name = 'Ramac1'
-# csv_target_folder = '../data/'
-#
-# donor_lwindow, donor_rwindow = 150, 150
-# acceptor_lwindow, acceptor_rwindow = 150, 150
-#
-# test_train = 'train'
-
-assembly = f'{base_loc}/data/Assembly/{shroom_name}_AssemblyScaffolds.fasta'
-introns_locs = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-introns.fasta'
-
-false_donor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-donor-false.fasta'
-false_acceptor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-acceptor-false.fasta'
-
-donor_dir = f'{csv_target_folder}/{test_train}/donor'
-acceptor_dir = f'{csv_target_folder}/{test_train}/acceptor'
-
-if not os.path.isdir(donor_dir):
-    os.makedirs(donor_dir)
-if not os.path.isdir(acceptor_dir):
-    os.makedirs(acceptor_dir)
-
-donor_csv = f'{donor_dir}/{shroom_name}-donor-windows.csv'
-acceptor_csv = f'{acceptor_dir}/{shroom_name}-acceptor-windows.csv'
-logging.info(f'Splice site training/testing CSV will be saved to {donor_dir} and {acceptor_dir}')
-
-logging.getLogger().setLevel(logging.INFO)
-
 POSITIVE_LABEL = '+1'
 NEGATIVE_LABEL = '-1'
 
 DONOR_DIMER = 'GT'
 ACCEPTOR_DIMER = 'AG'
+
+
+# ==== Use standalone to extract train data for a single shroom, or in a batch mode using a script ====
+# >bash create_train_test_csvs.sh $SPLICE_TRAIN_NAMES ~/Desktop/mykointrons-data 150 150 ../data train
 
 
 def get_donor_acceptor_windows_from_intron_locations(position_infos, scaffold_dict):
@@ -163,7 +126,7 @@ def append_true_splice_site_windows(
         lwindow: int,
         rwindow: int,
 ):
-    append_examples(true_donor_acceptor_file, target_csv, lwindow, rwindow, POSITIVE_LABEL)
+    append_splice_site_windows_(true_donor_acceptor_file, target_csv, lwindow, rwindow, POSITIVE_LABEL)
 
 
 def append_false_splice_site_windows(
@@ -172,10 +135,10 @@ def append_false_splice_site_windows(
         lwindow: int,
         rwindow: int,
 ):
-    append_examples(false_donor_acceptor_file, target_csv, lwindow, rwindow, NEGATIVE_LABEL)
+    append_splice_site_windows_(false_donor_acceptor_file, target_csv, lwindow, rwindow, NEGATIVE_LABEL)
 
 
-def append_examples(
+def append_splice_site_windows_(
         donor_acceptor_file: str,
         target_csv: str,
         lwindow: int,
@@ -184,28 +147,28 @@ def append_examples(
 ):
     with open(donor_acceptor_file, 'r') as f:
         # Read sequences from FASTA file
-        false_splice_windows = [str(sr.seq) for sr in SeqIO.parse(f, 'fasta')]
+        splice_windows = [str(sr.seq) for sr in SeqIO.parse(f, 'fasta')]
 
-        window_mid = int(0.5 * (len(false_splice_windows[1]) - 2))  # -2 for GT/AG dimers
+        window_mid = int(0.5 * (len(splice_windows[1]) - 2))  # -2 for GT/AG dimers
 
         # Adjust the sequences so they have the same length as positive examples
         adjusted_range = slice(window_mid - lwindow, window_mid + rwindow + 2)
-        false_splice_windows = map(
+        splice_windows = map(
             lambda false_splice_window: false_splice_window.rstrip()[adjusted_range],
-            false_splice_windows
+            splice_windows
         )
-        false_splice_windows = list(false_splice_windows)
+        splice_windows = list(splice_windows)
 
         splice_dimers_check = map(
             lambda false_splice_window: false_splice_window[lwindow:lwindow + 2] in {DONOR_DIMER, ACCEPTOR_DIMER},
-            false_splice_windows
+            splice_windows
         )
         assert np.all(splice_dimers_check)
 
         # Create CSV rows
         data_negative = zip(
-            false_splice_windows,
-            [label] * len(false_splice_windows)
+            splice_windows,
+            [label] * len(splice_windows)
         )
 
         with open(target_csv, 'a') as f:
@@ -214,31 +177,71 @@ def append_examples(
             for row in data_negative:
                 w.writerow(row)
 
-        logging.info(f'Appended {len(false_splice_windows)} false splice site windows to {target_csv}')
+        logging.info(f'Appended {len(splice_windows)} false splice site windows to {target_csv}')
 
 
-if not Path(assembly).is_file():
-    logging.warning(f'Assembly data for shroom {shroom_name} not found. Directory {assembly}')
-    exit(1)
+if __name__ == "__main__":
+    base_loc = sys.argv[1]
+    shroom_name = sys.argv[2]
 
-if os.path.isfile(donor_csv) and os.path.isfile(acceptor_csv):
-    logging.warning(f'Files {donor_csv} and {acceptor_csv} already exist')
-    exit(0)
+    donor_lwindow, donor_rwindow = int(sys.argv[3]), int(sys.argv[4])
+    acceptor_lwindow, acceptor_rwindow = int(sys.argv[5]), int(sys.argv[6])
 
-scaffold_dict = {}
-with open(assembly, 'r') as assembly_f:
-    for desc, sequence in read_fasta(assembly_f):
-        scaffold_dict[desc] = sequence
+    csv_target_folder = sys.argv[7]
+    test_train = sys.argv[8]
 
-intron_positions = get_introns_position_info(introns_locs)
+    # base_loc = '/home/anhvu/Desktop/mykointrons-data'
+    # shroom_name = 'Ramac1'
+    # csv_target_folder = '../data/'
+    #
+    # donor_lwindow, donor_rwindow = 150, 150
+    # acceptor_lwindow, acceptor_rwindow = 150, 150
+    #
+    # test_train = 'train'
 
-d_windows, a_windows = get_donor_acceptor_windows_from_intron_locations(intron_positions, scaffold_dict)
+    assembly = f'{base_loc}/data/Assembly/{shroom_name}_AssemblyScaffolds.fasta'
+    introns_locs = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-introns.fasta'
 
-write_true_splice_site_windows(d_windows, donor_csv)
-append_false_splice_site_windows(false_donor_file, donor_csv, donor_lwindow, donor_rwindow)
+    false_donor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-donor-false.fasta'
+    false_acceptor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-acceptor-false.fasta'
 
-write_true_splice_site_windows(a_windows, acceptor_csv)
-append_false_splice_site_windows(false_acceptor_file, acceptor_csv, acceptor_lwindow, acceptor_rwindow)
+    donor_dir = f'{csv_target_folder}/{test_train}/donor'
+    acceptor_dir = f'{csv_target_folder}/{test_train}/acceptor'
 
-# append_positive_train_examples(true_acceptor_file, csv_acceptor_train, acceptor_lwindow, acceptor_rwindow)
-# append_positive_train_examples(true_donor_file, csv_donors_train, donor_lwindow, donor_rwindow)
+    if not os.path.isdir(donor_dir):
+        os.makedirs(donor_dir)
+    if not os.path.isdir(acceptor_dir):
+        os.makedirs(acceptor_dir)
+
+    out_donor_csv = f'{donor_dir}/{shroom_name}-donor-windows.csv'
+    out_acceptor_csv = f'{acceptor_dir}/{shroom_name}-acceptor-windows.csv'
+
+    logging.getLogger().setLevel(logging.INFO)
+
+    if not Path(assembly).is_file():
+        logging.warning(f'Assembly data for shroom {shroom_name} not found. Directory {assembly}')
+        exit(1)
+
+    if os.path.isfile(out_donor_csv) and os.path.isfile(out_acceptor_csv):
+        logging.warning(f'Files {out_donor_csv} and {out_acceptor_csv} already exist')
+        exit(0)
+
+    logging.info(f'Splice site training/testing CSV will be saved to {donor_dir} and {acceptor_dir}')
+
+    scaffold_dict = {}
+    with open(assembly, 'r') as assembly_f:
+        for desc, sequence in read_fasta(assembly_f):
+            scaffold_dict[desc] = sequence
+
+    intron_positions = get_introns_position_info(introns_locs)
+
+    d_windows, a_windows = get_donor_acceptor_windows_from_intron_locations(intron_positions, scaffold_dict)
+
+    write_true_splice_site_windows(d_windows, out_donor_csv)
+    append_false_splice_site_windows(false_donor_file, out_donor_csv, donor_lwindow, donor_rwindow)
+
+    write_true_splice_site_windows(a_windows, out_acceptor_csv)
+    append_false_splice_site_windows(false_acceptor_file, out_acceptor_csv, acceptor_lwindow, acceptor_rwindow)
+
+    # append_positive_train_examples(true_acceptor_file, csv_acceptor_train, acceptor_lwindow, acceptor_rwindow)
+    # append_positive_train_examples(true_donor_file, csv_donors_train, donor_lwindow, donor_rwindow)

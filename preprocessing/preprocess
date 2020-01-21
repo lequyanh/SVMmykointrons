@@ -32,10 +32,11 @@ SHROOM_SPECIES="ascomycota"
  # Also an output folder - each shroom sub-directory will have a fasta file with false introns.
 INTRON_LOC="/home/anhvu/Desktop/mykointrons-data/new-sequences"
 EXAMPLE_LIMIT=50000
+WINDOW_DIAMETER=200
 
 function generate_false_splice_site_windows() {
     while read shroom; do
-      $PYTHON splicesite/extract_false_splice_sites.py $shroom "${ASSEMBLIES_LOC}/data/Assembly" ${INTRON_LOC} ${EXAMPLE_LIMIT}
+      $PYTHON splicesite/extract_false_splice_sites.py "${shroom}" "${ASSEMBLIES_LOC}/data/Assembly" ${INTRON_LOC} ${EXAMPLE_LIMIT} ${WINDOW_DIAMETER}
     done <${SHROOM_NAMES_ALL}
 }
 
@@ -78,7 +79,7 @@ function create_train_test_csvs() {
     train_test=$2
     for shroom in $(<"$shroom_names")
     do
-        $PYTHON ./splicesite/create_splice_site_windows.py $ASSEMBLIES_LOC "${shroom}" 150 150 150 150 $splicesite_dataloc "${train_test}"
+        $PYTHON ./splicesite/create_splice_site_windows.py $ASSEMBLIES_LOC "${shroom}" 200 200 200 200 $splicesite_dataloc "${train_test}"
     done
 }
 

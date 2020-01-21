@@ -1,37 +1,11 @@
 import logging
 import os
 import sys
-from contextlib import closing
+from tools import read_data, read_model
 
 import numpy as np
 import pandas as pd
 import shogun as sg
-
-
-def read_data(filename, window):
-    # center - lwin = start of the window (inclusively)
-    # center + rwin + 2 = end of the window (exclusively)
-    center = 150
-    lwin = window[0]
-    rwin = window[1]
-
-    data = pd.read_csv(filename, sep=';')
-    data = data.dropna(axis=0, how='any', inplace=False)
-    data.sequence = data.sequence.str[center - lwin: center + rwin + 2]
-
-    return data
-
-
-def read_model(filename):
-    svm = sg.LibSVM()
-
-    model_file = sg.SerializableHdf5File(filename, "r")
-
-    with closing(model_file):
-        if not svm.load_serializable(model_file):
-            exit(1)
-
-    return svm
 
 
 def parser():
@@ -86,8 +60,7 @@ if __name__ == "__main__":
                    " -TP: {}".format(acc.get_TP()),
                    " -FP: {}".format(acc.get_FP()),
                    " -TN: {}".format(acc.get_TN()),
-                   " -FN: {}".format(acc.get_FN()),
-                   ]
+                   " -FN: {}".format(acc.get_FN())]
         metrics = '\n'.join(metrics)
         logging.info(metrics)
 
