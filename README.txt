@@ -80,3 +80,7 @@ INSTALLATION
   Instructions on how to install
     - Shogun are at http://shogun.ml/install
     - Pandas are at https://pandas.pydata.org/pandas-docs/stable/install.html
+
+    conda create -n mykointron python=3.6
+    conda install -c conda-forge shogun
+    conda install pandas
