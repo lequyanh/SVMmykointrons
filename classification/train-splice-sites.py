@@ -35,6 +35,7 @@ if __name__ == "__main__":
 
     acc = sg.AccuracyMeasure()
 
+    ACC = acc.evaluate(predict, labels)
     TP = int(acc.get_TP())
     FP = int(acc.get_FP())
     FN = int(acc.get_FN())
@@ -42,7 +43,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(
         level=logging.INFO,
-        filename=f'classification-d{kernel_degree}-C{C}-{lWindow}-{rWindow}.log',
+        filename=f'train-splice-sites-d{kernel_degree}-C{C}-{lWindow}-{rWindow}.log',
         filemode='w'
     )
 
