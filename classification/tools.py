@@ -2,6 +2,8 @@ import pandas as pd
 import shogun as sg
 from contextlib import closing
 
+from sklearn.metrics import confusion_matrix
+
 
 def read_data(filename, window):
     # center - lwin = start of the window (inclusively)
@@ -29,36 +31,38 @@ def read_model(filename):
     return svm
 
 
-def performance_metrics(predict, labels, imbalance_rat):
-    acc_measure = sg.AccuracyMeasure()
-    acc = acc_measure.evaluate(predict, labels)
-    prec = sg.PrecisionMeasure().evaluate(predict, labels)
-    recall = sg.RecallMeasure().evaluate(predict, labels)
+def performance_metrics(labels, predictions, imbalance_rat):
+    conf_matrix = confusion_matrix(labels, predictions)
+    TN = conf_matrix[0][0]
+    FN = conf_matrix[1][0]
+    TP = conf_matrix[1][1]
+    FP = conf_matrix[0][1]
+
+    acc = (TP + TN) / (TP + FP + FN + TN)
+    prec = TP / (TP + FP)
+    recall = TP / (TP + FN)
 
     metrics = [
-        " -TP: {}".format(acc_measure.get_TP()),
-        " -FP: {}".format(acc_measure.get_FP()),
-        " -TN: {}".format(acc_measure.get_TN()),
-        " -FN: {}".format(acc_measure.get_FN()),
+        " -TP: {}".format(TP),
+        " -FP: {}".format(FP),
+        " -TN: {}".format(TN),
+        " -FN: {}".format(FN),
 
         "Accuracy: {}".format(acc),
         "Precision: {}".format(prec),
-        "Recall: {}".format(recall),
+        "Recall: {}".format(recall)
     ]
 
-    def adjust_precision(acc_meas, imbalance_ratio):
-        TP = acc_meas.get_TP()
-        FP = acc_meas.get_FP()
-
+    def adjust_precision(imbalance_ratio):
         # Infer ratio of +/- classes in the validation set
-        v = (TP + acc_meas.get_FN()) / (acc_meas.get_TN() + FP)
+        v = (TP + FN) / (TN + FP)
         # Ratio of +/- classes in real data
         r = imbalance_ratio
 
         return (r / v * TP) / (r / v * TP + (1 - r / 1 - v) * FP)
 
     if imbalance_rat:
-        adj_prec = adjust_precision(acc_measure, imbalance_rat)
+        adj_prec = adjust_precision(imbalance_rat)
         metrics += [
             "Adjusted precision: {}".format(adj_prec),
             "Adj. precision calculated with imbalance ratio: {}".format(imbalance_rat)

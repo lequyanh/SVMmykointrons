@@ -61,8 +61,13 @@ if __name__ == "__main__":
             logging.warning(f'Imbalance ratio was not set! Using default value {imbalance_ratio}. '
                             f'Results will be inaccurate!')
 
-        metrics_list = performance_metrics(predict, labels, imbalance_ratio)
-        metrics_str = '\n'.join(metrics_list)
+        metrics_data = performance_metrics(
+            labels.get_int_labels(),
+            predict.get_int_labels(),
+            imbalance_ratio
+        )
+
+        metrics_str = '\n'.join(metrics_data)
         logging.info(f'Performance metrics:\n'
                      f'{metrics_str}')
 

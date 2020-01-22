@@ -64,7 +64,12 @@ if __name__ == "__main__":
 
         labels = sg.BinaryLabels(np.array(data.label))
 
-        metrics_list = performance_metrics(predict, labels, imbalance_rat=None)
-        metrics_str = '\n'.join(metrics_list)
+        metrics_data = performance_metrics(
+            labels.get_int_labels(),
+            predict.get_int_labels(),
+            imbalance_rat=None
+        )
+
+        metrics_str = '\n'.join(metrics_data)
         logging.info(f'Performance metrics:\n'
                      f'{metrics_str}')
