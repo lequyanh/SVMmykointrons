@@ -1,76 +1,128 @@
+#!/usr/bin/env python3
+
+
+"""Classify splice sites with a neural network and SVM.
+
+Usage:
+  classify-splice-sites.py <data-file-name> <model-file-name> <window-inner> \
+    <window-outer> <site> [-r <imbalance-ratio>] [-c <ncpus>]
+  classify-splice-sites.py (-h | --help)
+
+Options:
+  -h --help     Show this screen.
+  -c <ncpus>    Number of CPUs  [default: 4]
+"""
+
 import logging
 import os
 import sys
-from argparse import ArgumentParser
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import shogun as sg
+from docopt import docopt
+from tools import performance_metrics
+from tools import read_data
+from tools import read_model
 
-from tools import read_data, read_model, performance_metrics
-
-
-def parser():
-    p = ArgumentParser(description="Classify splice sites")
-    p.add_argument('data_filename', metavar='INPUT', type=str,
-                   help='filename of the input')
-    p.add_argument('model_filename', metavar='MODEL', type=str,
-                   help='filename of the model')
-    p.add_argument('window_inner', type=int)
-    p.add_argument('window_outer', type=int)
-    p.add_argument('site', type=str, help='donor or acceptor')
-    p.add_argument('-r', type=float, default=-1.0,
-                   help='real imbalance ratio of +/- classes in data. Float in <0,1>')
-    p.add_argument('-c', '--cpus', type=int, default=1, dest='ncpus')
-    return p
+DNA_SYMBOLS = np.array(['A', 'T', 'C', 'G', 'N'])
 
 
-if __name__ == "__main__":
-    argparser = parser().parse_args()
+def main():
+    arguments = docopt(__doc__, version='1.0')
 
-    win_in = argparser.window_inner
-    win_out = argparser.window_outer
-    window = (win_out, win_in) if argparser.site == 'donor' else (win_in, win_out)
+    data_file = Path(arguments['<data-file-name>'])
+    model_file = arguments['<model-file-name>']
+
+    window_inner = int(arguments['<window-inner>'])
+    window_outer = int(arguments['<window-outer>'])
+
+    site = arguments['<site>']
+    assert site in ('donor', 'acceptor')
+
+    imbalance_ratio = float(arguments['<imbalance-ratio>'])
+    ncpus = int(arguments['-c'])
+
+    # Setup logging
+    logging.basicConfig(
+        level=logging.INFO,
+        filename=f'classify-splice-sites-{os.path.basename(model_file)}.log',
+        filemode='w'
+    )
+    logging.info(f'Classification of file {data_file} with model {model_file}')
+
+    model_extension = os.path.splitext(model_file)[1]
+    if model_extension == '.hd5':
+        input_df, predictions = get_svm_predictions(model_file, data_file, window_inner, window_outer, site, ncpus)
+    elif model_extension == '.h5':
+        input_df, predictions = get_dnn_predictions(model_file, data_file, window_inner, window_outer)
+    else:
+        logging.warning(f'Unknown model extension {model_extension}. Exiting.')
+        return
+
+    output_df = input_df.assign(pred=pd.Series(predictions))
+    output_df.to_csv(sys.stdout, sep=';', index=False)
+
+    if 'label' in input_df:
+        log_performance(predictions, input_df[["label"]], imbalance_ratio)
+
+
+def prepare_inputs(input_df: pd.DataFrame):
+    sequences = []
+    for sequence in input_df['sequence']:
+        sequence = np.array(list(str(sequence)))
+        sequences.append((sequence[:, None] == DNA_SYMBOLS).astype(np.float32))
+
+    return np.array(sequences)
+
+
+def get_svm_predictions(model_file, data_file, window_inner, window_outer, site, ncpus):
+    window = (window_outer, window_inner) if site == 'donor' else (window_inner, window_outer)
 
     # Extract the region of interest given the window.
     # NOTE: The script expects the acceptor/donor dimer to be in the middle of the sequence
-    data = read_data(argparser.data_filename, window=window)
+    input_df = read_data(data_file, window=window)
 
-    sg.Parallel().set_num_threads(argparser.ncpus)
+    sg.Parallel().set_num_threads(ncpus)
 
-    features = sg.StringCharFeatures(data.sequence.tolist(), sg.RAWBYTE)
-    model = read_model(argparser.model_filename)
+    features = sg.StringCharFeatures(input_df.sequence.tolist(), sg.RAWBYTE)
+    model = read_model(model_file)
 
     predict = model.apply_binary(features)
+    return input_df, predict.get_int_labels()
 
-    if 'label' in data:
-        mod_name = os.path.basename(argparser.model_filename)
-        logging.basicConfig(
-            level=logging.INFO,
-            filename=f'classify-splice-sites-{mod_name}.log',
-            filemode='w'
-        )
-        logging.info(f'Classification of file {argparser.data_filename} with model {argparser.model_filename}')
 
-        labels = sg.BinaryLabels(np.array(data.label))
-        imbalance_ratio = argparser.r
+def get_dnn_predictions(model_file, data_file, window_inner, window_outer):
+    from keras.models import load_model
+    assert window_inner == 200
+    assert window_outer == 200
 
-        if imbalance_ratio < 0:
-            # Dummy value was set by argparser, set a new reasonable default (but still wrong) value
-            imbalance_ratio = 0.005
-            logging.warning(f'Imbalance ratio was not set! Using default value {imbalance_ratio}. '
-                            f'Results will be inaccurate!')
+    window = (window_outer - 1, window_inner - 1)   # windows are 400nt long INCLUDING GT/AG pair
 
-        metrics_data = performance_metrics(
-            labels.get_int_labels(),
-            predict.get_int_labels(),
-            imbalance_ratio
-        )
+    input_df = read_data(data_file, window=window)
+    model = load_model(model_file)
 
-        metrics_str = '\n'.join(metrics_data)
-        logging.info(f'Performance metrics:\n'
-                     f'{metrics_str}')
+    inputs = prepare_inputs(input_df)
+    predictions = model.predict(inputs)
+    predictions = np.squeeze(predictions).round().astype(np.int32)
+    predictions[np.where(predictions == 0)] = -1    # negative classes are -1 as opposed to NN output (which is 0)
 
-    data.assign(
-        pred=pd.Series(list(predict.get_int_labels()))) \
-        .to_csv(sys.stdout, sep=';', index=False)
+    return input_df, predictions
+
+
+def log_performance(prediction, labels, imbalance_ratio):
+    if imbalance_ratio is None:
+        # Set a new reasonable default (but still wrong) value
+        imbalance_ratio = 0.005
+        logging.warning(f'Imbalance ratio was not set! Using default value {imbalance_ratio}. '
+                        f'Results will be inaccurate!')
+
+    metrics_list = performance_metrics(prediction, labels, imbalance_ratio)
+    metrics_str = '\n'.join(metrics_list)
+    logging.info(f'Performance metrics:\n'
+                 f'{metrics_str}')
+
+
+if __name__ == '__main__':
+    main()
