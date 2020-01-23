@@ -1,26 +1,26 @@
+#!/usr/bin/env python3
+
+
+"""Classify introns with SVM.
+
+Usage:
+  classify-introns.py <data-file-name> <model-file-name> <kernel-order> [-c <ncpus>]
+  classify-introns.py (-h | --help)
+
+Options:
+  -h --help     Show this screen.
+  -c <ncpus>    Number of CPUs  [default: 4]
+"""
+
 import logging
 import sys
-from argparse import ArgumentParser
 
 import numpy as np
 import pandas as pd
 import shogun as sg
+from docopt import docopt
 
 from tools import performance_metrics, read_model
-
-
-def parser():
-    p = ArgumentParser(description="Classify introns")
-    p.add_argument('data_filename', metavar='INPUT', type=str,
-                   help='filename of the input')
-    p.add_argument('model_filename', metavar='MODEL', type=str,
-                   help='filename of the model')
-    p.add_argument('l', metavar='ORDER', type=int,
-                   help='order of the spectrum kernel')
-    p.add_argument('-c', '--cpus', type=int, default=1,
-                   dest='ncpus',
-                   help='number of CPUs')
-    return p
 
 
 def create_features(order, dna):
@@ -37,15 +37,20 @@ def create_features(order, dna):
 
 
 if __name__ == "__main__":
-    argparser = parser().parse_args()
+    arguments = docopt(__doc__, version='1.0')
 
-    sg.Parallel().set_num_threads(argparser.ncpus)
+    data_file = arguments['<data-file-name>']
+    model_file = arguments['<model-file-name>']
 
-    data = pd.read_csv(argparser.data_filename, sep=';')
-    model = read_model(argparser.model_filename)
+    kernel_order = int(arguments['<kernel-order>'])  # order of the spectrum kernel
+    ncpus = int(arguments['-c'])
 
-    features = create_features(argparser.l, data.loc[:, 'sequence'].tolist())
+    data = pd.read_csv(data_file, sep=';')
+    model = read_model(model_file)
 
+    sg.Parallel().set_num_threads(ncpus)
+
+    features = create_features(kernel_order, data['sequence'].tolist())
     predict = model.apply_binary(features)
 
     data.assign(pred=pd.Series(list(predict.get_int_labels()))) \
@@ -54,13 +59,10 @@ if __name__ == "__main__":
     if 'label' in data:
         logging.basicConfig(
             level=logging.INFO,
-            filename=f'classify-introns-d{argparser.l}.log',
+            filename=f'classify-introns-d{kernel_order}.log',
             filemode='w'
         )
-
-        logging.info(
-            f'Validation of model {argparser.model_filename} on testset {argparser.data_filename}; d={argparser.l}'
-        )
+        logging.info(f'Validation of model {model_file} on testset {data_file}; d={kernel_order}')
 
         labels = sg.BinaryLabels(np.array(data.label))
 

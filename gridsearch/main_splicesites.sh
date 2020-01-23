@@ -1,88 +1,114 @@
 #!/bin/bash
 
+# ----- CHOOSE A SHROOM FOR GRID SEARCH TO INFER THE BEST SET OF SVM PARAMETERS FOR ACTUAL TRAINING ------
 ROOT="lequyanh@skirit.metacentrum.cz:/storage/praha1/home/lequyanh"
 
-# ----- CHOOSE A SHROOM FOR GRID SEARCH TO INFER THE BEST SET OF SVM PARAMETERS FOR ACTUAL TRAINING ------
-# Shuffle the examples and split them to train and validation sets.
-# The train set will be used for grid search training
-site="acceptor"
-division="ascomycota"
-shroom="Blade1"
-shroom_csv="../data/${division}/train/${site}/${shroom}-${site}-windows.csv"
+SITE="acceptor"
+DIVISION="ascomycota"
+SPECIES="Blade1"
+SPECIES_CSV="../data/${DIVISION}/train/${SITE}/${SPECIES}-${SITE}-windows.csv"
+
+TRAINSET="shuffeled_train_$(basename ${SPECIES_CSV})"
+VALIDATION_SET="shuffeled_valid_$(basename ${SPECIES_CSV})"
+
+# ratio of positive splice sites vs negative (false) splice_sites in the fungi genome
+C_pos_real=0.003
+# How to determine this parameter, go to:
+#     ../statistics/splice-SITE-performance-evaluation/adjusting-precision-methodology.md
+# But in general, for Ascomycota its roughly 0.003 and for Basidiomycota 0.025
 
 # ======================================= GRID SEARCH FOR BEST SVM PARAMETERS =============================
-bash split_csv_valid_train.sh $shroom_csv
+function split_csv_valid_train() {
+  echo "Shuffle the examples of chosen fungi species and split them to train and validation sets."
+  echo "The train set will be used for grid search training"
+  echo "Make sure there are enough examples (200k+)"
 
-# The command produced files with prefix 'shuffeled_train_' and 'shuffeled_valid_'. Upload them to metacenter
-# Here we upload only the train file as training is more demanding and is better to do it remotely
-scp "shuffeled_train_${shroom}-${site}-windows.csv" "${ROOT}/data/${site}s"
+  bash split_csv_valid_train.sh ${SPECIES_CSV} "${TRAINSET}" "${VALIDATION_SET}"
+}
 
-echo "Now perform grid search (on metacenter). Use following command:"
-echo "bash grid_search.sh $site shuffeled_train_$(basename ${shroom_csv})"
-echo "Change the range of parameters in the 'grid_search.sh' script according to your requirements"
+function upload_trainset_and_train_gridmodels() {
+  echo "Uploading train set to metacenter..."
+  # Here we upload only the train file as training is more demanding and is better to do it remotely
+  scp "${TRAINSET}" "${ROOT}/data/${SITE}s"
 
-# ---------------------------------------------- Wait... --------------------------------------------------
+  echo "Now perform grid search (on metacenter). Use following command:"
+  echo ">bash grid_search.sh ${SITE} ${TRAINSET}"
+  echo "Change the range of parameters like C, win_in in the 'grid_search.sh' script according to your requirements"
+}
 
-# this will produce model files, which will be downloaded
-models_folder="${division}/${site}/models"
-mkdir -p ./$models_folder
-scp "${ROOT}/results/train-splice-site-shuffeled_train_${shroom}-${site}*" "$models_folder"
+function download_grid_models() {
+  # local storage of grid models
+  models_folder="${DIVISION}/${SITE}/models"
+  mkdir -p "./${models_folder}"
 
-# and evaluate their performance on validation dataset. Note the parameters of the best performing one
-shroom_validation_set="shuffeled_valid_$(basename ${shroom_csv})"
-output_folder="${division}/${site}/validation_results"
-mkdir -p ./$output_folder
-bash validate_grid_models.sh $site "${shroom_validation_set}" "${models_folder}" "${output_folder}"
+  echo "Download trained grid models from metacentrum. Models will be save to ${models_folder}"
 
-# ratio of #true_splice_site_windows vs #false_splice_site_windows in resampled train/test file
-pos_ex=$(grep -c ";+1" < "${shroom_validation_set}")
-neg_ex=$(grep -c ";-1" < "${shroom_validation_set}")
-C_pos_resampled=$(awk "BEGIN {print $pos_ex/$neg_ex}")
-# actual ratio of #true_splice_site_windows vs #false_splice_site_windows
-C_pos_real=#CHANGE ME
-# For details on how to set the two parameters, refer to:
-# ../statistics/splice-site-performance-evaluation/adjusting-precision-methodology.md
-bash ../classification/evaluate_models.sh -f "${output_folder}" -r ${C_pos_real} -t ${C_pos_resampled} -a 0.5 -g
-# For more elaborate ways to choose hyperparameters from the grid-search results, please refer to:
-# ../statistics/splice-site-performance-evaluation/examining-gridsearch-result.md
+  # The result files contain the training filename in them
+  scp "${ROOT}/results/${TRAINSET}*" ${models_folder}
+}
 
-# ================================= TRAIN OVERALL MODEL WITH DISCOVERED PARAMETERS =========================
-# Train the overall model with the discovered parameters (locally or on metacenter)
+function evaluate_grid_models() {
+  results_folder="${DIVISION}/${SITE}/validation_results"
+  mkdir -p "./${results_folder}"
+
+  echo "Evaluate the performance of grid search models on the validation dataset."
+  echo "Results will be stored in ${results_folder}"
+
+  bash validate_grid_models.sh ${SITE} "${VALIDATION_SET}" ${models_folder} ${results_folder} ${C_pos_real}
+
+  echo "Now we can compare the model performances to choose the best set of WD kernel parameters"
+  echo "Guide on how to do so is in: ../statistics/splice-SITE-performance-evaluation/examining-gridsearch-result.md"
+
+  # ------------------------------- LEGACY -----------------------------------
+  # * The purpose of this is only to determine the adjusted precision. This metric is now already calculated during
+  # validation of the model.
+  # * Older result files however still need to be processed post-hoc, therefore this code stays
+
+  # ratio of #true_splice_site_windows vs #false_splice_site_windows in resampled train/test file
+  pos_ex=$(grep -c ";+1" <"${VALIDATION_SET}")
+  neg_ex=$(grep -c ";-1" <"${VALIDATION_SET}")
+  C_pos_resampled=$(awk "BEGIN {print $pos_ex/$neg_ex}")
+
+  bash ../classification/evaluate_models.sh -f "${results_folder}" -r ${C_pos_real} -t "${C_pos_resampled}" -a 0.5 -g
+  # ------------------------------- LEGACY -----------------------------------
+}
+
+split_csv_valid_train
+upload_trainset_and_train_gridmodels
+# Wait several hours...
+#download_grid_models
+#evaluate_grid_models
+
+# =========================== TRAINING AND VALIDATION OF THE FULL MODEL WITH DISCOVERED PARAMETERS =====================
 win_in=70
 win_out=70
-degree=30
-C=1
+degree=25
+C=10
+model_name="${SITE}-model.hd5"
 
-# ------------------- locally ------------------
-train_file="../data/${division}/train/shuff_aggreg_${site}_site_train.csv"
-python ../classification/train-splice-sites.py ${train_file} "${site}-model.hd5" ${win_in} ${win_out} ${degree} ${C} 10
-# ------------------- locally ------------------
+function train_full_model() {
+  train_file="../data/${DIVISION}/train/shuff_aggreg_${SITE}_site_train.csv"
 
+  if [ "$1" == "locally" ]; then
+    python ../classification/train-splice-sites.py ${train_file} "${model_name}" ${win_in} ${win_out} ${degree} ${C} 12
+  else
+    echo "Upload the full train set to metacentrum"
+    scp ${train_file} "${ROOT}/data/${SITE}s"
 
-## ------------------- metacenter ------------------
-#echo "To train on metacenter, use the following commands:"
-#echo "1) LOCALLY: scp ${train_file} ${ROOT}/data/${site}s"
-#echo "2) REMOTLY: qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v DEGREE=30,LWINDOW=70,RWINDOW=70,C=1,SITE=donors,DATAFILE=$(basename ${train_file}),CPU=10 train-splice-site.sh"
-## retrieve the model
-## ------------------- metacenter ------------------
+    echo "Execute this command on metacentrum (care for the interpratation of windows):"
+    echo "qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v DEGREE=${degree},LWINDOW=70,RWINDOW=70,C=${C},SITE=${SITE}s,DATAFILE=$(basename ${train_file}),CPU=10 train-splice-SITE.sh"
+    ## retrieve the model
+  fi
+}
 
-# ================================= VALIDATION OF THE MODEL =========================
-# validate the model using the mixed shuffeled dataset (created during preprocessing step)
-model_location="../pipeline/bestmodels/${division}/${site}-model.hd5"
-test_file="../data/${division}/test/shuff_aggreg_${site}_site_test.csv"
+function validate_full_model() {
+  test_file="../data/${DIVISION}/test/shuff_aggreg_${SITE}_site_test.csv"
+  C_pos_real=$1
 
-pos_ex=$(grep -c ";+1" < "${test_file}")
-neg_ex=$(grep -c ";-1" < "${test_file}")
-C_pos_resampled_test=$(awk "BEGIN {print $pos_ex/$neg_ex}")
+  python ../classification/classify-splice-sites.py ${test_file} ${model_name} ${win_in} ${win_out} ${SITE} -r "${C_pos_real}" -c 10
+}
 
-C_pos_real= # CHANGE_ME
-
-python ../classification/classify-splice-sites.py ${test_file} ${model_location} ${win_in} ${win_out} ${site} -v -c 10
-
-result_file="overal-${site}-model-results.txt"
-
-cat "classify-splice-sites.log" > ${result_file}
-echo "Accuracy metrics recalculated with C_pos_real ${C_pos_real} and C_pos_resampled ${C_pos_resampled_test}" >> ${result_file}
-bash ../classification/evaluate_models.sh -f "classify-splice-sites.log" -r ${C_pos_real} -t "${C_pos_resampled_test}" -a 0.5 >> ${result_file}
-
-rm "classify-splice-sites.log"
+#train_full_model "locally"
+## For validation consider changing the C_+ parameter.
+## But we assume that the ratio is more or less similar accross species
+#validate_full_model "${C_pos_real}"
