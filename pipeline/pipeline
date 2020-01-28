@@ -5,7 +5,7 @@
 PYTHON=~/anaconda3/envs/mykointron/bin/python
 #  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
-NUMBER_CPUS=12
+NUMBER_CPUS=10
 #  - memory limit for caching (in MB)
 #    this is used in the intron prediction
 CACHE_LIMIT=1024
@@ -65,7 +65,7 @@ splice_site_acceptor_model=$3
 #  - intron prediction model
 intron_model=$4
 #  - in case of validation
-intron_source="/home/anhvu/Desktop/mykointrons-data/new-sequences/Blade1/Blade1-introns.fasta"
+intron_source="/home/anhvu/Desktop/mykointrons-data/new-sequences/Kocim1/Kocim1-introns.fasta"
 
 if [ $# -ne 4 ]
 then
@@ -141,14 +141,14 @@ function classify_splice_sites_step() {
     # classify the donors and acceptors in parallel
     # keep only the positively classified samples
     # keep only the columns `scaffold`, and `position` (1st and 2nd)
-    $PYTHON classify-splice-sites.py $DONOR_FILE $splice_site_donor_model \
+    $PYTHON classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
                                     $DONOR_RWINDOW $DONOR_LWINDOW \
                                     "donor" \
                                     -c $donor_cpus \
             | grep $positive_splice_sites \
             | cut -d ';' -f -2 >> $DONOR_RESULT &
     classify_donor_pid=$!
-    $PYTHON classify-splice-sites.py $ACCEPTOR_FILE $splice_site_acceptor_model \
+    $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
                                     $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
                                     "acceptor" \
                                     -c $acceptor_cpus \
@@ -195,7 +195,7 @@ function classify_introns_step() {
     # classify the introns
     # keep only the positively classified samples
     # keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE $intron_model $SPECT_KERNEL_ORDER \
+    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER \
             | grep $positive_introns \
             | cut -d ';' -f -3 >> $INTRON_RESULT
 
@@ -209,7 +209,7 @@ function validate_introns_step() {
     # prepare a file for the intron classification results
     echo "scaffold;start;end;label;prediction" > $INTRON_RESULT
 
-    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE $intron_model $SPECT_KERNEL_ORDER \
+    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER \
             | grep $positive_introns \
             | cut --complement -d ';' -f4 >> $INTRON_RESULT
 }
@@ -219,15 +219,15 @@ function cut_introns_step() {
 }
 
 #extract_donor_acceptor_step
-classify_splice_sites_step
-pair_splice_sites_and_extract_introns_step
+#classify_splice_sites_step
+#pair_splice_sites_and_extract_introns_step
 
 ## ===================================== VALIDATE =====================================
-# validate_introns_step
+validate_introns_step
 ## =================================== or CLASIFY =====================================
-classify_introns_step
+# classify_introns_step
 
-cut_introns_step
+# cut_introns_step
 
 echo "Pipeline log for file ${assembly_filepath}" > pipeline.output
 for p in ./*.log;

@@ -42,7 +42,6 @@ def main():
     site = arguments['<site>']
     assert site in ('donor', 'acceptor')
 
-    imbalance_ratio = float(arguments['<imbalance-ratio>'])
     ncpus = int(arguments['-c'])
 
     # Setup logging
@@ -57,7 +56,7 @@ def main():
     if model_extension == '.hd5':
         input_df, predictions = get_svm_predictions(model_file, data_file, window_inner, window_outer, site, ncpus)
     elif model_extension == '.h5':
-        input_df, predictions = get_dnn_predictions(model_file, data_file, window_inner, window_outer)
+        input_df, predictions = get_dnn_predictions(model_file, data_file, window_inner, window_outer, site)
     else:
         logging.warning(f'Unknown model extension {model_extension}. Exiting.')
         return
@@ -66,13 +65,31 @@ def main():
     output_df.to_csv(sys.stdout, sep=';', index=False)
 
     if 'label' in input_df:
-        log_performance(predictions, input_df[["label"]], imbalance_ratio)
+        imbalance_ratio = float(arguments['<imbalance-ratio>'])
+
+        log_performance(input_df[["label"]], predictions, imbalance_ratio)
 
 
-def prepare_inputs(input_df: pd.DataFrame):
+def prepare_inputs(input_df: pd.DataFrame, site: str):
     sequences = []
     for sequence in input_df['sequence']:
-        sequence = np.array(list(str(sequence)))
+        sequence = str(sequence)
+        sequence = sequence.upper()
+
+        try:
+            assert set(sequence).issubset({'A', 'C', 'T', 'G', 'N'})
+        except AssertionError:
+            print(set(sequence))
+
+        if site == 'acceptor':
+            assert sequence[198] == 'A'
+            assert sequence[199] == 'G'
+        else:
+            assert sequence[200] == 'G'
+            assert sequence[201] == 'T'
+
+        sequence = np.array(list(sequence))
+
         sequences.append((sequence[:, None] == DNA_SYMBOLS).astype(np.float32))
 
     return np.array(sequences)
@@ -94,20 +111,20 @@ def get_svm_predictions(model_file, data_file, window_inner, window_outer, site,
     return input_df, predict.get_int_labels()
 
 
-def get_dnn_predictions(model_file, data_file, window_inner, window_outer):
+def get_dnn_predictions(model_file, data_file, window_inner, window_outer, site):
     from keras.models import load_model
     assert window_inner == 200
     assert window_outer == 200
 
-    window = (window_outer - 1, window_inner - 1)   # windows are 400nt long INCLUDING GT/AG pair
+    window = (window_outer, window_inner - 2) if site == 'donor' else (window_inner - 2, window_outer)
 
     input_df = read_data(data_file, window=window)
     model = load_model(model_file)
 
-    inputs = prepare_inputs(input_df)
+    inputs = prepare_inputs(input_df, site)
     predictions = model.predict(inputs)
     predictions = np.squeeze(predictions).round().astype(np.int32)
-    predictions[np.where(predictions == 0)] = -1    # negative classes are -1 as opposed to NN output (which is 0)
+    predictions[np.where(predictions == 0)] = -1  # negative classes are -1 as opposed to NN output (which is 0)
 
     return input_df, predictions
 

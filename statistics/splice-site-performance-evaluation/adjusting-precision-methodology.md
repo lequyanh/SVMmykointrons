@@ -4,7 +4,7 @@ there is in actual data (meaning the test and train sets have more positive dono
 in mushrooms). To address this positive-negative examples imbalance we need to find the true ratio of positive vs. negative
 AG/GT dimers in mushrooms. This file documents just that (process is demonstrated on *Ascomycota* division).
 
-#### ACCEPTOR SITE ####
+#### ACCEPTOR SITE
 First we determine the +/- ratio in our test (or validation) set:
 
 ```shell script
@@ -14,8 +14,9 @@ First we determine the +/- ratio in our test (or validation) set:
 >> grep -c ";-1" < ../data/ascomycota/test/shuff_aggreg_acceptor_site_test.csv
 300951 negative candidates
 ```
-set the
-**test-set ratio to 0.66**
+set the **test-set ratio to 0.66**.
+
+
 ---------------------------------------------------------------------------------------------------------------------
 Then we estimate the true positive/negative acceptor ratio from results of 2 mushrooms:
 
