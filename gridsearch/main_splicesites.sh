@@ -4,8 +4,8 @@
 ROOT="lequyanh@skirit.metacentrum.cz:/storage/praha1/home/lequyanh"
 
 SITE="acceptor"
-DIVISION="ascomycota"
-SPECIES="Blade1"
+DIVISION="basidiomycota"
+SPECIES="Lenvul1"
 SPECIES_CSV="../data/${DIVISION}/train/${SITE}/${SPECIES}-${SITE}-windows.csv"
 
 TRAINSET="shuffeled_train_$(basename ${SPECIES_CSV})"

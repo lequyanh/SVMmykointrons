@@ -14,6 +14,10 @@ INT_TEST_NAMES="$split_dir/intron_test_names.txt"
 SPLICE_TRAIN_NAMES="$split_dir/splice_sites_train_names.txt"
 SPLICE_TEST_NAMES="$split_dir/splice_sites_test_names.txt"
 
+# Number of positive and negative windows in each dataset
+POSTIVE_WINDOWS=20000
+NEGATIVE_WINDOWS=30000
+
 # ----------- CREATE FALSE SPLICE SITE WINDOWS FOR EACH SHROOM (INTERGENIC GT/AG WINDOWS VERSION)-----------------
 #GFF_LOC=/home/anhvu/Desktop/ascomycota-data/GFFS/
 #OUTPUT_LOC="/home/anhvu/Desktop/mykointrons-data/new-sequences/"
@@ -86,7 +90,7 @@ function create_train_test_csvs() {
   shroom_names=$1
   train_test=$2
   for shroom in $(<"$shroom_names"); do
-    $PYTHON ./splicesite/create_splice_site_windows.py $ASSEMBLIES_LOC "${shroom}" 200 200 200 200 $splicesite_dataloc "${train_test}"
+    $PYTHON ./splicesite/create_splice_site_windows.py $ASSEMBLIES_LOC "${shroom}" 200 200 200 200 $splicesite_dataloc "${train_test}" ${POSTIVE_WINDOWS} ${NEGATIVE_WINDOWS}
   done
 }
 
@@ -111,14 +115,14 @@ function mix_and_merge_windows_to_single_file() {
 
 # ===================================================================================================
 # 1. step (only one time step unless you want different samples or bigger window sizes)
-#generate_false_splice_site_windows &
+generate_false_splice_site_windows &
 generate_true_splice_site_windows &
-# wait
+wait
 
 # 2. step (also a one time step unless you want different set of fungi for training)
-#split_species_to_train_test_sets
+split_species_to_train_test_sets
 ## 3. step
-#create_train_test_csvs $SPLICE_TRAIN_NAMES train
-#create_train_test_csvs $SPLICE_TEST_NAMES test
+create_train_test_csvs $SPLICE_TRAIN_NAMES train
+create_train_test_csvs $SPLICE_TEST_NAMES test
 ## 4. step
-#mix_and_merge_windows_to_single_file
+mix_and_merge_windows_to_single_file
