@@ -39,8 +39,8 @@ def main():
     # acceptor_lwindow, acceptor_rwindow = 200, 200
     #
     # test_train = 'train'
-    # max_pos_samples = 100
-    # max_neg_samples = 100
+    # max_pos_samples = 1000
+    # max_neg_samples = 1000
 
     assembly = f'{base_loc}/data/Assembly/{shroom_name}_AssemblyScaffolds.fasta'
     if not Path(assembly).is_file():

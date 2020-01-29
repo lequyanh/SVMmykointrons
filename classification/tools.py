@@ -1,7 +1,6 @@
-import pandas as pd
-import shogun as sg
 from contextlib import closing
 
+import pandas as pd
 from sklearn.metrics import confusion_matrix
 
 
@@ -19,6 +18,7 @@ def read_data(filename, window):
 
 
 def read_model(filename):
+    import shogun as sg
     svm = sg.LibSVM()
 
     model_file = sg.SerializableHdf5File(filename, "r")

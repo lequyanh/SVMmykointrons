@@ -3,7 +3,7 @@ import sys
 
 from Bio import SeqIO
 
-from extract_tools import true_donorac_positions, extract_window
+from extract_tools import true_donorac_positions, extract_window, ACCEPTOR, DONOR
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,11 +59,15 @@ def retrieve_true_splice_sites(
 
             for donor_pos in donor_positions.get(scaffold, []):
                 window = extract_window(sequence, donor_pos, margin_size, scaffold)
-                true_donors = true_donors + [window] if window else true_donors
+
+                if window and str(window.seq[margin_size:margin_size + 2]) == DONOR:
+                    true_donors.append(window)
 
             for acc_pos in acceptor_positions.get(scaffold, []):
                 window = extract_window(sequence, acc_pos, margin_size, scaffold)
-                true_acceptors = true_acceptors + [window] if window else true_acceptors
+
+                if window and str(window.seq[margin_size:margin_size+2]) == ACCEPTOR:
+                    true_acceptors.append(window)
 
         print(f'\t True splice sites: {len(true_donors)} donor, {len(true_acceptors)} acceptor windows')
 

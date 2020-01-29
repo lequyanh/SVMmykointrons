@@ -20,7 +20,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import shogun as sg
 from docopt import docopt
 
 from tools import performance_metrics
@@ -102,6 +101,7 @@ def get_svm_predictions(model_file, data_file, window_inner, window_outer, site,
     # NOTE: The script expects the acceptor/donor dimer to be in the middle of the sequence
     input_df = read_data(data_file, window=window)
 
+    import shogun as sg  # import it here not to conflict with keras d-NN use
     sg.Parallel().set_num_threads(ncpus)
 
     features = sg.StringCharFeatures(input_df.sequence.tolist(), sg.RAWBYTE)
@@ -112,15 +112,13 @@ def get_svm_predictions(model_file, data_file, window_inner, window_outer, site,
 
 
 def get_dnn_predictions(model_file, data_file, window_inner, window_outer, site):
-    import os
-
-    os.environ['KERAS_BACKEND'] = 'tensorflow'
-    from keras.models import load_model
-
     assert window_inner == 200
     assert window_outer == 200
 
     window = (window_outer, window_inner - 2) if site == 'donor' else (window_inner - 2, window_outer)
+
+    os.environ['KERAS_BACKEND'] = 'tensorflow'
+    from tensorflow.keras.models import load_model
 
     input_df = read_data(data_file, window=window)
     model = load_model(model_file)

@@ -23,11 +23,11 @@ def main():
     examples_limit = int(sys.argv[4])
     margin_size = int(sys.argv[5])
     # ---------------------------
-    # shroom_name = 'Lenvul1'
+    # shroom_name = 'Mycreb1'
     # assembly_folder = "/home/anhvu/Desktop/mykointrons-data/data/Assembly"
     # introns_folder = "/home/anhvu/Desktop/mykointrons-data/new-sequences"
     #
-    # examples_limit = 50000
+    # examples_limit = 100000
     # margin_size = 200
 
     assembly_fasta = f'{assembly_folder}/{shroom_name}_AssemblyScaffolds.fasta'
