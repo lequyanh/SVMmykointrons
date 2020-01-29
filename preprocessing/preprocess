@@ -3,8 +3,8 @@
 PYTHON=/home/anhvu/anaconda3/envs/mykointron/bin/python
 
 ASSEMBLIES_LOC="/home/anhvu/Desktop/mykointrons-data"
-SHROOM_NAMES_ALL="/home/anhvu/PycharmProjects/mycointrons/ascomycotas.txt"
 SHROOM_SPECIES="basidiomycota"
+SHROOM_NAMES_ALL="/home/anhvu/PycharmProjects/mycointrons/${SHROOM_SPECIES}.txt"
 
 # Files containing fungi species names, that are used for training and testing
 split_dir="shroom_split/$SHROOM_SPECIES/"
@@ -111,8 +111,10 @@ function mix_and_merge_windows_to_single_file() {
 
 # ===================================================================================================
 # 1. step (only one time step unless you want different samples or bigger window sizes)
-# generate_false_splice_site_windows
-generate_true_splice_site_windows
+#generate_false_splice_site_windows &
+generate_true_splice_site_windows &
+# wait
+
 # 2. step (also a one time step unless you want different set of fungi for training)
 #split_species_to_train_test_sets
 ## 3. step

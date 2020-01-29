@@ -3,15 +3,19 @@ import logging
 import os
 import sys
 from pathlib import Path
+import random
+from typing import Tuple, List
 
 import numpy as np
 from Bio import SeqIO
 
 from extract_tools import ACCEPTOR, DONOR
-from fastalib import read_fasta
 
 POSITIVE_LABEL = '+1'
 NEGATIVE_LABEL = '-1'
+
+logging.getLogger().setLevel(logging.INFO)
+random.seed(42)
 
 
 def main():
@@ -24,16 +28,19 @@ def main():
     csv_target_folder = sys.argv[7]
     test_train = sys.argv[8]
 
+    max_pos_samples = int(sys.argv[9])
+    max_neg_samples = int(sys.argv[10])
+
     # base_loc = '/home/anhvu/Desktop/mykointrons-data'
     # shroom_name = 'Ramac1'
     # csv_target_folder = '../data/'
     #
-    # donor_lwindow, donor_rwindow = 150, 150
-    # acceptor_lwindow, acceptor_rwindow = 150, 150
+    # donor_lwindow, donor_rwindow = 200, 200
+    # acceptor_lwindow, acceptor_rwindow = 200, 200
     #
     # test_train = 'train'
-
-    logging.getLogger().setLevel(logging.INFO)
+    # max_pos_samples = 100
+    # max_neg_samples = 100
 
     assembly = f'{base_loc}/data/Assembly/{shroom_name}_AssemblyScaffolds.fasta'
     if not Path(assembly).is_file():
@@ -43,43 +50,82 @@ def main():
     false_donor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-donor-false.fasta'
     false_acceptor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-acceptor-false.fasta'
 
+    true_donor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-donor-true.fasta'
+    true_acceptor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-acceptor-true.fasta'
+
     out_donor_csv, out_acceptor_csv = prepare_output(shroom_name, csv_target_folder, test_train)
 
-    append_false_splice_site_windows(false_donor_file, out_donor_csv, donor_lwindow, donor_rwindow)
-    append_false_splice_site_windows(false_acceptor_file, out_acceptor_csv, acceptor_lwindow, acceptor_rwindow)
+    dwins_pos = get_positive_windows(true_donor_file, donor_lwindow, donor_rwindow, max_pos_samples)
+    dwins_neg = get_negative_windows(false_donor_file, donor_lwindow, donor_rwindow, max_neg_samples)
 
-    append_true_splice_site_windows(true_acceptor_file, out_acceptor_csv, acceptor_lwindow, acceptor_rwindow)
-    append_true_splice_site_windows(true_donor_file, out_donor_csv, donor_lwindow, donor_rwindow)
+    create_csv(out_donor_csv, dwins_pos, dwins_neg)
+
+    awins_neg = get_negative_windows(false_acceptor_file, acceptor_lwindow, acceptor_rwindow, max_neg_samples)
+    awins_pos = get_positive_windows(true_acceptor_file, acceptor_lwindow, acceptor_rwindow, max_pos_samples)
+
+    create_csv(out_acceptor_csv, awins_pos, awins_neg)
 
 
-def append_true_splice_site_windows(
+def create_csv(target_csv: str, positive_windows: list, negative_windows: list):
+    with open(target_csv, 'w') as f:
+        w = csv.writer(f, delimiter=';')
+        w.writerow(("sequence", "label"))
+
+        for row in positive_windows:
+            w.writerow(row)
+
+        for row in negative_windows:
+            w.writerow(row)
+
+    logging.info(f'Written {len(positive_windows)}/{len(negative_windows)} positive/negative'
+                 f'splice site windows to {target_csv}')
+
+
+def get_positive_windows(
         true_donor_acceptor_file: str,
-        target_csv: str,
         lwindow: int,
         rwindow: int,
-):
-    append_splice_site_windows_(true_donor_acceptor_file, target_csv, lwindow, rwindow, POSITIVE_LABEL)
+        max_samples: int
+) -> List[Tuple]:
+    splice_windows = get_splice_site_windows(true_donor_acceptor_file, lwindow, rwindow, max_samples)
+
+    labeled_windows = zip(
+        splice_windows,
+        [POSITIVE_LABEL] * len(splice_windows)
+    )
+
+    return list(labeled_windows)
 
 
-def append_false_splice_site_windows(
+def get_negative_windows(
         false_donor_acceptor_file: str,
-        target_csv: str,
         lwindow: int,
         rwindow: int,
-):
-    append_splice_site_windows_(false_donor_acceptor_file, target_csv, lwindow, rwindow, NEGATIVE_LABEL)
+        max_samples: int
+) -> List[Tuple]:
+    splice_windows = get_splice_site_windows(false_donor_acceptor_file, lwindow, rwindow, max_samples)
+
+    labeled_windows = zip(
+        splice_windows,
+        [NEGATIVE_LABEL] * len(splice_windows)
+    )
+
+    return list(labeled_windows)
 
 
-def append_splice_site_windows_(
+def get_splice_site_windows(
         donor_acceptor_file: str,
-        target_csv: str,
         lwindow: int,
         rwindow: int,
-        label: str,
+        max_samples: int,
 ):
     with open(donor_acceptor_file, 'r') as f:
         # Read sequences from FASTA file
-        splice_windows = [str(sr.seq) for sr in SeqIO.parse(f, 'fasta')]
+        all_windows = [str(sr.seq) for sr in SeqIO.parse(f, 'fasta')]
+        random.shuffle(all_windows)
+
+        # Take either max_samples or all available if there is not enough windows
+        splice_windows = all_windows[0:min(max_samples, len(all_windows))]
 
         window_mid = int(0.5 * (len(splice_windows[1]) - 2))  # -2 for GT/AG dimers
 
@@ -97,19 +143,7 @@ def append_splice_site_windows_(
         )
         assert np.all(dimers_check)
 
-        # Create CSV rows
-        labeled_windows = zip(
-            splice_windows,
-            [label] * len(splice_windows)
-        )
-
-        with open(target_csv, 'a') as f:
-            w = csv.writer(f, delimiter=';')
-
-            for row in labeled_windows:
-                w.writerow(row)
-
-        logging.info(f'Appended {len(splice_windows)} splice site windows to {target_csv}')
+        return splice_windows
 
 
 def prepare_output(shroom_name: str, target_folder: str, test_train: str):

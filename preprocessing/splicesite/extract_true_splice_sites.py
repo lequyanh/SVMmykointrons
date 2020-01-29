@@ -19,7 +19,7 @@ def main():
 
     margin_size = int(sys.argv[4])
     # ---------------------------
-    # shroom_name = 'Lenvul1'
+    # shroom_name = 'Ramac1'
     # assembly_folder = "/home/anhvu/Desktop/mykointrons-data/data/Assembly"
     # introns_folder = "/home/anhvu/Desktop/mykointrons-data/new-sequences"
     #
@@ -30,7 +30,7 @@ def main():
 
     donor_positions, acceptor_positions = true_donorac_positions(introns_fasta)
 
-    print(f'Writing true donor/acceptor windows for {shroom_name} (positive strand)')
+    print(f'Writing true donor/acceptor windows (on positive strand) for {shroom_name}')
 
     true_donors, true_acceptors = \
         retrieve_true_splice_sites(assembly_fasta, donor_positions, acceptor_positions, margin_size)
@@ -68,26 +68,6 @@ def retrieve_true_splice_sites(
         print(f'\t True splice sites: {len(true_donors)} donor, {len(true_acceptors)} acceptor windows')
 
         return true_donors, true_acceptors
-
-
-#
-# def write_true_splice_site_windows(
-#         train_windows: List[str],
-#         splice_windows_train_csv: str
-# ):
-#     train_data_positive = zip(
-#         train_windows,
-#         [POSITIVE_LABEL] * len(train_windows)
-#     )
-#
-#     with open(splice_windows_train_csv, 'w') as f:
-#         w = csv.writer(f, delimiter=';')
-#         w.writerow(("sequence", "label"))
-#
-#         for row in train_data_positive:
-#             w.writerow(row)
-#
-#     logging.info(f'Wrote {len(train_windows)} positive splice site windows to {splice_windows_train_csv}')
 
 
 if __name__ == "__main__":

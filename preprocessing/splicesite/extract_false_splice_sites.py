@@ -3,6 +3,7 @@ import sys
 
 from Bio import SeqIO
 
+import random
 import fastalib as fl
 from extract_tools import true_donorac_positions, DONOR, ACCEPTOR, extract_window
 
@@ -11,22 +12,23 @@ logging.basicConfig(
     filename='extract-false-windows.log',
     filemode='w'
 )
+random.seed(42)
 
 
 def main():
-    # shroom_name = sys.argv[1]
-    # assembly_folder = sys.argv[2]
-    # introns_folder = sys.argv[3]
-    #
-    # examples_limit = int(sys.argv[4])
-    # margin_size = int(sys.argv[5])
-    # ---------------------------
-    shroom_name = 'Lenvul1'
-    assembly_folder = "/home/anhvu/Desktop/mykointrons-data/data/Assembly"
-    introns_folder = "/home/anhvu/Desktop/mykointrons-data/new-sequences"
+    shroom_name = sys.argv[1]
+    assembly_folder = sys.argv[2]
+    introns_folder = sys.argv[3]
 
-    examples_limit = 50000
-    margin_size = 200
+    examples_limit = int(sys.argv[4])
+    margin_size = int(sys.argv[5])
+    # ---------------------------
+    # shroom_name = 'Lenvul1'
+    # assembly_folder = "/home/anhvu/Desktop/mykointrons-data/data/Assembly"
+    # introns_folder = "/home/anhvu/Desktop/mykointrons-data/new-sequences"
+    #
+    # examples_limit = 50000
+    # margin_size = 200
 
     assembly_fasta = f'{assembly_folder}/{shroom_name}_AssemblyScaffolds.fasta'
     introns_fasta = f'{introns_folder}/{shroom_name}/{shroom_name}-introns.fasta'
@@ -53,29 +55,32 @@ def retrieve_false_splice_sites(
 ):
     false_donors = list()
     false_acceptors = list()
-    k = 0
 
     def yield_false_windows():
-        print(f'False splice sites written: {k}/{examples_limit}. '
-              f'{len(false_donors)} donor, {len(false_acceptors)} acceptor windows')
+        print(f'False splice sites written:'
+              f'{len(false_donors)} donor, {len(false_acceptors)} acceptor windows / {examples_limit} limit')
         return false_donors, false_acceptors
 
     with open(assembly_fasta, 'r') as assembly_f:
 
-        for scaffold, sequence in fl.read_fasta(assembly_f):
+        scaffold_records = list(SeqIO.parse(assembly_f, 'fasta'))  # high memory usage :(
+        random.shuffle(scaffold_records)
+
+        for seq_record in scaffold_records:
+            sequence = str(seq_record.seq)
+            scaffold = seq_record.description
+
             for position, dimer in fl.dimers(sequence):
-                if k >= examples_limit:
+                if len(false_acceptors) + len(false_donors) >= examples_limit:
                     return yield_false_windows()
 
                 if dimer == DONOR and position not in donor_positions.get(scaffold, []):
                     window = extract_window(sequence, position, margin_size, scaffold)
                     false_donors = false_donors + [window] if window else false_donors
-                    k += 1
 
                 elif dimer == ACCEPTOR and position not in acceptor_positions.get(scaffold, []):
                     window = extract_window(sequence, position, margin_size, scaffold)
                     false_acceptors = false_acceptors + [window] if window else false_acceptors
-                    k += 1
                 else:
                     logging.info(f'Dimer is a splice site, skip it')
                     continue

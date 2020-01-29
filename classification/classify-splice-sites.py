@@ -112,7 +112,11 @@ def get_svm_predictions(model_file, data_file, window_inner, window_outer, site,
 
 
 def get_dnn_predictions(model_file, data_file, window_inner, window_outer, site):
+    import os
+
+    os.environ['KERAS_BACKEND'] = 'tensorflow'
     from keras.models import load_model
+
     assert window_inner == 200
     assert window_outer == 200
 
