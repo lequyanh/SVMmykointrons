@@ -8,7 +8,7 @@ pos_neg_ratio=$5  # ratio between positive and negative (false) splice sites in 
 
 # Comment if extraction is not needed
 for z in "${model_folders}"/*.tar.gz; do tar -xf "$z" --directory "${model_folders}"; done
-rm "${model_folders}/*.tar.gz"
+rm "${model_folders}"/*.tar.gz
 
 mkdir -p "${result_dir}"
 echo "Grid models validation in progress. Results will be saved in ./${result_dir}"
@@ -26,11 +26,6 @@ do
     i_win=$(echo "${f}" | cut -d'-' -f$col )
     model="${f}/model.hd5"
 
-    # ---------- CLOUD VERSION --------------
-    # TODO update the remote script
-    # qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v SUBJECT=$subject,DATA=$validation_set,MODEL=$model_folders,I_WIN=$i_win,CPU=10 classify-splice-sites-cloud.sh
-    # ---------- LOCAL VERSION --------------
-    python ../classification/classify-splice-sites.py "${validation_set}" "${model $i_win}" 70 "${subject}" -r "${pos_neg_ratio}" -c 12
-    cat 'classify-splice-sites*.log' > "./${result_dir}/$(basename "$f")-results.txt"
-    # ---------- LOCAL VERSION --------------
+    python ../classification/classify-splice-sites.py "${validation_set}" "${model}" "${i_win}" 70 "${subject}" -r "${pos_neg_ratio}" -c 12
+    cat classify-splice-sites*.log > "./${result_dir}/$(basename "$f")-results.txt"
 done

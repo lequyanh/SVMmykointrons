@@ -13,6 +13,13 @@ logging.basicConfig(
 
 
 def main():
+    """
+    For a given fungi species, create a file with true donor/acceptor windows.
+    Each window will be @margin_size (times 2) long. This margin will be around the GT/AG dimer.
+    There will be at most @examples_limit of them (for each donor/acceptor file)
+    Script takes @introns_folder as a source of introns (to know from which AG/GTs to make the windows)
+    """
+
     shroom_name = sys.argv[1]
     assembly_folder = sys.argv[2]
     introns_folder = sys.argv[3]

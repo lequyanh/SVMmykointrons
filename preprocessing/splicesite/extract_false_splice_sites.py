@@ -16,6 +16,13 @@ random.seed(42)
 
 
 def main():
+    """
+    For a given fungi species, create a file with false donor/acceptor windows.
+    Each window will be @margin_size (times 2) long. This margin will be around the GT/AG dimer.
+    There will be at most @examples_limit of them (for each donor/acceptor file)
+    Script takes @introns_folder as a source of introns (to know what AG/GTs not to include)
+    """
+
     shroom_name = sys.argv[1]
     assembly_folder = sys.argv[2]
     introns_folder = sys.argv[3]
@@ -27,7 +34,7 @@ def main():
     # assembly_folder = "/home/anhvu/Desktop/mykointrons-data/data/Assembly"
     # introns_folder = "/home/anhvu/Desktop/mykointrons-data/new-sequences"
     #
-    # examples_limit = 100000
+    # examples_limit = 150000
     # margin_size = 200
 
     assembly_fasta = f'{assembly_folder}/{shroom_name}_AssemblyScaffolds.fasta'
@@ -64,14 +71,14 @@ def retrieve_false_splice_sites(
     with open(assembly_fasta, 'r') as assembly_f:
 
         scaffold_records = list(SeqIO.parse(assembly_f, 'fasta'))  # high memory usage :(
-        random.shuffle(scaffold_records)
+        random.shuffle(scaffold_records)  # shuffle scaffolds for uniform sampling
 
         for seq_record in scaffold_records:
             sequence = str(seq_record.seq)
             scaffold = seq_record.description
 
             for position, dimer in fl.dimers(sequence):
-                if len(false_acceptors) + len(false_donors) >= examples_limit:
+                if len(false_acceptors) >= examples_limit:
                     return yield_false_windows()
 
                 if dimer == DONOR and position not in donor_positions.get(scaffold, []):

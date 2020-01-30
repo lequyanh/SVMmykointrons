@@ -19,6 +19,15 @@ random.seed(42)
 
 
 def main():
+    """
+    For a given fungi species, generate a CSV file with true&false splice site windows.
+        - Each window will be @xx_lindow and @yy_rwindow long
+    The script takes 2 files - e.g. true-donors and false-donors and mix them into the resulting CSV
+        - Expect the true/false files to exist. Run "extract_false/true_splice_sites.py" first
+        - Can specify the ratio between positive and negative examples by arguments @max_pos_samples, @max_neg_samples
+    The file can be either for testing/training, which is specified by @test_train parameter
+    :return: 2 files - donor-train/test.csv acceptor-train/test.csv
+    """
     base_loc = sys.argv[1]
     shroom_name = sys.argv[2]
 
@@ -32,15 +41,15 @@ def main():
     max_neg_samples = int(sys.argv[10])
 
     # base_loc = '/home/anhvu/Desktop/mykointrons-data'
-    # shroom_name = 'Ramac1'
+    # shroom_name = 'Mycreb1'
     # csv_target_folder = '../data/'
     #
     # donor_lwindow, donor_rwindow = 200, 200
     # acceptor_lwindow, acceptor_rwindow = 200, 200
     #
     # test_train = 'train'
-    # max_pos_samples = 1000
-    # max_neg_samples = 1000
+    # max_pos_samples = 100000
+    # max_neg_samples = 140000
 
     assembly = f'{base_loc}/data/Assembly/{shroom_name}_AssemblyScaffolds.fasta'
     if not Path(assembly).is_file():

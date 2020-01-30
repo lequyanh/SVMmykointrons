@@ -3,16 +3,16 @@
 # ----- CHOOSE A SHROOM FOR GRID SEARCH TO INFER THE BEST SET OF SVM PARAMETERS FOR ACTUAL TRAINING ------
 ROOT="lequyanh@skirit.metacentrum.cz:/storage/praha1/home/lequyanh"
 
-SITE="acceptor"
+SITE="donor"
 DIVISION="basidiomycota"
-SPECIES="Lenvul1"
+SPECIES="Mycreb1"
 SPECIES_CSV="../data/${DIVISION}/train/${SITE}/${SPECIES}-${SITE}-windows.csv"
 
 TRAINSET="shuffeled_train_$(basename ${SPECIES_CSV})"
 VALIDATION_SET="shuffeled_valid_$(basename ${SPECIES_CSV})"
 
 # ratio of positive splice sites vs negative (false) splice_sites in the fungi genome
-C_pos_real=0.003
+C_pos_real=0.025
 # How to determine this parameter, go to:
 #     ../statistics/splice-SITE-performance-evaluation/adjusting-precision-methodology.md
 # But in general, for Ascomycota its roughly 0.003 and for Basidiomycota 0.025
@@ -44,10 +44,11 @@ function download_grid_models() {
   echo "Download trained grid models from metacentrum. Models will be save to ${models_folder}"
 
   # The result files contain the training filename in them
-  scp "${ROOT}/results/${TRAINSET}*" ${models_folder}
+  scp "${ROOT}/results/train-splice-site-${TRAINSET}*" ${models_folder}
 }
 
 function evaluate_grid_models() {
+  models_folder="${DIVISION}/${SITE}/models"
   results_folder="${DIVISION}/${SITE}/validation_results"
   mkdir -p "./${results_folder}"
 
@@ -64,12 +65,12 @@ function evaluate_grid_models() {
   # validation of the model.
   # * Older result files however still need to be processed post-hoc, therefore this code stays
 
-  # ratio of #true_splice_site_windows vs #false_splice_site_windows in resampled train/test file
-  pos_ex=$(grep -c ";+1" <"${VALIDATION_SET}")
-  neg_ex=$(grep -c ";-1" <"${VALIDATION_SET}")
-  C_pos_resampled=$(awk "BEGIN {print $pos_ex/$neg_ex}")
-
-  bash ../classification/evaluate_models.sh -f "${results_folder}" -r ${C_pos_real} -t "${C_pos_resampled}" -a 0.5 -g
+  ## ratio of #true_splice_site_windows vs #false_splice_site_windows in resampled train/test file
+#  pos_ex=$(grep -c ";+1" <"${VALIDATION_SET}")
+#  neg_ex=$(grep -c ";-1" <"${VALIDATION_SET}")
+#  C_pos_resampled=$(awk "BEGIN {print $pos_ex/$neg_ex}")
+#
+#  bash ../classification/evaluate_models.sh -f "${results_folder}" -r ${C_pos_real} -t "${C_pos_resampled}" -a 0.5 -g
   # ------------------------------- LEGACY -----------------------------------
 }
 
