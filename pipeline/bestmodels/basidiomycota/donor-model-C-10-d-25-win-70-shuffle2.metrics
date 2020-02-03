@@ -1,0 +1,11 @@
+INFO:root:Classification of file ../data/basidiomycota/test/shuff_aggreg_donor_site_test.csv with model donor-model-basi-C-10-d-25-win-70-shuffle2.hd5
+INFO:root:Performance metrics:
+ -TP: 194328
+ -FP: 15870
+ -TN: 269874
+ -FN: 19896
+Accuracy: 0.9284634216589862
+Precision: 0.924499757371621
+Recall: 0.9071252520725969
+Adjusted precision: 0.6444338271221769
+Adj. precision calculated with imbalance ratio: 0.025

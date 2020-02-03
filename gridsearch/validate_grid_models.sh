@@ -16,14 +16,14 @@ echo "Grid models validation in progress. Results will be saved in ./${result_di
 # Folder with models have parameters of that model in their name (split by '-').
 # Extract the INNER_WINDOW parameter from the names
 if [ "$subject" == "donor" ]; then
-    col=10
+    col=11  # 10 for remote version of train results
 else
-    col=9
+    col=11  # 9 for remote version of train results
 fi
 
 for f in "${model_folders}"/*/
 do
-    i_win=$(echo "${f}" | cut -d'-' -f$col )
+    i_win=$(echo "${f%?}" | cut -d'-' -f$col )  # the term after echo removes the last character
     model="${f}/model.hd5"
 
     python ../classification/classify-splice-sites.py "${validation_set}" "${model}" "${i_win}" 70 "${subject}" -r "${pos_neg_ratio}" -c 12

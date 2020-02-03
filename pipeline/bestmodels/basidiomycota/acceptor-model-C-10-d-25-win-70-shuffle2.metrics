@@ -1,0 +1,11 @@
+INFO:root:Classification of file ../data/basidiomycota/test/shuff_aggreg_acceptor_site_test.csv with model acceptor-model-C-10-d-25-win-70.hd5
+INFO:root:Performance metrics:
+ -TP: 176735
+ -FP: 23120
+ -TN: 274286
+ -FN: 25827
+Accuracy: 0.9020997343830005
+Precision: 0.8843161291936654
+Recall: 0.8724982968177645
+Adjusted precision: 0.4884090285909399
+Adj. precision calculated with imbalance ratio: 0.025

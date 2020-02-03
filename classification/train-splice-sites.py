@@ -53,6 +53,10 @@ if __name__ == "__main__":
     logging.info('\t'.join(["TP", "FP", "TN", "FN"]))
     logging.info('\t'.join(map(str, [TP, FP, TN, FN])))
 
+    logging.info(f'Precision: {TP / (TP + FP)}\n'
+                 f'Recall: {TP / (TP + FN)}\n'
+                 f'Accuracy: {ACC}')
+
     output = sg.SerializableHdf5File(model_file, "w")
     with closing(output):
         if svm.save_serializable(output):

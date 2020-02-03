@@ -77,8 +77,8 @@ function evaluate_grid_models() {
 split_csv_valid_train
 upload_trainset_and_train_gridmodels
 # Wait several hours...
-#download_grid_models
-#evaluate_grid_models
+download_grid_models
+evaluate_grid_models
 
 # =========================== TRAINING AND VALIDATION OF THE FULL MODEL WITH DISCOVERED PARAMETERS =====================
 win_in=70
@@ -94,7 +94,7 @@ function train_full_model() {
     python ../classification/train-splice-sites.py ${train_file} "${model_name}" ${win_in} ${win_out} ${degree} ${C} 12
   else
     echo "Upload the full train set to metacentrum"
-    scp ${train_file} "${ROOT}/data/${SITE}s"
+    scp ${train_file} "${ROOT}/data/${SITE}"
 
     echo "Execute this command on metacentrum (care for the interpratation of windows):"
     echo "qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v DEGREE=${degree},LWINDOW=70,RWINDOW=70,C=${C},SITE=${SITE}s,DATAFILE=$(basename ${train_file}),CPU=10 train-splice-SITE.sh"
@@ -109,7 +109,7 @@ function validate_full_model() {
   python ../classification/classify-splice-sites.py ${test_file} ${model_name} ${win_in} ${win_out} ${SITE} -r "${C_pos_real}" -c 10
 }
 
-#train_full_model "locally"
+train_full_model "locally"
 ## For validation consider changing the C_+ parameter.
 ## But we assume that the ratio is more or less similar accross species
 #validate_full_model "${C_pos_real}"
