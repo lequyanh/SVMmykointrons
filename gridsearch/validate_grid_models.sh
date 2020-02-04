@@ -16,9 +16,9 @@ echo "Grid models validation in progress. Results will be saved in ./${result_di
 # Folder with models have parameters of that model in their name (split by '-').
 # Extract the INNER_WINDOW parameter from the names
 if [ "$subject" == "donor" ]; then
-    col=11  # 10 for remote version of train results
+    col=12
 else
-    col=11  # 9 for remote version of train results
+    col=11
 fi
 
 for f in "${model_folders}"/*/

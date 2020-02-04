@@ -36,6 +36,8 @@ with open(assembly, 'r') as assembly_f:
 
     # Sample a set of assemblies
     scaffolds = np.array(scaffolds)
+
+    np.random.seed(42)
     np.random.shuffle(scaffolds)
 
     k = 0

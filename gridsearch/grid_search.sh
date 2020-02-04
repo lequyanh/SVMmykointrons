@@ -12,10 +12,16 @@ for deg in "${ds[@]}"; do
         for i_win in "${intron_windows[@]}"; do
             if [ "$subject" == 'donor' ]
             then
-                qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v DEGREE=${deg},LWINDOW=70,RWINDOW=${i_win},C=${C},SITE=donors,DATAFILE=${train_set},CPU=10 train-splice-site.sh
+                python ../classification/train-splice-sites.py "${train_set}" model.hd5 70 "${i_win}" "${deg}" "${C}" 12
+                results_dir="train-${subject}-$(basename "$train_set")-C-${C}-d-${deg}-win-70-${i_win}"
             else
-                qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v DEGREE=${deg},LWINDOW=${i_win},RWINDOW=70,C=${C},SITE=acceptors,DATAFILE=${train_set},CPU=10 train-splice-site.sh
+                python ../classification/train-splice-sites.py "${train_set}" model.hd5 "${i_win}" 70 "${deg}" "${C}" 12
+                results_dir="train-${subject}-$(basename "$train_set")-C-${C}-d-${deg}-win-${i_win}-70"
             fi
+
+            mkdir "${results_dir}"
+            mv model.hd5 "${results_dir}"
+            mv train-splice-sites-*.log "${results_dir}"
         done
     done
 done

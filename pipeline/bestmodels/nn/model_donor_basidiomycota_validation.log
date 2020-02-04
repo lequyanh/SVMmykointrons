@@ -1,0 +1,11 @@
+INFO:root:Classification of file ../data/basidiomycota/test/shuff_aggreg_donor_site_test.csv with model ../pipeline/bestmodels/nn/model_donor.h5
+INFO:root:Performance metrics:
+ -TP: 185109
+ -FP: 10413
+ -TN: 275331
+ -FN: 29115
+Accuracy: 0.9209389400921659
+Precision: 0.9467425660539479
+Recall: 0.8640908581671521
+Adjusted precision: 0.7246076780492973
+Adj. precision calculated with imbalance ratio: 0.025

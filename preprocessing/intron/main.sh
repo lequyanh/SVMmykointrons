@@ -6,15 +6,13 @@ PYTHON=~/anaconda3/envs/mykointron/bin/python
 #  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
 NUMBER_CPUS=12
-#  - memory limit for caching (in MB)
-#    this is used in the intron prediction
-CACHE_LIMIT=1024
+
 #   - path to data storage on the remote metacenter
 ROOT="lequyanh@skirit.metacentrum.cz:/storage/praha1/home/lequyanh"
 # -------------------------------------------------------------
 
 # Pipeline settings:
-DIVISION="ascomycota"
+DIVISION="basidiomycota"
 #  - splice site dimers
 DONOR="GT"
 ACCEPTOR="AG"
@@ -107,15 +105,15 @@ function generate_splice_site_candidates() {
 
   # extract the splice site sequences and then use awk to separate the sequences into
   # the donor and acceptor dataset, respectively
-  $PYTHON extract-donor-acceptor.py $assembly_filepath \
+  $PYTHON extract-donor-acceptor.py "${assembly_filepath}" \
                                     $DONOR $ACCEPTOR \
                                     $DONOR_LWINDOW $DONOR_RWINDOW \
                                     $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
                                     $EXAMPLES_LIMIT \
           | gawk -v donor="$donor_regex" \
                 -v acceptor="$acceptor_regex" \
-                -v donor_file=$donor_file \
-                -v acceptor_file=$acceptor_file \
+                -v donor_file="${donor_file}" \
+                -v acceptor_file="${acceptor_file}" \
                 '$0 ~ donor {print >> donor_file} $0 ~ acceptor {print >> acceptor_file}'
 
   echo "Donors extracted to [$donor_file]."
@@ -157,17 +155,17 @@ function get_positive_splice_site_candidates() {
     # classify the donors and acceptors in parallel
     # keep only the positively classified samples
     # keep only the columns `scaffold`, and `position` (1st and 2nd)
-    $PYTHON classify-splice-sites.py $donor_file $splice_site_donor_model \
+    $PYTHON classify-splice-sites.py "${donor_file}" "${splice_site_donor_model}" \
                                     $DONOR_RWINDOW $DONOR_LWINDOW \
                                     "donor" \
-                                    -c $donor_cpus \
+                                    -c "${donor_cpus}" \
             | grep $positive_splice_sites \
             | cut -d ';' -f -2 >> "$donor_result" &
     classify_donor_pid=$!
-    $PYTHON classify-splice-sites.py $acceptor_file $splice_site_acceptor_model \
+    $PYTHON classify-splice-sites.py "${acceptor_file}" "${splice_site_acceptor_model}" \
                                     $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
                                     "acceptor" \
-                                    -c $acceptor_cpus \
+                                    -c "${acceptor_cpus}" \
             | grep $positive_splice_sites \
             | cut -d ';' -f -2 >> "$acceptor_result" &
     classify_acceptor_pid=$!
@@ -251,26 +249,26 @@ function merge_into_one_dataset() {
 # determine the number of CPUs available for each classification task
 donor_cpus=$((NUMBER_CPUS/2))
 acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
-#
-#echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
-#
-#echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating traning dataset"
-#get_positive_splice_site_candidates "train"
-#echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating testing dataset"
-#get_positive_splice_site_candidates "test"
 
-#echo "Pairing positive donors with appropriate positive acceptors to form introns"
-#generate_intron_candidates "train"
-#generate_intron_candidates "test"
+echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
+
+echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating traning dataset"
+get_positive_splice_site_candidates "train"
+echo "Classifying splice site candidates (keeping positions of positive donors/acceptors). Creating testing dataset"
+get_positive_splice_site_candidates "test"
+
+echo "Pairing positive donors with appropriate positive acceptors to form introns"
+generate_intron_candidates "train"
+generate_intron_candidates "test"
 
 echo "Labeling intron candidates for training/testing purposes"
 label_intron_candidates "train"
 label_intron_candidates "test"
 
-output_loc=./$DIVISION/intron_candidates/
+output_loc="./${DIVISION}/intron_candidates/"
 echo "Merging labeled intron dataset into one file ${INTRON_TRAIN_FILE} and ${INTRON_TEST_FILE} at ${output_loc}"
 merge_into_one_dataset ${output_loc}
 
-echo "Copying the overal intron train file to ${ROOT}/data/intron"
-scp "${output_loc}/$INTRON_TRAIN_FILE" $ROOT/data/intron
+#echo "Copying the overal intron train file to ${ROOT}/data/intron"
+#scp "${output_loc}/${INTRON_TRAIN_FILE}" "${ROOT}/data/intron"
 

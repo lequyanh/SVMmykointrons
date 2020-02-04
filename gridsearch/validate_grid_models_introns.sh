@@ -7,13 +7,13 @@ model_folders=$2
 out_folder=$3
 
 # Comment if extraction is not needed
-for z in ${model_folders}/*.tar.gz; do tar -xf "$z" --directory "$model_folders"; done
-rm "${model_folders}/*.tar.gz"
+for z in "${model_folders}"/*.tar.gz; do tar -xf "$z" --directory "$model_folders"; done
+rm "${model_folders}"/*.tar.gz
 
-mkdir -p "$out_folder"
-echo "Grid validation of models in ${model_folders}. Results will be saved in ./$out_folder"
+mkdir -p "${out_folder}"
+echo "Grid validation of models in ${model_folders}. Results will be saved in ./${out_folder}"
 
-for f in $model_folders/*/
+for f in "${model_folders}"/*/
 do
     model=$f/model.hd5
     order=$(echo "$f" | cut -d "-" -f 4 )
