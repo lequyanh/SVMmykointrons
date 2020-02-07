@@ -8,56 +8,43 @@ svm_classification = pd.read_csv(svm_output, delimiter=';')
 
 # Adjust range so the sequences of two files are equally long
 nn_classification['sequence'] = nn_classification[['sequence']].applymap(lambda seq: seq[128:270])
+# nn_classification.to_csv("nn_acceptor_trimmed.csv", index=False, sep=";")
 
-intersect_whole = pd.merge(nn_classification, svm_classification, how='inner')
-print(f'Intersection in classification: {len(intersect_whole)} out of {len(nn_classification)}.'
-      f'Ratio {100 * len(intersect_whole) / len(nn_classification)}%')
+nn_classification.drop_duplicates(inplace=True)
+svm_classification.drop_duplicates(inplace=True)
 
+joined_results = pd.merge(nn_classification, svm_classification, on='sequence')
+positives_df = joined_results[joined_results['label_x'] == 1]
 
-def get_intersection(filter_nn, filter_svm):
-    nn_view = nn_classification[filter_nn]
-    svm_view = svm_classification[filter_svm]
+fn_x = positives_df[positives_df['pred_x'] == -1]
+fn_y = positives_df[positives_df['pred_y'] == -1]
 
-    # Drop predictions so the join makes sense
-    nn_view = nn_view.drop(columns='pred')
-    svm_view = svm_view.drop(columns='pred')
+tp_x = positives_df[positives_df['pred_x'] == 1]
+tp_y = positives_df[positives_df['pred_y'] == 1]
 
-    intersect = pd.merge(nn_view, svm_view, how='inner')
+tp_tp_intersect = positives_df[(positives_df['pred_x'] == 1) & (positives_df['pred_y'] == 1)]
+print(f'True positives intersection {len(tp_tp_intersect)}. '
+      f'I.e {100 * len(tp_tp_intersect) / len(tp_x)}% of model X '
+      f'and {100 * len(tp_tp_intersect) / len(tp_y)}% of model Y results')
 
-    return intersect, nn_view, svm_view
+fn_fn_intersect = positives_df[(positives_df['pred_x'] == -1) & (positives_df['pred_y'] == -1)]
+print(f'False negatives intersection {len(fn_fn_intersect)}. '
+      f'The intersection makes {100 * len(fn_fn_intersect) / len(fn_x)}% of model X false negatives '
+      f'and {100 * len(fn_fn_intersect) / len(fn_y)}% of model Y false negatives')
 
+fn_tp_intersect = positives_df[(positives_df['pred_x'] == -1) & (positives_df['pred_y'] == 1)]
+print(f'FN vs TP intersection {len(fn_tp_intersect)}. '
+      f'I.e {100 * len(fn_tp_intersect) / len(fn_x)}% of Xs model FN is found by model Y ')
 
-filter_nn_FN = (nn_classification['pred'] == -1) & (nn_classification['label'] == 1)
-filter_svm_TP = (svm_classification['pred'] == 1) & (nn_classification['label'] == 1)
+tp_fn_intersect = positives_df[(positives_df['pred_x'] == 1) & (positives_df['pred_y'] == -1)]
+print(f'FN vs TP intersection {len(tp_fn_intersect)}. '
+      f'I.e {100 * len(tp_fn_intersect) / len(fn_y)}% of Ys model FN is found by model X ')
 
-intersect_nnFN_svmTP, nn_fn, _ = get_intersection(filter_nn_FN, filter_svm_TP)
-print(f'Intersection between SVM TP and NN FN is {len(intersect_nnFN_svmTP)}/{len(nn_fn)}. '
-      f'I.e {100 * len(intersect_nnFN_svmTP) / len(nn_fn)}% of NN false negatives are detected by SVM')
+negatives_df = joined_results[joined_results['label_x'] == -1]
+fp_x = negatives_df[negatives_df['pred_x'] == 1]
+fp_y = negatives_df[negatives_df['pred_y'] == 1]
 
-# -------------------------------------------------------------------------------------------------------
-filter_nn_TP = (nn_classification['pred'] == 1) & (nn_classification['label'] == 1)
-filter_svm_FN = (svm_classification['pred'] == -1) & (nn_classification['label'] == 1)
-
-intersect_svmFN_nnTP, _, svm_fn = get_intersection(filter_nn_TP, filter_svm_FN)
-print(f'Intersection between SVM TP and NN FN is {len(intersect_svmFN_nnTP)}/{len(svm_fn)}. '
-      f'I.e {100 * len(intersect_svmFN_nnTP) / len(svm_fn)}% of SVM false negatives are detected by MM')
-
-# ------------------------------------------SHARING IS CARING-----------------------------------------------------------
-filter_nn_FP = (nn_classification['pred'] == 1) & (nn_classification['label'] == -1)
-filter_svm_FP = (svm_classification['pred'] == 1) & (nn_classification['label'] == -1)
-
-intersect_svmFP_nnFP, nn_fp, svm_fp = get_intersection(filter_nn_FP, filter_svm_FP)
-print(f'Intersection between SVM FP and NN FP is {len(intersect_svmFP_nnFP)}. '
-      f'I.e {100 * len(intersect_svmFP_nnFP) / len(svm_fp)}% of SVM false positives are shared with NN '
-      f'and {100 * len(intersect_svmFP_nnFP) / len(nn_fp)}% of NN false positives are shared with SVM')
-
-intersect_svmTP_nnTP, nn_tp, svm_tp = get_intersection(filter_nn_TP, filter_svm_TP)
-print(f'Intersection between SVM TP and NN TP is {len(intersect_svmTP_nnTP)}. '
-      f'I.e {100 * len(intersect_svmTP_nnTP) / len(svm_tp)}% of SVM true positives are shared with NN '
-      f'and {100 * len(intersect_svmTP_nnTP) / len(nn_tp)}% of NN true positives are shared with SVM')
-
-intersect_svmFN_nnFN, nn_fn, svm_fn = get_intersection(filter_nn_FN, filter_svm_FN)
-print(f'Intersection between SVM FN and NN FN is {len(intersect_svmFN_nnFN)}. '
-      f'I.e {100 * len(intersect_svmFN_nnFN) / len(svm_fn)}% of SVM false negatives are shared with NN '
-      f'and {100 * len(intersect_svmFN_nnFN) / len(nn_fn)}% of NN false negatives are shared with SVM')
-
+fp_fp_intersect = negatives_df[(negatives_df['pred_x'] == 1) & (negatives_df['pred_y'] == 1)]
+print(f'False positives intersection {len(fp_fp_intersect)}. '
+      f'The intersection makes {100 * len(fp_fp_intersect) / len(fp_x)}% of model X false positives '
+      f'and {100 * len(fp_fp_intersect) / len(fp_y)}% of model Y false positives')

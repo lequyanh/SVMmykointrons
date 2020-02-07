@@ -20,14 +20,14 @@ cd "${SCRATCHDIR}" || exit 2
 
 cat *.csv > input.csv
 
-$PYTHONDIR/python train-introns.py input.csv "${ORDER}" "${C_POS}" -t "${TEST}" -c "${CPU}"
+$PYTHONDIR/python train-introns.py input.csv "${ORDER}" 1 "${C_POS}" -t "${TEST}" -c "${CPU}"
 
 mkdir -p "${ROOT}/results"
 
 RESULTDIR="train-introns-C-${C_POS}-d-${ORDER}-${PBS_JOBID}"
 mkdir "${RESULTDIR}"
 
-mv train-introns.*.log "${RESULTDIR}/"
+mv train-introns*.log "${RESULTDIR}/"
 mv model.hd5 "${RESULTDIR}/"
 
 tar -czvf "${RESULTDIR}.tar.gz" "${RESULTDIR}"

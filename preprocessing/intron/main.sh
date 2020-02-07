@@ -24,7 +24,7 @@ ACCEPTOR_LWINDOW=70
 ACCEPTOR_RWINDOW=70
 
 # Maximal number of examples taken from each shroom for intron model training
-EXAMPLES_LIMIT=40000
+EXAMPLES_LIMIT=60000
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
 INTRON_MIN_LENGTH=40

@@ -27,7 +27,7 @@ INTRON_MIN_LENGTH=40
 INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
 #    it is used in the intron prediction and it must be equal to the order used while training
-SPECT_KERNEL_ORDER=6
+SPECT_KERNEL_ORDER=4
 #  - names of the splice site datasets
 #    it will be created before the splice sites classification
 DONOR_FILE="splice-site-donor-dataset.csv"
@@ -57,7 +57,7 @@ positive_introns=";1$"
 
 # Pipeline inputs:
 #  - Assembly file (FASTA)
-assembly_filepath=$1
+assembly_filepath=$1  # ~/Desktop/mykointrons-data/data/Assembly/Kocim1_AssemblyScaffolds.fasta
 #  - donor splice site prediction model
 splice_site_donor_model=$2
 #  - acceptor splice site prediction model
@@ -67,9 +67,9 @@ intron_model=$4
 #  - in case of validation
 intron_source="/home/anhvu/Desktop/mykointrons-data/new-sequences/Kocim1/Kocim1-introns.fasta"
 
-if [ $# -ne 4 ]
+if ! ([ $# -eq 4 ] || [ $# -eq 5 ])
 then
-    echo "Arguments expected: ASSEMBLY DONOR_MODEL ACCEPTOR_MODEL INTRON_MODEL"
+    echo "Arguments expected: ASSEMBLY DONOR_MODEL ACCEPTOR_MODEL INTRON_MODEL [INTRON_SOURCE]"
     exit 1
 fi
 
