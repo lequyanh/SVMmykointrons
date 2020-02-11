@@ -5,7 +5,7 @@
 PYTHON=~/anaconda3/envs/mykointron/bin/python
 #  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
-NUMBER_CPUS=10
+NUMBER_CPUS=12
 #  - memory limit for caching (in MB)
 #    this is used in the intron prediction
 CACHE_LIMIT=1024
@@ -112,12 +112,12 @@ function extract_donor_acceptor_step() {
     ##                -v acceptor_file=$ACCEPTOR_FILE \
     ##                '$0 ~ donor {print >> donor_file} $0 ~ acceptor {print >> acceptor_file}'
     #
-    $PYTHON extract-donor-acceptor.py $assembly_filepath \
+    $PYTHON extract-donor-acceptor.py "${assembly_filepath}" \
                                       $DONOR $ACCEPTOR \
                                       $DONOR_LWINDOW $DONOR_RWINDOW \
                                       $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
-            | gawk -v donor=$donor_regex \
-                  -v acceptor=$acceptor_regex \
+            | gawk -v donor="${donor_regex}" \
+                  -v acceptor="${acceptor_regex}" \
                   -v donor_file=$DONOR_FILE \
                   -v acceptor_file=$ACCEPTOR_FILE \
                   '$0 ~ donor {print >> donor_file} $0 ~ acceptor {print >> acceptor_file}'
@@ -215,19 +215,18 @@ function validate_introns_step() {
 }
 
 function cut_introns_step() {
-    $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ../statistics/basidiomycota-intron-lens.txt
+    $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ../statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt
 }
-
-#extract_donor_acceptor_step
-#classify_splice_sites_step
-#pair_splice_sites_and_extract_introns_step
+extract_donor_acceptor_step
+classify_splice_sites_step
+pair_splice_sites_and_extract_introns_step
 
 ## ===================================== VALIDATE =====================================
-validate_introns_step
+# validate_introns_step
 ## =================================== or CLASIFY =====================================
-# classify_introns_step
+classify_introns_step
 
-# cut_introns_step
+cut_introns_step
 
 echo "Pipeline log for file ${assembly_filepath}" > pipeline.output
 for p in ./*.log;

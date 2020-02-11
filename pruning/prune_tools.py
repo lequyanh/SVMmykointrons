@@ -52,7 +52,9 @@ def find_overlaps(_intron_coords: dict):
     """
     overlaps_dict = dict()
     for scaffold, positions in _intron_coords.items():
-        last_end, last_start = 0, 0
+        # The "last last" vars are needed in case the overlap is not between two immediate neighbours (it skips one)
+        # e.g. for intron positions 10-15, 12-13, 14-16)
+        last_end, last_start, last_last_start, last_last_end = 0, 0, 0, 0
         positions_non_overlap, positions_overlap = [], []
         correction = 0
 
@@ -68,10 +70,21 @@ def find_overlaps(_intron_coords: dict):
 
                 overlap_ratio = (last_end - start) / (last_end - last_start)
                 logging.info(f'{scaffold}> simple overlap ratio {overlap_ratio}')
+            elif last_end <= start <= last_last_end:
+                # remove the last overlap. That intron is too short anyways, so ignore it
+                positions_overlap = positions_overlap[:-1]
+                logging.warning("Overlap type: skip one")
+
+                positions_overlap.append((last_last_start, last_last_end, start, end))
+                # even though we should increment for multi-overlap count, we removed one overlap pair
+                # Therefore we removed 2 intron positions and added one overlap position, i.e. -2 + 1
+                correction -= 1
             else:
                 positions_non_overlap += [(start, end)]
 
+            last_last_end = last_end
             last_end = end
+            last_last_start = last_start
             last_start = start
 
         assert len(positions) == len(positions_non_overlap) + 2 * len(positions_overlap) - correction

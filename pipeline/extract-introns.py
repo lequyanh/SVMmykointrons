@@ -40,7 +40,7 @@ if __name__ == '__main__':
     with open(fasta_filename, 'r') as fasta_file:
         for scaffold in SeqIO.parse(fasta_file, 'fasta'):
             to_extract = scaffold_sequences[scaffold.id]
-
+            logging.info(f'Extracting from scaffold {to_extract}')
             for positions in to_extract:
                 scaffold_seq = str(scaffold.seq)
                 extracted = ''.join(scaffold_seq[positions[i] - 1:positions[i + 1]]
