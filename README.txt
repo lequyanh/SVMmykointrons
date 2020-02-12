@@ -86,3 +86,4 @@ INSTALLATION
     conda install -c conda-forge shogun
     conda install -c anaconda keras
     conda install -c anaconda biopython
+    (pip install gffutils)

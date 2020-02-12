@@ -94,6 +94,7 @@ def find_overlaps(_intron_coords: dict):
 
 
 def prune_non_overlap_introns(
+        scaffold: str,
         scaffold_dna: str,
         non_overlap_introns: List[Tuple[int, int]]
 ) -> (str, List[Tuple[int, int]]):
@@ -108,6 +109,8 @@ def prune_non_overlap_introns(
 
         if intron_end - intron_begin > 80:
             continue  # Skipping long introns
+
+        print(f'{scaffold};{intron_begin};{intron_end}')
 
         exon_end = intron_begin - 1  # Exon ends where the current intron begins. Starts where the previous intron ended
         exon_seq = scaffold_dna[exon_begin:exon_end]

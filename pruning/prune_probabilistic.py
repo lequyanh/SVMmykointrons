@@ -88,6 +88,7 @@ def prune(
         if multioverlap_flag:
             cut_coords = pdf_length_compare(cut_coords[0], cut_coords[1], next_cut_coords[0], next_cut_coords[1])
 
+        print(f'{scaffold};{cut_coords[0]};{cut_coords[1]}')
         purged_fragments, introns, fragment_origin, prev_fragment_origin = cut_region(fragment_origin, cut_coords)
         cut_coords = next_cut_coords
 
@@ -116,6 +117,7 @@ if __name__ == "__main__":
     fasta_to_purge = sys.argv[1]  # /home/anhvu/Desktop/Desktop/S21_contigs.fasta
     intron_locs = sys.argv[2]  # CSV with intron locations
     counts_file = sys.argv[3]  # file with typical intron counts. Used to create prob. dens. function
+    # /home/anhvu/PycharmProjects/mycointrons/statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt
 
     scaffold_sequences, intron_coords = load_as_dicts(fasta_to_purge, intron_locs)
     LENGTH_PDF = load_length_counts_as_pdf(counts_file)
@@ -128,7 +130,7 @@ if __name__ == "__main__":
         logging.info(f'Processing scaffold {scaffold}')
         scaffold_dna = scaffold_sequences[scaffold]
 
-        scaffold_prepruned, _ = prune_non_overlap_introns(scaffold_dna, non_overlap_introns)
+        scaffold_prepruned, _ = prune_non_overlap_introns(scaffold, scaffold_dna, non_overlap_introns)
         exon_fragments = prune(scaffold_prepruned, overlap_introns)
 
         pruned_scaffolds[scaffold] = ''.join(exon_fragments)
