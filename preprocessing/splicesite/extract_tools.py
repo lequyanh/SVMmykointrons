@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Tuple
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -39,7 +39,7 @@ def extract_window(
     )
 
 
-def true_donorac_positions(introns_fasta: str):
+def true_donorac_positions(introns_fasta: str) -> Tuple[dict, dict]:
     with open(introns_fasta, 'r') as intron_fasta_f:
         donor_positions = dict()
         acceptor_positions = dict()

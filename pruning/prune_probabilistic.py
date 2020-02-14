@@ -71,7 +71,7 @@ def prune(
             continue
 
         if multioverlap_flag:
-            if cut_coords[1] > next_cut_coords[0]:
+            if cut_coords[1] >= next_cut_coords[0]:
                 logging.info("Triple overlap")
                 fragment_origin = prev_fragment_origin
                 # noinspection PyUnboundLocalVariable
