@@ -25,11 +25,11 @@ def main():
     @intron_annotation_file     Result or running pipeline with an exception - do not discard negatively labeled
                                 introns candidates
     """
-    shroom_name = 'Kocim1'
+    shroom_name = 'Thega1'
     exon_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}_exon_positions.csv'
 
-    intron_annotations_file = f'Kocim1_intron_result-NN.csv'
-    cut_coords_file = f'Kocim1_cut_coords-NN.csv'
+    intron_annotations_file = f'{shroom_name}_intron-result-NN.csv'
+    cut_coords_file = f'{shroom_name}_cut_coords-NN.csv'
 
     # Get the accuracy and recall of intron detection after the pruning step
     joined_df = join_on_position(cut_coords_file, intron_annotations_file)
@@ -58,33 +58,38 @@ def main():
 def main2():
     shroom_name = "Kocim1"
     exon_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}_exon_positions.csv'
-    introns_fasta = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}_introns.fasta'
+    introns_fasta = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-introns.fasta'
 
     classification_dataset_f = f'{shroom_name}-splice-site-donor-dataset.csv'
-    classification_result_f = f'{shroom_name}-splice-site-result-nn.csv'
+    classification_result_f = f'{shroom_name}-splice-site-donor-result-svm.csv'
 
     classification_data_df = pd.read_csv(classification_dataset_f, delimiter=';')
-    classification_result_df = pd.read_csv(classification_result_f, delimiter=';')
+    # Remove unnecessary sequence column and merge the classification dataset with labels and predictions
+    classification_data_df.drop(columns='sequence', inplace=True)
 
+    classification_result_df = pd.read_csv(classification_result_f, delimiter=';')
     # Add new column and set it to be ones
     classification_result_df['prediction'] = 1
 
+    # Create a DF with true donor/acceptor positions (i.e. DataFrame of candidate labels)
     true_donor_pos, true_acceptor_pos = true_donorac_positions(introns_fasta)
 
     true_donors_df = splice_site_positions_dict_to_df(true_donor_pos)
     true_donors_df['label'] = 1  # Add new column and set it to be ones
 
-    classification_data_df.drop(columns='sequence', inplace=True)
-
+    # Merge all the 3 data sets (input dataset, classification and labels) together
     merged_df = classification_data_df.merge(true_donors_df, how="left").fillna(-1)
     merged_df = merged_df.merge(classification_result_df, how="left").fillna(-1)
 
+    merged_df.rename(columns={"position": "start"}, inplace=True)  # Rename so it matches required interface
+    merged_df['in_exon'] = -1  # New column of "in_exon" indicators. Initialize to -1 and update those inside exons
+
+    # Create DataFrame with exon positions. The DF will be used to determine intra-exonic false predictions
     exon_pos_df = pd.read_csv(exon_file, delimiter=';')
 
     exon_grouped = exon_pos_df.groupby(by='scaffold')
     merged_grouped = merged_df.groupby(by='scaffold')
 
-    merged_df['in_exon'] = -1  # New column of in_exon indicators. Initialize to -1
     for scaffold, positions in merged_grouped:
         try:
             scaff_exon_positions = exon_grouped.get_group(scaffold)
@@ -92,17 +97,24 @@ def main2():
             print(f'No exons in scaffold {scaffold}, or scaffold missing')
             continue
 
-        cut_positions = positions[positions.label == -1 and positions.prediction == 1]
-        exon_cuts, _ = get_intraexonic_cuts(scaff_exon_positions, cut_positions)
-        merged_df[[merged_df.scaffold == scaffold]]['in_exon'] = exon_cuts
+        # Pick positions (within given scaffold) of false positives and find, whether they fall into exon or not
+        filter_false_positives = (merged_df.scaffold == scaffold) & (merged_df.label == -1) & (
+                    merged_df.prediction == 1)
+        cut_positions = merged_df[filter_false_positives]
+        exon_cut_indicators, _ = get_intraexonic_cuts(scaff_exon_positions, cut_positions)
+
+        merged_df.loc[filter_false_positives, 'in_exon'] = list(
+            map(lambda x: -1 if x is False else 1, exon_cut_indicators)
+        )
 
 
 def splice_site_positions_dict_to_df(splicesite_positions: dict):
-    splicesite_pos_df = pd.DataFrame()
+    per_scaffold_dfs = []
     for scaffold, positions in splicesite_positions.items():
         data = {'scaffold': [scaffold] * len(positions), 'position': positions}
-        splicesite_pos_df.append(pd.DataFrame(data))
-    return splicesite_pos_df
+        per_scaffold_dfs.append(pd.DataFrame(data))
+
+    return pd.concat(per_scaffold_dfs)
 
 
 def determine_num_intraexonic_cuts(exon_grouped: GroupBy, cuts_grouped: GroupBy) -> int:
@@ -144,7 +156,7 @@ def get_intraexonic_cuts(scaff_exon_positions: DataFrame, query_positions: DataF
     start_end_flattened = list(itertools.chain(*start_end_tuplelist))
     exon_length = sum([se[1] - se[0] for se in start_end_tuplelist])
 
-    def inside_exon_cut(cut_start) -> bool:
+    def inside_exon_cut(cut_start) -> int:
         i = bisect(start_end_flattened, cut_start)
         return i % 2 == 1
 
@@ -195,4 +207,4 @@ def join_on_position(cut_coords_file: str, intron_annotations_file: str) -> Data
 
 
 if __name__ == "__main__":
-    main()
+    main2()

@@ -36,7 +36,7 @@ if __name__ == '__main__':
         candidate_scaffolds = intron_candidates.scaffold.unique()
         logging.info(f'Scaffolds, that the candidates were extracted from: {candidate_scaffolds}')
 
-        # Keep only introns coming from scaffolds, that contain candidate introns
+        # Keep only introns coming from scaffolds, that lie on the positive strand
         def intron_scaffold(seq_rec: SeqRecord):
             return seq_rec.id.split(' ')[0]
 
@@ -45,8 +45,7 @@ if __name__ == '__main__':
             return seq_rec.description.split(' ')[1] == sign
 
 
-        introns = filter(lambda i_rec: intron_scaffold(i_rec) in candidate_scaffolds and is_strand(i_rec, '+'),
-                         introns_seqrecords)
+        introns = filter(lambda i_rec: is_strand(i_rec, '+'), introns_seqrecords)
         introns = set([str(i.seq) for i in introns])
 
         logging.info(f'Number of true introns on the given (+/-) strand: {len(introns)}')

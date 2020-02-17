@@ -1,8 +1,8 @@
-import csv
 import logging
 from typing import List
 from typing import Tuple
 
+import pandas as pd
 from scipy import stats
 
 from fastalib import read_fasta
@@ -28,18 +28,13 @@ def load_as_dicts(fasta_to_purge: str, intron_locs: str):
         scaffolds_input = {desc: seq for desc, seq in read_fasta(f)}
 
     # Load intron location data
+    intron_pos_df = pd.read_csv(intron_locs, delimiter=";")
+    intron_pos_df_true = intron_pos_df[intron_pos_df['pred'] == 1]
+
+    grouped_intron_pos = intron_pos_df_true.groupby(by='scaffold')
     intron_coords = dict()
-    with open(intron_locs, 'r') as f:
-        # Assemble a scaffold:List[intron locations] dictionary
-        for i, row in enumerate(csv.reader(f, delimiter=';')):
-            if i == 0:
-                continue  # Skip header of the csv
-
-            scaff = row[0]
-            positions = intron_coords.get(scaff, [])
-            positions.append((int(row[1]), int(row[2])))
-
-            intron_coords[scaff] = positions
+    for scaffold, positions in grouped_intron_pos:
+        intron_coords[scaffold] = positions.apply(lambda x: (x.start, x.end), axis=1).values
 
     return scaffolds_input, intron_coords
 

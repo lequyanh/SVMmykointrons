@@ -65,7 +65,7 @@ splice_site_acceptor_model=$3
 #  - intron prediction model
 intron_model=$4
 #  - in case of validation
-intron_source="/home/anhvu/Desktop/mykointrons-data/new-sequences/Kocim1/Kocim1-introns.fasta"
+intron_source="/home/anhvu/Desktop/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta"
 
 if ! ([ $# -eq 4 ] || [ $# -eq 5 ])
 then
@@ -206,20 +206,19 @@ function validate_introns_step() {
     # Label introns
     $PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
-    # prepare a file for the intron classification results
-    echo "scaffold;start;end;label;prediction" > $INTRON_RESULT
-
     $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER \
-            | grep $positive_introns \
             | cut --complement -d ';' -f4 >> $INTRON_RESULT
 }
 
 function cut_introns_step() {
-    $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ../statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt
+    CUT_COORDS_FILE="Thega1_cut_coords.csv"
+    echo "scaffold;start;end" > ${CUT_COORDS_FILE}
+
+    $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ../statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt >> "${CUT_COORDS_FILE}"
 }
 #extract_donor_acceptor_step
-classify_splice_sites_step
-pair_splice_sites_and_extract_introns_step
+#classify_splice_sites_step
+#pair_splice_sites_and_extract_introns_step
 
 ## ===================================== VALIDATE =====================================
 validate_introns_step
