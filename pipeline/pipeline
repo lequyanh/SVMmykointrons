@@ -216,12 +216,12 @@ function cut_introns_step() {
 
     $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ../statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt >> "${CUT_COORDS_FILE}"
 }
-#extract_donor_acceptor_step
+extract_donor_acceptor_step
 #classify_splice_sites_step
 #pair_splice_sites_and_extract_introns_step
 
 ## ===================================== VALIDATE =====================================
-validate_introns_step
+#validate_introns_step
 ## =================================== or CLASIFY =====================================
 #classify_introns_step
 

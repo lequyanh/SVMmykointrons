@@ -53,7 +53,7 @@ if __name__ == "__main__":
     features = create_features(kernel_order, data['sequence'].tolist())
     predict = model.apply_binary(features)
 
-    data.assign(pred=pd.Series(list(predict.get_int_labels()))) \
+    data.assign(prediction=pd.Series(list(predict.get_int_labels()))) \
         .to_csv(sys.stdout, sep=';', index=False)
 
     if 'label' in data:

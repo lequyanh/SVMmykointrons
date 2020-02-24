@@ -29,7 +29,10 @@ def load_as_dicts(fasta_to_purge: str, intron_locs: str):
 
     # Load intron location data
     intron_pos_df = pd.read_csv(intron_locs, delimiter=";")
-    intron_pos_df_true = intron_pos_df[intron_pos_df['pred'] == 1]
+    if 'prediction' in intron_pos_df.columns:
+        intron_pos_df_true = intron_pos_df[intron_pos_df['prediction'] == 1]
+    else:
+        intron_pos_df_true = intron_pos_df
 
     grouped_intron_pos = intron_pos_df_true.groupby(by='scaffold')
     intron_coords = dict()
