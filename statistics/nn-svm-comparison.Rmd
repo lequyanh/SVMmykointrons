@@ -1,0 +1,260 @@
+---
+title: "nn-vs-svm"
+author: "AnhVu"
+date: "2/18/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("ggplot2")
+library("gridExtra") 
+```
+
+# Comparison of SVM and NN models
+```{r echo=FALSE}
+category <- c("exon region FP", "intergenic FP", "true positive")
+
+build_piechart_data <- function(dat){
+  # Add addition columns, needed for drawing with geom_rect.
+  dat$fraction = dat$count / sum(dat$count)
+  dat$ymax = cumsum(dat$fraction)
+  dat$ymin = c(0, head(dat$ymax, n=-1))
+  
+  return(dat)
+}
+
+plot_piechart <- function(class.metrics, site){
+  dat = data.frame(
+    count=diff(rev(c(class.metrics, 0))), 
+    category=category
+  )
+  dat.plot.data <- build_piechart_data(dat)
+  dat.plot.data$category <- factor(dat$category, levels = category)
+
+  p = ggplot(dat.plot.data, aes(fill=category, ymax=ymax, ymin=ymin, xmax=4, xmin=3)) +
+       geom_rect() +
+       coord_polar(theta="y") +
+       xlim(c(0, 4)) +
+       theme_bw() +
+       theme(panel.grid=element_blank()) +
+       theme(axis.text=element_blank()) +
+       theme(axis.ticks=element_blank()) +
+       labs(title=paste("Classification metrics of", site) )
+  
+  return(p)
+}
+```
+
+## Thega1 splice site classification (SVM models)
+```{r echo=FALSE}
+kocim.donor.class.metrics <- c(39159, 22171, 3499)
+kocim.acceptor.class.metrics <- c(99443, 82582, 29948)
+
+thega.donor.class.metrics <- c(131246, 107595, 20057)
+thega.acceptor.class.metrics <- c(191664, 168262, 41325)
+
+p1 <- plot_piechart(thega.donor.class.metrics, "donor")
+p2 <- plot_piechart(thega.acceptor.class.metrics, "acceptor")
+
+grid.arrange(p1, p2, nrow=1)
+```
+
+## Thega1 splice site classification (NN models)
+```{r echo=FALSE}
+thega.donor.class.metrics.nn <- c(77560, 55826, 6373)
+thega.acceptor.class.metrics.nn <- c(113595, 90925, 11822)
+
+p1 <- plot_piechart(thega.donor.class.metrics.nn, "donor")
+p2 <- plot_piechart(thega.acceptor.class.metrics.nn, "acceptor")
+
+grid.arrange(p1, p2, nrow=1)
+```
+
+## Thega1 splice site classification (comparison)
+```{r echo=FALSE}
+category <- c("exon region FP", "intergenic FP", "true positive")
+dat <- data.frame(
+  model=rep(c("SVM", "NN"), each=3),
+  category=rep(category, times=2),
+  count=c(diff(rev(c(thega.donor.class.metrics, 0))), diff(rev(c(thega.donor.class.metrics.nn, 0))))
+)
+
+donor.class.plot <- ggplot(data=dat, aes(x=model, y=count, fill=category)) +
+    geom_bar(stat="identity") +
+    ggtitle("Thega1 donor classification") +
+    ylab("Donor counts") + 
+    scale_fill_brewer() + theme_linedraw()
+
+donor.class.plot
+```
+
+# Intron classification (Kocim1 and Thega1)
+```{r, echo=FALSE}
+
+total <- 19911
+filter40_100 <- 14204
+
+kocim.basido.counts <- 12156
+kocim.asco.counts <-  10766
+kocim.nn.counts <- 12100
+
+intron_groups <- c("Basidiomycota SVM", "Ascomycota SVM", "Neural Net")
+kocim.intron.counts <- c(kocim.basido.counts, kocim.asco.counts, kocim.nn.counts)
+rate <- 100*kocim.intron.counts / total
+
+dat <- data.frame(
+  model = intron_groups, 
+  counts = kocim.intron.counts,
+  rate = rate
+  )
+dat$model <- factor(dat$model, levels = dat$model)
+
+ggplot(data=dat, aes(x=model, y=counts, fill=model)) +
+    geom_bar(stat="identity") +
+    geom_text(aes(label = paste(round(rate), '%')), vjust=-0.5) +
+    geom_hline(aes(yintercept=total)) +
+    geom_text(aes(1,total,label = "Introns total", vjust = -1)) +
+    geom_hline(aes(yintercept=filter40_100), color='coral', size=0.3) +
+    geom_text(aes(1,filter40_100,label = "Introns length 40-100", vjust = -1), color='coral') +
+    ggtitle("After splice site classification - intron survival rate") +
+    theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+    ylab("Intron counts") +
+    ylim(0, 21000) +
+    scale_fill_brewer() +
+    theme_linedraw()
+
+```
+
+
+```{r echo=FALSE}
+progress.groups <- c("Total", "Length filter (40-100)", "After pairing", "Ater intron classification", "After cutting")
+kocim.basi.progress <- c(19911, 14204, 12156, 9834, 8456)
+kocim.nn.progress <- c(19911, 14204, 12100, 9731, 9011)
+
+dat1 <- data.frame(
+  stage = rep(progress.groups, times=2), 
+  model= rep(c("SVM Basidiomycota", "NN"), each=length(kocim.basi.progress)),
+  count=c(kocim.basi.progress, kocim.nn.progress)
+  )
+
+dat1$stage <- factor(dat1$stage, levels = progress.groups)
+
+ggplot(data=dat1, aes(x=stage, y=count, group=model, color=model)) +
+    geom_line() +
+    geom_point() +   
+    theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+    coord_cartesian(ylim=c(0, 20000)) +
+    ylab("Intron counts")
+```
+
+```{r echo=FALSE}
+progress.groups <- c("Before classification", "After classification", "After cutting")
+regions <- c("non-coding", "exon region")
+
+build_plot_df <- function(counts_intergen, counts_intragen){
+  dat <- data.frame(
+    stage = rep(progress.groups, times=2), 
+    fp_type = rep(regions, each=3),
+    fp_counts=c(counts_intergen, counts_intragen)
+  )
+
+  dat$stage <- factor(dat$stage, levels = progress.groups)
+  dat$fp_type <- factor(dat$fp_type, levels = regions)
+  
+  return(dat)
+}
+```
+
+```{r}
+
+kocim.NN.fp.all <- c(20141, 10103, 9495)
+kocim.NN.fp.intragen <- c(2640, 1383, 1143)
+kocim.NN.fp.intergen <- kocim.NN.fp.all - kocim.NN.fp.intragen
+
+kocim.SVM.fp.all <- c(41001, 18228, 13934)
+kocim.SVM.fp.intragen <- c(8927, 3792, 2975)
+kocim.SVM.fp.intergen <- kocim.SVM.fp.all - kocim.SVM.fp.intragen
+
+dat_svm <- build_plot_df(kocim.SVM.fp.intergen, kocim.SVM.fp.intragen)
+
+svm.plot <- ggplot(data=dat_svm, aes(x=stage, y=fp_counts, fill=fp_type)) +
+    geom_bar(stat="identity") + 
+    ggtitle("SVM false positives") +
+    ylab("False positives counts") +
+    theme(legend.direction="horizontal", legend.position="bottom", axis.text.x = element_text(angle = 30, hjust = 1))
+# ----------------------------------------------------------------------------------------------------------------
+dat_nn <- build_plot_df(kocim.NN.fp.intergen, kocim.NN.fp.intragen)
+
+nn.plot <- ggplot(data=dat_nn, aes(x=stage, y=fp_counts, fill=fp_type)) +
+    geom_bar(stat="identity") +
+    ggtitle("Neural net false positives") +
+    ylab("False positives counts") + 
+    ylim(0,40000) +
+    theme(legend.direction="horizontal", legend.position="bottom", axis.text.x = element_text(angle = 30, hjust = 1))
+
+grid.arrange(svm.plot, nn.plot, ncol = 2)  
+
+dat3 <- data.frame(
+  stage=rep(progress.groups, times=2),
+  model=rep(c("SVM (bas.)", "NN"), each=3),
+  intragen_fp=c(kocim.SVM.fp.intragen, kocim.NN.fp.intragen)
+  )
+
+dat3$stage <- factor(dat3$stage, levels = progress.groups)
+
+exon.fp.plot <- ggplot(data=dat3, aes(x=stage, y=intragen_fp, fill=model)) +
+    geom_bar(stat="identity", position = position_dodge()) +
+    ggtitle("Inside exon false positives") +
+    ylab("False positives counts") + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+    scale_fill_brewer() + theme_linedraw()
+exon.fp.plot
+```
+
+## Thega1 experiments
+```{r}
+thega.NN.fp.all <- c(50331, 25251, 20008)
+thega.NN.fp.intragen <- c(5071, 2759, 2195)
+thega.NN.fp.intergen <- thega.NN.fp.all - thega.NN.fp.intragen
+
+thega.SVM.fp.all <- c(86685, 41416, 29680)
+thega.SVM.fp.intragen <- c(14131, 6204, 4577)
+thega.SVM.fp.intergen <- thega.SVM.fp.all - thega.SVM.fp.intragen
+
+dat_svm_thega <- build_plot_df(thega.SVM.fp.intergen, thega.SVM.fp.intragen)
+
+svm.plot <- ggplot(data=dat_svm_thega, aes(x=stage, y=fp_counts, fill=fp_type)) +
+    geom_bar(stat="identity") + 
+    ggtitle("SVM false positives") +
+    ylab("False positives counts") +
+    theme(legend.direction="horizontal", legend.position="bottom", axis.text.x = element_text(angle = 30, hjust = 1))
+# ----------------------------------------------------------------------------------------------------------------
+dat_nn_thega <- build_plot_df(thega.NN.fp.intergen, thega.NN.fp.intragen)
+
+nn.plot <- ggplot(data=dat_nn_thega, aes(x=stage, y=fp_counts, fill=fp_type)) +
+    geom_bar(stat="identity") +
+    ggtitle("Neural net false positives") +
+    ylab("False positives counts") + 
+    ylim(0,87000) +
+    theme(legend.direction="horizontal", legend.position="bottom", axis.text.x = element_text(angle = 30, hjust = 1))
+
+grid.arrange(svm.plot, nn.plot, ncol = 2)  
+
+dat3 <- data.frame(
+  stage=rep(progress.groups, times=2),
+  model=rep(c("SVM (bas.)", "NN"), each=3),
+  intragen_fp=c(thega.SVM.fp.intragen, thega.NN.fp.intragen)
+  )
+
+dat3$stage <- factor(dat3$stage, levels = progress.groups)
+
+exon.fp.plot <- ggplot(data=dat3, aes(x=stage, y=intragen_fp, fill=model)) +
+    geom_bar(stat="identity", position = position_dodge()) +
+    ggtitle("Inside exon false positives") +
+    ylab("False positives counts") + 
+    theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+    scale_fill_brewer() + theme_linedraw()
+exon.fp.plot
+
+```

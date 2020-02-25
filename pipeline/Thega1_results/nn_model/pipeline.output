@@ -1,0 +1,19 @@
+Pipeline log for file /home/anhvu/Desktop/mykointrons-data/data/Assembly/Thega1_AssemblyScaffolds.fasta
+================================== ./classify-introns-d4.log ==========================================
+INFO:root:Validation of model bestmodels/basidiomycota/intron-model-C-6-d-4-shuffle2.hd5 on testset intron-dataset.csv; d=4
+INFO:root:Performance metrics:
+ -TP: 15923
+ -FP: 25154
+ -TN: 25080
+ -FN: 3524
+Accuracy: 0.5884387422683371
+Precision: 0.38763785086544783
+Recall: 0.8187895305188461
+================================== ./label-introns.log ==========================================
+INFO:root:Parsing introns from /home/anhvu/Desktop/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta file.
+INFO:root:Total number of introns: 53298
+
+INFO:root:Number of true introns on the given (+/-) strand: 26979
+INFO:root:Number of introns in the range 40 - 100: 24607
+INFO:root:19449/69681 candidates are positive introns
+

@@ -88,8 +88,8 @@ def false_introns_exploration(joined: DataFrame, exon_file: str):
     print(f'------------------ Potential false positives inside exons (before classification) -----------------')
     no_cuts = intraexonic_cuts_count(exon_scaff_grouped, potential_fp_grouped)
     print(
-        f'{no_cuts} out of {len(potential_fp_candidates)} all false candidates.\n'
-        f'Ratio of intra-genic candidates in dataset: {100 * no_cuts / len(potential_fp_candidates):.2f}%.\n'
+        f'{no_cuts} out of {len(potential_fp_candidates)} all false candidates => '
+        f'the ratio of intra-genic candidates in dataset is {100 * no_cuts / len(potential_fp_candidates):.2f}%.\n'
     )
 
     # See, where potential mistakes of pruning can be (intron classification intra-genic FP)
@@ -99,9 +99,9 @@ def false_introns_exploration(joined: DataFrame, exon_file: str):
     print(f'----------------- False positives inside exons (after classification, before cut) -----------------')
     no_cuts = intraexonic_cuts_count(exon_scaff_grouped, fps_grouped)
     print(
-        f'{no_cuts} out of {len(intron_classification_fps)} all false positives (classification).\n'
-        f'Ratio of intra-genic FP vs all FP {no_cuts / len(intron_classification_fps):.2f}.\n'
-        f'Intra-genic FP ratio {100 * no_cuts / labeled_true_df.shape[0]:.2f}%'
+        f'{no_cuts} out of {len(intron_classification_fps)} all false positives (classification) => '
+        f'the proportion of intra-genic FP among all FP is {no_cuts / len(intron_classification_fps):.2f}.\n'
+        f'Intra-genic FP rate is {100 * no_cuts / labeled_true_df.shape[0]:.2f}%'
     )
 
     # See, where false intron cuts happened
@@ -112,10 +112,16 @@ def false_introns_exploration(joined: DataFrame, exon_file: str):
     print(f'------------------------------------- False cuts inside exons -------------------------------------')
     no_cuts = intraexonic_cuts_count(exon_scaff_grouped, fp_cuts_grouped)
     print(
-        f'{no_cuts} out of {len(false_positive_cuts_df)} all false cuts. \n'
-        f'Ratio of intra-genic cuts vs all false cuts {no_cuts / len(false_positive_cuts_df):.2f}.\n'
-        f'After cut intra-genic FP ratio {100 * no_cuts / all_cuts_count:.2f}%'
+        f'{no_cuts} out of {len(false_positive_cuts_df)} all false cuts => '
+        f'the proportion of intra-genic cuts among all false cuts is {no_cuts / len(false_positive_cuts_df):.2f}.\n'
+        f'After cut intra-genic FP rate is {100 * no_cuts / all_cuts_count:.2f}%'
     )
+
+    print(f'----------------------------------- Determination coefficient -------------------------------------')
+    true_cuts = joined.query('cut == 1 and label == 1').shape[0]
+    print(f'Correctly cut {true_cuts} introns.\n'
+          f'Interfered with {no_cuts} exons.\n'
+          f'Ratio {true_cuts / no_cuts:.2f}')
 
 
 def intraexonic_cuts_count(exon_grouped: GroupBy, cuts_grouped: GroupBy) -> int:
