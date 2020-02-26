@@ -4,14 +4,44 @@ from contextlib import closing
 import numpy as np
 import pandas as pd
 import shogun as sg
-from sklearn.model_selection import StratifiedShuffleSplit
+
+from tools import split_data, performance_metrics
 
 
-def split_data(data, test_size):
-    s = StratifiedShuffleSplit(n_splits=1, test_size=test_size)
-    for train_i, test_i in s.split(data.sequence, data.label):
-        train, test = data.loc[train_i], data.loc[test_i]
-        return train, test
+def main():
+    argparser = parser().parse_args()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        filename=f'train-introns-d{argparser.l}-C{argparser.C}.log',
+        filemode='w'
+    )
+
+    sg.Parallel().set_num_threads(argparser.ncpus)
+
+    data = pd.read_csv(argparser.data_filename, sep=';')
+
+    if argparser.test_size > 0:
+        train_data, test_data = split_data(data, argparser.test_size)
+        train_features, test_features = create_features(argparser.l,
+                                                        train_data.loc[:, 'sequence'].tolist(),
+                                                        test_data.loc[:, 'sequence'].tolist())
+    else:
+        train_data = data
+        train_features = create_features(argparser.l, train_data.loc[:, 'sequence'].tolist())
+
+    model = train(train_features, sg.BinaryLabels(np.array(train_data.label)),
+                  argparser.cache_size, argparser.l, *argparser.C)
+
+    if argparser.test_size > 0:
+        test(model, test_features, sg.BinaryLabels(np.array(test_data.label)))
+
+    model_file = sg.SerializableHdf5File(argparser.model_filename, "w")
+    with closing(model_file):
+        if model.save_serializable(model_file):
+            logging.info("Model saved: {}".format(argparser.model_filename))
+        else:
+            logging.warning("Model could not be saved")
 
 
 def create_features(order, train_dna, test_dna=None):
@@ -47,49 +77,28 @@ def train(features, labels, cache, l, C_n, C_p=None):
     kernel = sg.CommWordStringKernel(features, features, False, cache)
     svm = sg.LibSVM(C_n, kernel, labels)
 
-    if C_p is not None: svm.set_C(C_n, C_p)
+    if C_p is not None:
+        svm.set_C(C_n, C_p)
 
     svm.train()
 
-    predict = svm.apply_binary(features)
+    prediction = svm.apply_binary(features)
 
-    acc = sg.AccuracyMeasure()
-    acc.evaluate(predict, labels)
-    TP = int(acc.get_TP())
-    FP = int(acc.get_FP())
-    FN = int(acc.get_FN())
-    TN = int(acc.get_TN())
-
-    logging.info("Train results:")
-    logging.info('\t'.join(["TP", "FP", "TN", "FN"]))
-    logging.info('\t'.join(map(str, [TP, FP, TN, FN])))
-
-    logging.info(f'Precision: {TP / (TP + FP)}\n'
-                 f'Recall: {TP / (TP + FN)}\n'
-                 f'Accuracy: {(TP + TN) / (sum([TP, FP, FN, TN]))}')
-
-    logging.info("")
+    metrics_list = performance_metrics(prediction, labels, imbalance_rat=None)
+    metrics_str = '\n'.join(metrics_list)
+    logging.info(f'Train performance metrics:\n'
+                 f'{metrics_str}\n')
 
     return svm
 
 
-def test(model, features, labels):
-    predict = model.apply_binary(features)
+def test(model, features, test_labels):
+    prediction = model.apply_binary(features)
 
-    acc = sg.AccuracyMeasure()
-    acc.evaluate(predict, labels)
-    TP = int(acc.get_TP())
-    FP = int(acc.get_FP())
-    FN = int(acc.get_FN())
-    TN = int(acc.get_TN())
-
-    logging.info("Test results:")
-    logging.info('\t'.join(["TP", "FP", "TN", "FN"]))
-    logging.info('\t'.join(map(str, [TP, FP, TN, FN])))
-
-    logging.info(f'Precision: {TP / (TP + FP)}\n'
-                 f'Recall: {TP / (TP + FN)}\n'
-                 f'Accuracy: {(TP + TN) / (sum([TP, FP, FN, TN]))}')
+    metrics_list = performance_metrics(prediction, test_labels, imbalance_rat=None)
+    metrics_str = '\n'.join(metrics_list)
+    logging.info(f'Test performance metrics:\n'
+                 f'{metrics_str}')
 
 
 def parser():
@@ -118,36 +127,4 @@ def parser():
 
 
 if __name__ == "__main__":
-    argparser = parser().parse_args()
-
-    logging.basicConfig(
-        level=logging.INFO,
-        filename=f'train-introns-d{argparser.l}-C{argparser.C}.log',
-        filemode='w'
-    )
-
-    sg.Parallel().set_num_threads(argparser.ncpus)
-
-    data = pd.read_csv(argparser.data_filename, sep=';')
-
-    if argparser.test_size > 0:
-        train_data, test_data = split_data(data, argparser.test_size)
-        train_features, test_features = create_features(argparser.l,
-                                                        train_data.loc[:, 'sequence'].tolist(),
-                                                        test_data.loc[:, 'sequence'].tolist())
-    else:
-        train_data = data
-        train_features = create_features(argparser.l, train_data.loc[:, 'sequence'].tolist())
-
-    model = train(train_features, sg.BinaryLabels(np.array(train_data.label)),
-                  argparser.cache_size, argparser.l, *argparser.C)
-
-    if argparser.test_size > 0:
-        test(model, test_features, sg.BinaryLabels(np.array(test_data.label)))
-
-    model_file = sg.SerializableHdf5File(argparser.model_filename, "w")
-    with closing(model_file):
-        if model.save_serializable(model_file):
-            logging.info("Model saved: {}".format(argparser.model_filename))
-        else:
-            logging.warning("Model could not be saved")
+    main()

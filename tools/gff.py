@@ -63,8 +63,8 @@ def main2():
     intergenic_pseudo_donors = []
     intergenic_pseudo_acceptors = []
 
-    with open(assembly_fasta, 'r') as f:
-        scaffolds_input = {desc: seq for desc, seq in fl.read_fasta(f)}
+    with open(assembly_fasta, 'r') as assembly_file:
+        scaffolds_input = {desc: seq for desc, seq in fl.read_fasta(assembly_file)}
 
     for gene in db.all_features(featuretype='gene'):
 
@@ -119,7 +119,7 @@ def main2():
 
 
 if __name__ == '__main__':
-    ascos = f'../basidiomycota.txt'
-    with open(ascos, 'r') as f:
-        names = f.readlines()
+    fungi_names = f'../basidiomycota.txt'
+    with open(fungi_names, 'r') as fungi_names_f:
+        names = fungi_names_f.readlines()
         list(map(extract_exons, names))

@@ -27,7 +27,14 @@ INTRON_MIN_LENGTH=40
 INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
 #    it is used in the intron prediction and it must be equal to the order used while training
-SPECT_KERNEL_ORDER=4
+SPECT_KERNEL_ORDER_BASI=4
+SPECT_KERNEL_ORDER_ASCO=6
+#  - files with intron lengths to build a probability distribution over intron lengths
+#    used as the cutting step to decide which candidate to cut in case of overlap
+INTRON_LENGTH_DATA_BASI="../statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt"
+INTRON_LENGTH_DATA_ASCO="../statistics/intron-lenghts-statistics/ascomycota-intron-lens.txt"
+
+# OUTPUT FILES
 #  - names of the splice site datasets
 #    it will be created before the splice sites classification
 DONOR_FILE="splice-site-donor-dataset.csv"
@@ -42,7 +49,7 @@ INTRON_POSITIONS_FILE="intron-positions-dataset.csv"
 INTRON_FILE="intron-dataset.csv"
 #  - name of the file for intron classification results
 INTRON_RESULT="intron-result.csv"
-
+CUT_COORDS_FILE="cut-coords.csv"
 # -------------------------------------------------------------
 
 # Derived variables:
@@ -64,10 +71,12 @@ splice_site_donor_model=$2
 splice_site_acceptor_model=$3
 #  - intron prediction model
 intron_model=$4
+#  - basiomycota or ascomycota. For adjusting parameters
+phylum=$5
 #  - in case of validation
-intron_source="/home/anhvu/Desktop/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta"
+intron_source=$6  #"/home/anhvu/Desktop/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta"
 
-if ! ([ $# -eq 4 ] || [ $# -eq 5 ])
+if ! { [ $# -eq 5 ] || [ $# -eq 6 ]; }
 then
     echo "Arguments expected: ASSEMBLY DONOR_MODEL ACCEPTOR_MODEL INTRON_MODEL [INTRON_SOURCE]"
     exit 1
@@ -90,6 +99,22 @@ fi
 set -e
 # enable pipe fail
 set -o pipefail
+
+function init() {
+    case $phylum in
+       "ascomycota")
+            echo "Loading settings for ${phylum}"
+            spect_kernel_order=${SPECT_KERNEL_ORDER_ASCO}
+            intron_lens_data=${INTRON_LENGTH_DATA_ASCO};;
+
+       "basidiomycota")
+            echo "Loading settings for ${phylum}"
+            spect_kernel_order=${SPECT_KERNEL_ORDER_BASI}
+            intron_lens_data=${INTRON_LENGTH_DATA_BASI};;
+
+       *) echo "Phylum not known, exiting" & exit;;
+    esac
+}
 
 function extract_donor_acceptor_step() {
     echo "Extracting donors and acceptors from [$assembly_filepath]..."
@@ -114,12 +139,6 @@ function extract_donor_acceptor_step() {
 }
 
 function classify_splice_sites_step() {
-    # determine the number of CPUs available for each classification task
-    donor_cpus=$((NUMBER_CPUS/2))
-    acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
-
-    echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
-    #
     # prepare files for the donor and acceptor classification results
     echo "scaffold;position" > $DONOR_RESULT
     echo "scaffold;position" > $ACCEPTOR_RESULT
@@ -130,13 +149,11 @@ function classify_splice_sites_step() {
     if [ "${splice_site_donor_model: -3}" == ".h5"  ]; then
         echo "Classifying with NN models"
 
-        date
         $PYTHON classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
                                           $DONOR_RWINDOW $DONOR_LWINDOW "donor" \
             | grep $positive_splice_sites \
             | cut -d ';' -f -2 >> $DONOR_RESULT
 
-        date
         $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
                                           $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW "acceptor" \
             | grep $positive_splice_sites \
@@ -197,7 +214,7 @@ function pair_splice_sites_and_extract_introns_step() {
 }
 
 function classify_introns_step() {
-    echo "Starting classification of the introns..."
+    echo "Starting classification of the introns using spectral kernel order ${spect_kernel_order}"
 
     # prepare a file for the intron classification results
     echo "scaffold;start;end" > $INTRON_RESULT
@@ -205,7 +222,7 @@ function classify_introns_step() {
     # classify the introns
     # keep only the positively classified samples
     # keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER \
+    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $spect_kernel_order \
             | grep $positive_introns \
             | cut -d ';' -f -3 >> $INTRON_RESULT
 
@@ -213,29 +230,32 @@ function classify_introns_step() {
 }
 
 function validate_introns_step() {
-    # Label introns
+    echo "Labeling intron dataset"
     $PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
-    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER \
+    echo "Starting validation of the intron dataset using spectral kernel order ${spect_kernel_order}"
+    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $spect_kernel_order \
             | cut --complement -d ';' -f4 >> $INTRON_RESULT
 }
 
 function cut_introns_step() {
-    CUT_COORDS_FILE="Thega1_cut_coords.csv"
-    echo "scaffold;start;end" > ${CUT_COORDS_FILE}
+    echo "Cutting introns. Intron length distribution derived from file ${intron_lens_data}"
 
-    $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ../statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt >> "${CUT_COORDS_FILE}"
+    echo "scaffold;start;end" > ${CUT_COORDS_FILE}
+    $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${intron_lens_data} >> "${CUT_COORDS_FILE}"
 }
-extract_donor_acceptor_step
+
+init
+#extract_donor_acceptor_step
 #classify_splice_sites_step
 #pair_splice_sites_and_extract_introns_step
 
 ## ===================================== VALIDATE =====================================
 #validate_introns_step
 ## =================================== or CLASIFY =====================================
-#classify_introns_step
+classify_introns_step
 
-#cut_introns_step
+cut_introns_step
 
 echo "Pipeline log for file ${assembly_filepath}" > pipeline.output
 for p in ./*.log;

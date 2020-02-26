@@ -2,6 +2,7 @@ from contextlib import closing
 
 import pandas as pd
 from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import StratifiedShuffleSplit
 
 
 def read_data(filename, window):
@@ -29,6 +30,13 @@ def read_model(filename):
             exit(1)
 
     return svm
+
+
+def split_data(data, test_size):
+    s = StratifiedShuffleSplit(n_splits=1, test_size=test_size)
+    for train_i, test_i in s.split(data.sequence, data.label):
+        train, test = data.loc[train_i], data.loc[test_i]
+        return train, test
 
 
 def performance_metrics(labels, predictions, imbalance_rat):

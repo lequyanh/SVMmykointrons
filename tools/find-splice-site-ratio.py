@@ -45,7 +45,6 @@ def find_true_introns_proportion(true_intron_file, intron_suspects_positions, si
         false_splice_site_count = 0
         true_splice_site_count = 0
 
-        exit(0)
         splicesite_positions_dict = donor_positions if site == 'donor' else acceptor_positions
 
         for _, row in intron_suspects_positions.iterrows():
