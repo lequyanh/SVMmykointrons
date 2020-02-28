@@ -1,11 +1,11 @@
 import csv
 
 import gffutils
-import fastalib as fl
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
-MARGIN_SIZE = 150
-DONOR = 'GT'
-ACCEPTOR = 'AG'
+import fastalib as fl
 
 
 def transform_func(d):
@@ -30,10 +30,17 @@ def parse_gff(gff_file: str):
     return db
 
 
-def extract_exon_positions(gff_file, assembly_fasta, output_csv: str, validate=False) -> None:
+def extract_exon_positions(
+        gff_file,
+        assembly_fasta,
+        output_csv: str,
+        output_fasta: str,
+        validate=False
+) -> None:
     """
     Extracts exon coordinates into a csv with columns [scaffold, start, end]
     Only from positive strand
+    :param output_fasta: FASTA file with exon sequences and positions
     :param validate: Validate positions
     :param gff_file: GFF file that contains fungi gene annotations (exons and their positions)
     :param assembly_fasta: FASTA file with whole fungi genome. Serves only as validation of extraction
@@ -46,23 +53,35 @@ def extract_exon_positions(gff_file, assembly_fasta, output_csv: str, validate=F
         with open(assembly_fasta, 'r') as f:
             scaffold_seq_dict = {desc: seq for desc, seq in fl.read_fasta(f)}
 
-    exons = []
+    exon_positions = []
+    exon_sequences = []
     for gene in db.all_features(featuretype='gene'):
         for f in db.children(gene['name'][0], featuretype='exon'):
             # Extract the exon described in the GFF file from the given FASTA.
             exon_seq = f.sequence(assembly_fasta)
 
-            scaffold = f.chrom
-            strand = f.strand
+            scaffold, strand = f.chrom, f.strand
+            start, end = f.start - 1, f.end
 
             if strand == "+":
                 if validate:
                     scaffold_seq = scaffold_seq_dict[scaffold]
-                    assert scaffold_seq[f.start - 1: f.end] == exon_seq
+                    assert scaffold_seq[start: end] == exon_seq
 
-                exons.append([scaffold, f.start - 1, f.end])
+                exon_positions.append([scaffold, start, end])
+                exon_sequences.append(
+                    SeqRecord(id=' '.join([scaffold, strand, str(start), str(end)]), seq=Seq(exon_seq))
+                )
+
+            if strand == '-':
+                if validate:
+                    scaffold_seq = scaffold_seq_dict[scaffold]
+                    assert Seq(scaffold_seq[start: end]).reverse_complement() == exon_seq
 
     with open(output_csv, "w") as csv_file:
         writer = csv.writer(csv_file, delimiter=';')
         writer.writerow(['scaffold', 'start', 'end'])
-        writer.writerows(exons)
+        writer.writerows(exon_positions)
+
+    with open(output_fasta, "w") as out_exon_fasta:
+        SeqIO.write(exon_sequences, out_exon_fasta, 'fasta')

@@ -14,31 +14,9 @@ INT_TEST_NAMES="$split_dir/intron_test_names.txt"
 SPLICE_TRAIN_NAMES="$split_dir/splice_sites_train_names.txt"
 SPLICE_TEST_NAMES="$split_dir/splice_sites_test_names.txt"
 
-# Number of positive and negative windows in each dataset
+# Number of positive and negative windows taken from each shroom to construct overall train and test datasets
 POSTIVE_WINDOWS=20000
 NEGATIVE_WINDOWS=30000
-
-# ----------- CREATE FALSE SPLICE SITE WINDOWS FOR EACH SHROOM (INTERGENIC GT/AG WINDOWS VERSION)-----------------
-#GFF_LOC=/home/anhvu/Desktop/ascomycota-data/GFFS/
-#OUTPUT_LOC="/home/anhvu/Desktop/mykointrons-data/new-sequences/"
-#
-#while read shroom; do
-#  echo "${shroom}"
-#
-#  if [ -f "$OUTPUT_LOC/${shroom}/${shroom}-acceptor-false.fasta" ]
-#  then
-#    continue
-#  fi
-#
-#  shroom_assembly="$ASSEMBLIES_LOC/data/Assembly/${shroom}_AssemblyScaffolds.fasta"
-#
-#  find $GFF_LOC -name "${shroom}*.gff" -print0 |
-#  xargs -I{} python ../tools/gff.py "${shroom}" "${shroom_assembly}" {} "$OUTPUT_LOC/${shroom}"
-#
-#  mv "${shroom}-acceptor-false.fasta" $OUTPUT_LOC/"${shroom}"/
-#  mv "${shroom}-donor-false.fasta" $OUTPUT_LOC/"${shroom}"/
-#
-#done < $SHROOM_NAMES_ALL
 
 # ----------- CREATE FALSE SPLICE SITE WINDOWS FOR EACH SHROOM (TAKE-GT/AG-WINDOWS-FROM-ANYWHERE VERSION)-----------------
 # Also an output folder - each shroom sub-directory will have a fasta file with false introns.

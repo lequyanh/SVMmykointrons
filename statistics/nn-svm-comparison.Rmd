@@ -1,7 +1,6 @@
 ---
 title: "nn-vs-svm"
 author: "AnhVu"
-date: "2/18/2020"
 output: pdf_document
 ---
 
@@ -9,11 +8,24 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 library("ggplot2")
 library("gridExtra") 
+library("ggpubr")
 ```
 
-# Comparison of SVM and NN models
 ```{r echo=FALSE}
-category <- c("exon region FP", "intergenic FP", "true positive")
+CATEGORY_SPLICESITE_CLASSIFIED_TRUE <- c("exon region FP", "intergenic FP", "true positive")
+CATEGORY_INTRON_CLASSIFIED_TRUE <- c("exon region FP", "TP or intergenic FP")
+
+prepare_splicesite_comparison_plot_data <- function(splicesite_classified_true_metrics.svm, splicesite_classified_true_metrics.nn){
+  dat <- data.frame(
+    model=rep(c("SVM", "NN"), each=3),
+    category=rep(CATEGORY_SPLICESITE_CLASSIFIED_TRUE, times=2),
+    count=c(
+        diff(rev(c(splicesite_classified_true_metrics.svm, 0))), 
+        diff(rev(c(splicesite_classified_true_metrics.nn, 0)))
+      )
+  )
+  return(dat)
+}
 
 build_piechart_data <- function(dat){
   # Add addition columns, needed for drawing with geom_rect.
@@ -24,111 +36,117 @@ build_piechart_data <- function(dat){
   return(dat)
 }
 
-plot_piechart <- function(class.metrics, site){
+plot_splicesite_piechart <- function(classified_as_true_metrics, site){
   dat = data.frame(
-    count=diff(rev(c(class.metrics, 0))), 
-    category=category
+    count=diff(rev(c(classified_as_true_metrics, 0))), 
+    category=CATEGORY_SPLICESITE_CLASSIFIED_TRUE
   )
   dat.plot.data <- build_piechart_data(dat)
-  dat.plot.data$category <- factor(dat$category, levels = category)
+  dat.plot.data$category <- factor(dat$category, levels = CATEGORY_SPLICESITE_CLASSIFIED_TRUE)
 
   p = ggplot(dat.plot.data, aes(fill=category, ymax=ymax, ymin=ymin, xmax=4, xmin=3)) +
        geom_rect() +
        coord_polar(theta="y") +
        xlim(c(0, 4)) +
-       theme_bw() +
        theme(panel.grid=element_blank()) +
        theme(axis.text=element_blank()) +
        theme(axis.ticks=element_blank()) +
-       labs(title=paste("Classification metrics of", site) )
+       scale_fill_manual(values=c("#FF595E", "#1982C4", "#8AC926")) +
+       labs(title=paste("Classified as true -", site, "candidates") )
   
   return(p)
 }
+
+plot_adjusted_intron_precision_piechart <- function(classified_true_data, model_type){
+  dat = data.frame(
+    count=diff(rev(c(classified_true_data, 0))), 
+    category=CATEGORY_INTRON_CLASSIFIED_TRUE
+  )
+  dat.plot.data <- build_piechart_data(dat)
+  dat.plot.data$category <- factor(dat$category, levels = CATEGORY_INTRON_CLASSIFIED_TRUE)
+  
+  p = ggplot(dat.plot.data, aes(fill=category, ymax=ymax, ymin=ymin, xmax=4, xmin=3)) +
+       geom_rect() +
+       coord_polar(theta="y") +
+       xlim(c(0, 4)) +
+       theme(panel.grid=element_blank()) +
+       theme(axis.text=element_blank()) +
+       theme(axis.ticks=element_blank()) +
+       scale_fill_manual(values=c("#FF595E", "#1982C4", "#8AC926")) +
+       labs(title=paste("Adjusted intron cutting precision -", model_type))
+  
+  return(p)
+}
+
 ```
 
-## Thega1 splice site classification (SVM models)
+# Comparison of SVM and NN models (on *Thega1* phylum)
+This section will be devoted to comparing NN and SVM splice site models. In general validation, the models ended up toe to toe in sense of both precision and recall. The tests however do not capture the real nature of the task, which is intron cutting for the purposes of enhancing BLAST search results. Good results here are measured in a slightly more complex manner, as we will see shortly.
+
+Intron cutting is a classification task. And as in all such tasks, we measure how we successful we are at solving such a task by means of metrics such as precision and recall. In this case however, we need to adjust (or rather extend) the notion of these metrics, especially precision. In intron classiciation and cutting, not all false positives "hurt" the same - in fact, some false positives are even beneficial. This is because we deal with two types of false positives introns here - those which are in intergenic regions and those that are inside exons. The former do not concern us at all. If we cut into the intergenic region, it is only for good, as BLAST will recieve smaller data at the cost of nothing. Intra-exon cuts are on the other hand the "real" false positives, as they will lower the quality of BLAST hits. 
+
+One way to compare the two models is therefore to look at the composition of examples, to which the models say they are introns (or splice sites). How many of them are true positives? And if they are false positives, how many of them will actually cause damage?
+If we compare SVM and NN splice site models in this fashion, we will reveal, that they are not quite the same, as they may seem after the first round testing. We will be particularly interested in ratios between correctly classified donors/acceptors (green) and falsely classified candidates, that lie inside an exon (red).   
+
+## Splice site classification (SVM models)
 ```{r echo=FALSE}
-kocim.donor.class.metrics <- c(39159, 22171, 3499)
-kocim.acceptor.class.metrics <- c(99443, 82582, 29948)
+# Number taken from the output of "intragen/intragen_splice_sites_fp.py" script
+thega.donor.class.metrics <- c(classified_as_true=131246, fp=107595, in_exon_fp=20057)
+thega.acceptor.class.metrics <- c(classified_as_true=191664, fp=168262, in_exon_fp=41325)
 
-thega.donor.class.metrics <- c(131246, 107595, 20057)
-thega.acceptor.class.metrics <- c(191664, 168262, 41325)
-
-p1 <- plot_piechart(thega.donor.class.metrics, "donor")
-p2 <- plot_piechart(thega.acceptor.class.metrics, "acceptor")
+p1 <- plot_splicesite_piechart(thega.donor.class.metrics, "donor")
+p2 <- plot_splicesite_piechart(thega.acceptor.class.metrics, "acceptor")
 
 grid.arrange(p1, p2, nrow=1)
 ```
 
-## Thega1 splice site classification (NN models)
+## Splice site classification (NN models)
 ```{r echo=FALSE}
+# Number taken from the output of "intragen/intragen_splice_sites_fp.py" script
 thega.donor.class.metrics.nn <- c(77560, 55826, 6373)
 thega.acceptor.class.metrics.nn <- c(113595, 90925, 11822)
 
-p1 <- plot_piechart(thega.donor.class.metrics.nn, "donor")
-p2 <- plot_piechart(thega.acceptor.class.metrics.nn, "acceptor")
+p1 <- plot_splicesite_piechart(thega.donor.class.metrics.nn, "donor")
+p2 <- plot_splicesite_piechart(thega.acceptor.class.metrics.nn, "acceptor")
 
 grid.arrange(p1, p2, nrow=1)
 ```
 
-## Thega1 splice site classification (comparison)
-```{r echo=FALSE}
-category <- c("exon region FP", "intergenic FP", "true positive")
-dat <- data.frame(
-  model=rep(c("SVM", "NN"), each=3),
-  category=rep(category, times=2),
-  count=c(diff(rev(c(thega.donor.class.metrics, 0))), diff(rev(c(thega.donor.class.metrics.nn, 0))))
-)
+Looking at the two pairs of graphs and the proportions of green-red regions we can clearly see, that NN models have significantly better ratio between correctly classified splice site candidates and incorrectly classified intra-exon ones. The graphs however capture only proportions, not absolute numbers. NN models may easily detect less correct splice sites (even though the general testing indicates this is not the case). 
 
-donor.class.plot <- ggplot(data=dat, aes(x=model, y=count, fill=category)) +
+Plots comparing two models in absolute numbers however show this is indeed not the case. The number of true positives is comparable (with a slight advantage of SVM models for donor site). NN models on the other produce substantialy less false positives. What is even more important, this difference is more prominent in the intra-exon cases - the types of FP actually causing damage.    
+
+```{r echo=FALSE}
+dat_thega_donor <- prepare_splicesite_comparison_plot_data(thega.donor.class.metrics, thega.donor.class.metrics.nn)
+thega.donor.class.plot <- ggplot(data=dat_thega_donor, aes(x=model, y=count, fill=category)) +
     geom_bar(stat="identity") +
     ggtitle("Thega1 donor classification") +
     ylab("Donor counts") + 
     scale_fill_brewer() + theme_linedraw()
 
-donor.class.plot
-```
-
-# Intron classification (Kocim1 and Thega1)
-```{r, echo=FALSE}
-
-total <- 19911
-filter40_100 <- 14204
-
-kocim.basido.counts <- 12156
-kocim.asco.counts <-  10766
-kocim.nn.counts <- 12100
-
-intron_groups <- c("Basidiomycota SVM", "Ascomycota SVM", "Neural Net")
-kocim.intron.counts <- c(kocim.basido.counts, kocim.asco.counts, kocim.nn.counts)
-rate <- 100*kocim.intron.counts / total
-
-dat <- data.frame(
-  model = intron_groups, 
-  counts = kocim.intron.counts,
-  rate = rate
-  )
-dat$model <- factor(dat$model, levels = dat$model)
-
-ggplot(data=dat, aes(x=model, y=counts, fill=model)) +
+dat_thega_acceptor <- prepare_splicesite_comparison_plot_data(thega.acceptor.class.metrics, thega.acceptor.class.metrics.nn)
+thega.acceptor.class.plot <- ggplot(data=dat_thega_acceptor, aes(x=model, y=count, fill=category)) +
     geom_bar(stat="identity") +
-    geom_text(aes(label = paste(round(rate), '%')), vjust=-0.5) +
-    geom_hline(aes(yintercept=total)) +
-    geom_text(aes(1,total,label = "Introns total", vjust = -1)) +
-    geom_hline(aes(yintercept=filter40_100), color='coral', size=0.3) +
-    geom_text(aes(1,filter40_100,label = "Introns length 40-100", vjust = -1), color='coral') +
-    ggtitle("After splice site classification - intron survival rate") +
-    theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
-    ylab("Intron counts") +
-    ylim(0, 21000) +
-    scale_fill_brewer() +
-    theme_linedraw()
+    ggtitle("Thega1 acceptor classification") +
+    ylab("Acceptor counts") + 
+    scale_fill_brewer() + theme_linedraw()
 
+ggarrange(thega.donor.class.plot, thega.acceptor.class.plot, nrow=1, common.legend = TRUE, legend="bottom")
 ```
 
+# Comparison of SVM and NN models (on *Kocim1* phylum)
+```{r}
+# Number taken from the output of "intragen/intragen_splice_sites_fp.py" script
+kocim.donor.class.metrics <- c(39159, 22171, 3499)
+kocim.acceptor.class.metrics <- c(99443, 82582, 29948)
+```
+
+
+# Intron classification (*Kocim1*)
+Intron cutting and purging is done in steps. Each steps looses a portion of introns due to some filtration or non-perfect recall. Let's visualize, how many introns are lost in each step. The first stage is the number of introns we start with - all introns on the positive strand. Next, we will loose those introns, which are not in the length range of 40-100. Undetected donors and acceptor will also cause some introns to be lost. Intron classification is an apparent source of losses and some are lost during cutting as well. This final decrease is due to incorrect decisions when dealing with candidate overlaps - we simply chose the wrong candidate.  
 
 ```{r echo=FALSE}
-progress.groups <- c("Total", "Length filter (40-100)", "After pairing", "Ater intron classification", "After cutting")
+progress.groups <- c("Total", "Length filter (40-100)", "After splice site classification", "Ater intron classification", "After cutting")
 kocim.basi.progress <- c(19911, 14204, 12156, 9834, 8456)
 kocim.nn.progress <- c(19911, 14204, 12100, 9731, 9011)
 
@@ -142,8 +160,9 @@ dat1$stage <- factor(dat1$stage, levels = progress.groups)
 
 ggplot(data=dat1, aes(x=stage, y=count, group=model, color=model)) +
     geom_line() +
-    geom_point() +   
-    theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+    geom_point() +
+    ggtitle("Intron survival rate during pipeline") +
+    theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1)) +
     coord_cartesian(ylim=c(0, 20000)) +
     ylab("Intron counts")
 ```
@@ -182,7 +201,7 @@ svm.plot <- ggplot(data=dat_svm, aes(x=stage, y=fp_counts, fill=fp_type)) +
     geom_bar(stat="identity") + 
     ggtitle("SVM false positives") +
     ylab("False positives counts") +
-    theme(legend.direction="horizontal", legend.position="bottom", axis.text.x = element_text(angle = 30, hjust = 1))
+    theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
 # ----------------------------------------------------------------------------------------------------------------
 dat_nn <- build_plot_df(kocim.NN.fp.intergen, kocim.NN.fp.intragen)
 
@@ -191,9 +210,9 @@ nn.plot <- ggplot(data=dat_nn, aes(x=stage, y=fp_counts, fill=fp_type)) +
     ggtitle("Neural net false positives") +
     ylab("False positives counts") + 
     ylim(0,40000) +
-    theme(legend.direction="horizontal", legend.position="bottom", axis.text.x = element_text(angle = 30, hjust = 1))
+    theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
 
-grid.arrange(svm.plot, nn.plot, ncol = 2)  
+ggarrange(svm.plot, nn.plot, nrow=1, common.legend = TRUE, legend="bottom")
 
 dat3 <- data.frame(
   stage=rep(progress.groups, times=2),
@@ -207,7 +226,7 @@ exon.fp.plot <- ggplot(data=dat3, aes(x=stage, y=intragen_fp, fill=model)) +
     geom_bar(stat="identity", position = position_dodge()) +
     ggtitle("Inside exon false positives") +
     ylab("False positives counts") + 
-    theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+    theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1)) +
     scale_fill_brewer() + theme_linedraw()
 exon.fp.plot
 ```
@@ -228,7 +247,7 @@ svm.plot <- ggplot(data=dat_svm_thega, aes(x=stage, y=fp_counts, fill=fp_type)) 
     geom_bar(stat="identity") + 
     ggtitle("SVM false positives") +
     ylab("False positives counts") +
-    theme(legend.direction="horizontal", legend.position="bottom", axis.text.x = element_text(angle = 30, hjust = 1))
+    theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
 # ----------------------------------------------------------------------------------------------------------------
 dat_nn_thega <- build_plot_df(thega.NN.fp.intergen, thega.NN.fp.intragen)
 
@@ -237,9 +256,9 @@ nn.plot <- ggplot(data=dat_nn_thega, aes(x=stage, y=fp_counts, fill=fp_type)) +
     ggtitle("Neural net false positives") +
     ylab("False positives counts") + 
     ylim(0,87000) +
-    theme(legend.direction="horizontal", legend.position="bottom", axis.text.x = element_text(angle = 30, hjust = 1))
+    theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
 
-grid.arrange(svm.plot, nn.plot, ncol = 2)  
+ggarrange(svm.plot, nn.plot, nrow=1, common.legend = TRUE, legend="bottom") 
 
 dat3 <- data.frame(
   stage=rep(progress.groups, times=2),
@@ -253,8 +272,55 @@ exon.fp.plot <- ggplot(data=dat3, aes(x=stage, y=intragen_fp, fill=model)) +
     geom_bar(stat="identity", position = position_dodge()) +
     ggtitle("Inside exon false positives") +
     ylab("False positives counts") + 
-    theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+    theme(axis.title.x=element_blank()) +
     scale_fill_brewer() + theme_linedraw()
 exon.fp.plot
+
+```
+
+
+```{r}
+classified_true_data_nn <- c(exon_fp = 2195, total_classified_true =34963)
+p_nn <- plot_adjusted_intron_precision_piechart(classified_true_data_nn, "NN")
+
+classified_true_data_svm <- c(exon_fp = 4577, total_classified_true =45015)
+p_svm <- plot_adjusted_intron_precision_piechart(classified_true_data_svm, "SVM")
+
+grid.arrange(p_nn, p_svm, ncol = 2)  
+```
+
+## Comparison of models
+```{r, echo=FALSE}
+total <- 19911
+filter40_100 <- 14204
+
+kocim.basido.counts <- 12156
+kocim.asco.counts <-  10766
+kocim.nn.counts <- 12100
+
+intron_groups <- c("Basidiomycota SVM", "Ascomycota SVM", "Neural Net")
+kocim.intron.counts <- c(kocim.basido.counts, kocim.asco.counts, kocim.nn.counts)
+rate <- 100*kocim.intron.counts / total
+
+dat <- data.frame(
+  model = intron_groups, 
+  counts = kocim.intron.counts,
+  rate = rate
+  )
+dat$model <- factor(dat$model, levels = dat$model)
+
+ggplot(data=dat, aes(x=model, y=counts, fill=model)) +
+    geom_bar(stat="identity") +
+    geom_text(aes(label = paste(round(rate), '%')), vjust=-0.5) +
+    geom_hline(aes(yintercept=total)) +
+    geom_text(aes(1,total,label = "Introns total", vjust = -1)) +
+    geom_hline(aes(yintercept=filter40_100), color='coral', size=0.3) +
+    geom_text(aes(1,filter40_100,label = "Introns length 40-100", vjust = -1), color='coral') +
+    ggtitle("After splice site classification - intron survival rate") +
+    theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+    ylab("Intron counts") +
+    ylim(0, 21000) +
+    scale_fill_brewer() +
+    theme_linedraw()
 
 ```

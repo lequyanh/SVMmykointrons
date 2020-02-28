@@ -114,7 +114,7 @@ def false_introns_exploration(joined: DataFrame, exon_file: str):
     print(
         f'{no_cuts} out of {len(false_positive_cuts_df)} all false cuts => '
         f'the proportion of intra-genic cuts among all false cuts is {no_cuts / len(false_positive_cuts_df):.2f}.\n'
-        f'After cut intra-genic FP rate is {100 * no_cuts / all_cuts_count:.2f}%'
+        f'After cut intra-genic FP rate is {100 * no_cuts / all_cuts_count:.2f}% as there are {all_cuts_count} cuts'
     )
 
     print(f'----------------------------------- Determination coefficient -------------------------------------')

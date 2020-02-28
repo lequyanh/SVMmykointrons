@@ -1,45 +1,277 @@
+import glob
 import logging
-from typing import Optional, Tuple
+import random
+from enum import Enum
+from typing import Optional, Tuple, List
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+import fastalib as fl
+import gfflib
+
 DONOR = 'GT'
 ACCEPTOR = 'AG'
 
+NEWSEQUENCES_LOC = '/home/anhvu/Desktop/mykointrons-data/new-sequences'
+ASSEMBLIES_LOC = '/home/anhvu/Desktop/mykointrons-data/data/Assembly'
+GFFS_LOC = '/home/anhvu/Desktop/mykointrons-data/data/GFF'
 
-def extract_window(
-        sequence: str,
-        position: int,
+logging.basicConfig(
+    level=logging.INFO,
+    filename='extract-tools.log',
+    filemode='w'
+)
+random.seed(42)
+
+
+class ExtractOptions(Enum):
+    FALSE_SPLICESITES = 1
+    FALSE_INTRAGEN_SPLICESITES = 2
+    TRUE_SPLICESITES = 3
+
+
+def main():
+    option = ExtractOptions.TRUE_SPLICESITES
+    fungi_name = 'Tripe1'
+    margin_size = 200
+    examples_limit = 25000
+
+    if option == ExtractOptions.FALSE_SPLICESITES:
+        donor_windows, acceptor_windows = generate_false_splicesites(fungi_name, margin_size, examples_limit)
+        suffix = 'false'
+    elif option == ExtractOptions.FALSE_INTRAGEN_SPLICESITES:
+        donor_windows, acceptor_windows = generate_false_exon_splicesites(fungi_name, margin_size, examples_limit)
+        suffix = 'false-intragenic'
+    elif option == ExtractOptions.TRUE_SPLICESITES:
+        donor_windows, acceptor_windows = generate_true_splice_sites(fungi_name, margin_size)
+        suffix = 'true2'
+    else:
+        print('No valid option for splice site windows extraction. Exiting...')
+        return
+
+    with open(f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-{suffix}.fasta', 'w') as f:
+        SeqIO.write(donor_windows, f, 'fasta')
+
+    with open(f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-{suffix}.fasta', 'w') as f:
+        SeqIO.write(acceptor_windows, f, 'fasta')
+
+
+def generate_true_splice_sites(
+        fungi_name: str,
         margin_size: int,
-        scaffold: str
-) -> Optional[SeqRecord]:
-    # compute start and end for the window
-    win_start = position - margin_size - 1
-    win_end = position + margin_size + 1
+) -> Tuple[List, List]:
+    introns_fasta = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-introns.fasta'
+    donor_positions, acceptor_positions = true_donorac_positions(introns_fasta)
 
-    if win_start < 0:
-        return None
+    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
+    with open(assembly_fasta, 'r') as assembly_f:
+        true_donors = list()
+        true_acceptors = list()
 
-    # extract the window
-    window = sequence[win_start:win_end]
+        # loop through the whole assembly
+        for seq_rec in SeqIO.parse(assembly_f, 'fasta'):
+            scaffold = seq_rec.description
+            sequence = str(seq_rec.seq)
 
-    dimer = window[margin_size:margin_size + 2]
-    if dimer not in {DONOR, ACCEPTOR}:
-        return None
+            for donor_pos in donor_positions.get(scaffold, []):
+                window = extract_window(sequence, donor_pos, margin_size, scaffold)
 
-    if len(window) < 2 * margin_size + 2:
-        logging.warning("Windows too short, skipping...")
-        return None
+                if window and str(window.seq[margin_size:margin_size + 2]) == DONOR:
+                    true_donors.append(window)
 
-    return SeqRecord(
-        id=' '.join([scaffold, '+', str(win_start), str(win_end)]),
-        seq=Seq(window)
-    )
+            for acc_pos in acceptor_positions.get(scaffold, []):
+                window = extract_window(sequence, acc_pos, margin_size, scaffold)
+
+                if window and str(window.seq[margin_size:margin_size + 2]) == ACCEPTOR:
+                    true_acceptors.append(window)
+
+        print(f'\t True splice sites: {len(true_donors)} donor, {len(true_acceptors)} acceptor windows')
+
+        return true_donors, true_acceptors
 
 
-def true_donorac_positions(introns_fasta: str) -> Tuple[dict, dict]:
+def generate_false_splicesites(
+        fungi_name: str,
+        margin_size: int,
+        examples_limit: int
+) -> Tuple[List, List]:
+    """
+    Extract false splice site windows anywhere in the genome of the given fungi. Scaffold, from which the windows will
+    be extracted are shuffled and sampled.
+    The windows will be saved to files at the new_sequences folder.
+
+    :param examples_limit: Limit on the number of false windows to extract (for each donor/acceptor windows)
+    :param margin_size: Width of the window
+    :param fungi_name: Fungi name to extract false intra-genic splice site windows from
+    :return: Two list of donor and acceptor windows
+    """
+    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
+    with open(assembly_fasta, 'r') as assembly_f:
+        scaffold_records = list(SeqIO.parse(assembly_f, 'fasta'))  # type: List[SeqRecord]
+        random.shuffle(scaffold_records)  # shuffle scaffolds for uniform sampling
+
+    introns_fasta = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-introns.fasta'
+    donor_positions, acceptor_positions = true_donorac_positions(introns_fasta)
+
+    false_donors = list()
+    false_acceptors = list()
+
+    def yield_false_windows():
+        print(f'False splice sites for fungi {fungi_name} written:'
+              f'{len(false_donors)} donor, {len(false_acceptors)} acceptor windows / {examples_limit} limit')
+
+        return false_donors, false_acceptors
+
+    for seq_record in scaffold_records:
+        sequence = str(seq_record.seq)
+        scaffold = seq_record.description
+
+        for position, dimer in fl.dimers(sequence):
+            if len(false_donors) >= examples_limit:
+                return yield_false_windows()
+
+            if dimer == DONOR and position not in donor_positions.get(scaffold, []):
+                window = extract_window(sequence, position, margin_size, scaffold)
+                false_donors = false_donors + [window] if window else false_donors
+
+            elif dimer == ACCEPTOR and position not in acceptor_positions.get(scaffold, []):
+                window = extract_window(sequence, position, margin_size, scaffold)
+                false_acceptors = false_acceptors + [window] if window else false_acceptors
+            else:
+                logging.info(f'Dimer is a splice site, skip it')
+                continue
+
+    return yield_false_windows()
+
+
+def generate_false_exon_splicesites(
+        fungi_name: str,
+        margin_size: int,
+        examples_limit: int
+) -> Tuple[List, List]:
+    """
+    Extract false splice site windows from exon regions of the given fungi. The regions will be sampled
+    The windows will be saved to files at the new_sequences folder.
+    NOTE: This method requires exon positions file to exist. If not, run the @extract_exons() function first
+          on the selected fungi
+
+    :param examples_limit: Limit on the number of false windows to extract (for each donor/acceptor windows)
+    :param margin_size: Width of the window
+    :param fungi_name: Fungi name to extract false intra-genic splice site windows from
+    :return: Two list of donor and acceptor windows
+    """
+    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
+    with open(assembly_fasta, 'r') as assembly_file:
+        scaffolds_input = {desc: seq for desc, seq in fl.read_fasta(assembly_file)}
+
+    exons_file = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}_exons.fasta'
+    with open(exons_file, 'r') as ef:
+        exons = list(SeqIO.parse(ef, 'fasta'))  # type: List[SeqRecord]
+        random.shuffle(exons)
+
+    intragenic_false_donors = list()
+    intragenic_false_acceptors = list()
+
+    def yield_false_windows():
+        print(f'False splice sites for fungi {fungi_name} written:'
+              f'{len(intragenic_false_donors)} donor, {len(intragenic_false_acceptors)} acceptor windows '
+              f'/ {examples_limit} limit')
+
+        return intragenic_false_donors, intragenic_false_acceptors
+
+    def window_coords(dimer_relative_position, exon_start):
+        # First, compute relative start and end for the window within the exon
+        win_start = dimer_relative_position - margin_size - 1
+        win_end = dimer_relative_position + margin_size + 1
+
+        # Adjust the window coordinates by the position of the exon
+        return exon_start + win_start, exon_start + win_end
+
+    def extract_exon_window(dimer_exon_position, exon_start):
+        win_start, win_end = window_coords(dimer_exon_position, exon_start)
+
+        window = scaffolds_input[scaffold][win_start:win_end]
+        if len(window) != 2 * margin_size + 2:
+            logging.warning("Windows too short, skipping...")
+            return None
+
+        win_mid = int(len(window) / 2)
+        assert window[win_mid - 1: win_mid + 1] in {DONOR, ACCEPTOR}
+
+        return SeqRecord(
+            id=' '.join([scaffold, strand, str(win_start), str(win_end)]),
+            seq=Seq(window)
+        )
+
+    for exon_seqrec in exons:  # type: SeqRecord
+        desc = exon_seqrec.description.split(' ')
+
+        scaffold, strand, start, end = desc[0], desc[1], int(desc[2]), int(desc[3])
+
+        # Compare the exon we get from the original fasta with the sequence in the exon file.
+        # We can't use directly sequences from the exon file, as we might need the surrounding nucleotides
+        exon_seq = scaffolds_input[scaffold][start:end]
+        assert exon_seq == str(exon_seqrec.seq)
+
+        for position, dimer in fl.dimers(exon_seq):
+            if len(intragenic_false_donors) >= examples_limit:
+                return yield_false_windows()
+
+            if dimer == DONOR or dimer == ACCEPTOR:
+                false_splicesite = extract_exon_window(position, start)
+
+                if dimer == DONOR and false_splicesite:
+                    intragenic_false_donors.append(false_splicesite)
+                elif dimer == ACCEPTOR and false_splicesite:
+                    intragenic_false_acceptors.append(false_splicesite)
+
+    return yield_false_windows()
+
+
+def extract_exons(
+        fungi_name: str
+) -> None:
+    """
+    Extracts exon positions to a CSV file and exon sequences to FASTA file. Run by:
+
+        ascos = f'../basidiomycota.txt'
+        with open(ascos, 'r') as f:
+            names = f.readlines()
+            list(map(extract_exons, names))
+
+    :param fungi_name: Fungi to extract exons for
+    :return: None
+    """
+    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
+
+    gff = glob.glob(f'{GFFS_LOC}/{fungi_name}_GeneCatalog_genes_*.gff')
+    if len(gff) == 0:
+        print(f'No GFF file for fungi {fungi_name}')
+        return
+    if len(gff) > 1:
+        print(f'More than one GFF file for fungi {fungi_name}. Taking first.')
+
+    gff_file = gff[0]
+    print(f'Extracting fungi {fungi_name}')
+
+    out_exon_pos = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}_exon_positions.csv'
+    out_exon_fasta = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}_exons.fasta'
+    gfflib.extract_exon_positions(gff_file, assembly_fasta, out_exon_pos, out_exon_fasta, validate=True)
+
+
+def true_donorac_positions(
+        introns_fasta: str
+) -> Tuple[dict, dict]:
+    """
+    Extracts positions of true donors and acceptors (only canonic GT and AG ones).
+    Record number of non-canonic splice sites.
+
+    :param introns_fasta: FASTA file with intron sequences and their positions
+    :return: Two dictionaries. One with donor positions and one with acceptor positions.
+                Keys are scaffold IDs, values list with coordinates
+    """
     with open(introns_fasta, 'r') as intron_fasta_f:
         donor_positions = dict()
         acceptor_positions = dict()
@@ -74,33 +306,36 @@ def true_donorac_positions(introns_fasta: str) -> Tuple[dict, dict]:
 
     return donor_positions, acceptor_positions
 
-#
-# def get_introns_position_info(introns_locs_fasta: str) -> Iterable[List]:
-#     """
-#     Parses intron file. Returns list, where each element is a intron "object"
-#     This object is a list of scaffold, position and sequence
-#     :param introns_locs_fasta: Location of introns file
-#     """
-#     # Fasta file with intron locations and sequences
-#     with open(introns_locs_fasta, 'r') as introns_locs_f:
-#         lines = introns_locs_f.readlines()
-#
-#         # From 1st line every second line (scaffold, strand, start, end)
-#         intron_descriptions = lines[::2]
-#         # From 2nd line every second line (intron sequence)
-#         intron_seqs = lines[1::2]
-#
-#         def join_sequence_with_info(rec):
-#             intron_info = rec[0].rstrip().split(' ')
-#             intron_seq = rec[1].rstrip()
-#
-#             intron_info.append(intron_seq)
-#             return intron_info
-#
-#         # Join parsed location info with the sequence itself
-#         intron_descriptions = map(
-#             join_sequence_with_info,
-#             zip(intron_descriptions, intron_seqs)
-#         )
-#
-#         return intron_descriptions
+
+def extract_window(
+        sequence: str,
+        position: int,
+        margin_size: int,
+        scaffold: str
+) -> Optional[SeqRecord]:
+    # compute start and end for the window
+    win_start = position - margin_size - 1
+    win_end = position + margin_size + 1
+
+    if win_start < 0:
+        return None
+
+    # extract the window
+    window = sequence[win_start:win_end]
+
+    dimer = window[margin_size:margin_size + 2]
+    if dimer not in {DONOR, ACCEPTOR}:
+        return None
+
+    if len(window) < 2 * margin_size + 2:
+        logging.warning("Windows too short, skipping...")
+        return None
+
+    return SeqRecord(
+        id=' '.join([scaffold, '+', str(win_start), str(win_end)]),
+        seq=Seq(window)
+    )
+
+
+if __name__ == '__main__':
+    main()
