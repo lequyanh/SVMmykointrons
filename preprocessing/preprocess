@@ -19,20 +19,24 @@ POSTIVE_WINDOWS=20000
 NEGATIVE_WINDOWS=30000
 
 # ----------- CREATE FALSE SPLICE SITE WINDOWS FOR EACH SHROOM (TAKE-GT/AG-WINDOWS-FROM-ANYWHERE VERSION)-----------------
-# Also an output folder - each shroom sub-directory will have a fasta file with false introns.
-INTRON_LOC="/home/anhvu/Desktop/mykointrons-data/new-sequences"
-EXAMPLE_LIMIT=50000
+# Options for splice site generation
+FALSE_SPLICESITES=1
+FALSE_INTRAGEN_SPLICESITES=2
+TRUE_SPLICESITES=3
+
+EXAMPLE_LIMIT=25000
 WINDOW_DIAMETER=200
 
 function generate_false_splice_site_windows() {
   while read shroom; do
-    $PYTHON splicesite/extract_false_splice_sites.py "${shroom}" "${ASSEMBLIES_LOC}/data/Assembly" ${INTRON_LOC} ${EXAMPLE_LIMIT} ${WINDOW_DIAMETER}
+    $PYTHON splicesite/extract_tools.py ${FALSE_SPLICESITES} "${shroom}" ${WINDOW_DIAMETER} ${EXAMPLE_LIMIT}
+#    $PYTHON splicesite/extract_tools.py ${FALSE_INTRAGEN_SPLICESITES} "${shroom}" ${WINDOW_DIAMETER} ${EXAMPLE_LIMIT}
   done <${SHROOM_NAMES_ALL}
 }
 
 function generate_true_splice_site_windows() {
   while read shroom; do
-    $PYTHON splicesite/extract_true_splice_sites.py "${shroom}" "${ASSEMBLIES_LOC}/data/Assembly" ${INTRON_LOC} ${WINDOW_DIAMETER}
+    $PYTHON splicesite/extract_tools.py ${TRUE_SPLICESITES} "${shroom}" ${WINDOW_DIAMETER} ${EXAMPLE_LIMIT}
   done <${SHROOM_NAMES_ALL}
 }
 
@@ -97,10 +101,10 @@ generate_false_splice_site_windows &
 generate_true_splice_site_windows &
 wait
 
-# 2. step (also a one time step unless you want different set of fungi for training)
-split_species_to_train_test_sets
-## 3. step
-create_train_test_csvs $SPLICE_TRAIN_NAMES train
-create_train_test_csvs $SPLICE_TEST_NAMES test
-## 4. step
-mix_and_merge_windows_to_single_file
+## 2. step (also a one time step unless you want different set of fungi for training)
+#split_species_to_train_test_sets
+### 3. step
+#create_train_test_csvs $SPLICE_TRAIN_NAMES train
+#create_train_test_csvs $SPLICE_TEST_NAMES test
+### 4. step
+#mix_and_merge_windows_to_single_file

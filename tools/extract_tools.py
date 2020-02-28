@@ -1,7 +1,9 @@
 import glob
 import logging
 import random
+import sys
 from enum import Enum
+from pathlib import Path
 from typing import Optional, Tuple, List
 
 from Bio import SeqIO
@@ -33,10 +35,15 @@ class ExtractOptions(Enum):
 
 
 def main():
-    option = ExtractOptions.TRUE_SPLICESITES
-    fungi_name = 'Tripe1'
-    margin_size = 200
-    examples_limit = 25000
+    # option = ExtractOptions.TRUE_SPLICESITES
+    # fungi_name = 'Tripe1'
+    # margin_size = 200
+    # examples_limit = 25000
+
+    option = ExtractOptions(int(sys.argv[1]))
+    fungi_name = sys.argv[2]
+    margin_size = int(sys.argv[3])
+    examples_limit = int(sys.argv[4])
 
     if option == ExtractOptions.FALSE_SPLICESITES:
         donor_windows, acceptor_windows = generate_false_splicesites(fungi_name, margin_size, examples_limit)
@@ -46,9 +53,9 @@ def main():
         suffix = 'false-intragenic'
     elif option == ExtractOptions.TRUE_SPLICESITES:
         donor_windows, acceptor_windows = generate_true_splice_sites(fungi_name, margin_size)
-        suffix = 'true2'
+        suffix = 'true'
     else:
-        print('No valid option for splice site windows extraction. Exiting...')
+        print(f'No valid option {option} for splice site windows extraction. Exiting...')
         return
 
     with open(f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-{suffix}.fasta', 'w') as f:
@@ -87,7 +94,8 @@ def generate_true_splice_sites(
                 if window and str(window.seq[margin_size:margin_size + 2]) == ACCEPTOR:
                     true_acceptors.append(window)
 
-        print(f'\t True splice sites: {len(true_donors)} donor, {len(true_acceptors)} acceptor windows')
+        print(f'\t True splice site windows for fungi {fungi_name} written: '
+              f'{len(true_donors)} donor, {len(true_acceptors)} acceptor windows')
 
         return true_donors, true_acceptors
 
@@ -119,7 +127,7 @@ def generate_false_splicesites(
     false_acceptors = list()
 
     def yield_false_windows():
-        print(f'False splice sites for fungi {fungi_name} written:'
+        print(f'False splice site windows for fungi {fungi_name} written:'
               f'{len(false_donors)} donor, {len(false_acceptors)} acceptor windows / {examples_limit} limit')
 
         return false_donors, false_acceptors
@@ -167,6 +175,9 @@ def generate_false_exon_splicesites(
         scaffolds_input = {desc: seq for desc, seq in fl.read_fasta(assembly_file)}
 
     exons_file = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}_exons.fasta'
+    if not Path(exons_file).is_file():
+        extract_exons(fungi_name)
+
     with open(exons_file, 'r') as ef:
         exons = list(SeqIO.parse(ef, 'fasta'))  # type: List[SeqRecord]
         random.shuffle(exons)
@@ -175,7 +186,7 @@ def generate_false_exon_splicesites(
     intragenic_false_acceptors = list()
 
     def yield_false_windows():
-        print(f'False splice sites for fungi {fungi_name} written:'
+        print(f'False intragenic splice site windows for fungi {fungi_name} written:'
               f'{len(intragenic_false_donors)} donor, {len(intragenic_false_acceptors)} acceptor windows '
               f'/ {examples_limit} limit')
 
@@ -254,7 +265,7 @@ def extract_exons(
         print(f'More than one GFF file for fungi {fungi_name}. Taking first.')
 
     gff_file = gff[0]
-    print(f'Extracting fungi {fungi_name}')
+    print(f'Extracting exons for fungi {fungi_name}')
 
     out_exon_pos = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}_exon_positions.csv'
     out_exon_fasta = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}_exons.fasta'
