@@ -12,7 +12,7 @@ ACCEPTOR_SITE = 'acceptor'
 
 
 def main():
-    shroom_name = 'Thega1'
+    shroom_name = 'Kocim1'
     model = 'SVM'
 
     logging.basicConfig(

@@ -35,8 +35,8 @@ def main():
 
     exon_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}_exon_positions.csv'
 
-    intron_annotations_file = f'{shroom_name}/{shroom_name}_intron-result-{model}.csv'
-    cut_coords_file = f'{shroom_name}/{shroom_name}_cut_coords-{model}.csv'
+    intron_annotations_file = f'{shroom_name}/{shroom_name}-intron-result-{model}.csv'
+    cut_coords_file = f'{shroom_name}/{shroom_name}-cut-coords-{model}.csv'
 
     joined_df = intragen_tools.join_on_position(cut_coords_file, intron_annotations_file)
 

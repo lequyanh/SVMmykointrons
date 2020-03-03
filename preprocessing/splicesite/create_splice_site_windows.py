@@ -17,6 +17,9 @@ NEGATIVE_LABEL = '-1'
 logging.getLogger().setLevel(logging.INFO)
 random.seed(42)
 
+ASSEMBLIES_LOC = '/home/anhvu/Desktop/mykointrons-data/data/Assembly'
+NEWSEQUENCES_LOC = '/home/anhvu/Desktop/mykointrons-data/new-sequences'
+
 
 def main():
     """
@@ -28,19 +31,20 @@ def main():
     The file can be either for testing/training, which is specified by @test_train parameter
     :return: 2 files - donor-train/test.csv acceptor-train/test.csv
     """
-    base_loc = sys.argv[1]
-    shroom_name = sys.argv[2]
+    shroom_name = sys.argv[1]
 
-    donor_lwindow, donor_rwindow = int(sys.argv[3]), int(sys.argv[4])
-    acceptor_lwindow, acceptor_rwindow = int(sys.argv[5]), int(sys.argv[6])
+    donor_lwindow, donor_rwindow = int(sys.argv[2]), int(sys.argv[3])
+    acceptor_lwindow, acceptor_rwindow = int(sys.argv[4]), int(sys.argv[5])
 
-    csv_target_folder = sys.argv[7]
-    test_train = sys.argv[8]
+    csv_target_folder = sys.argv[6]
+    test_train = sys.argv[7]
 
-    max_pos_samples = int(sys.argv[9])
-    max_neg_samples = int(sys.argv[10])
+    max_pos_samples = int(sys.argv[8])
+    max_neg_samples = int(sys.argv[9])
 
-    # base_loc = '/home/anhvu/Desktop/mykointrons-data'
+    intragenic = bool(sys.argv[10])
+    suffix = '-intragenic' if intragenic else ''
+
     # shroom_name = 'Mycreb1'
     # csv_target_folder = '../data/'
     #
@@ -51,16 +55,16 @@ def main():
     # max_pos_samples = 100000
     # max_neg_samples = 140000
 
-    assembly = f'{base_loc}/data/Assembly/{shroom_name}_AssemblyScaffolds.fasta'
+    assembly = f'{ASSEMBLIES_LOC}/{shroom_name}_AssemblyScaffolds.fasta'
     if not Path(assembly).is_file():
         logging.warning(f'Assembly data for shroom {shroom_name} not found. Directory {assembly}')
         exit(1)
 
-    false_donor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-donor-false.fasta'
-    false_acceptor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-acceptor-false.fasta'
+    false_donor_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-donor-false{suffix}.fasta'
+    false_acceptor_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-acceptor-false{suffix}.fasta'
 
-    true_donor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-donor-true.fasta'
-    true_acceptor_file = f'{base_loc}/new-sequences/{shroom_name}/{shroom_name}-acceptor-true.fasta'
+    true_donor_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-donor-true.fasta'
+    true_acceptor_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-acceptor-true.fasta'
 
     out_donor_csv, out_acceptor_csv = prepare_output(shroom_name, csv_target_folder, test_train)
 

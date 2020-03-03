@@ -18,6 +18,10 @@ SPLICE_TEST_NAMES="$split_dir/splice_sites_test_names.txt"
 POSTIVE_WINDOWS=20000
 NEGATIVE_WINDOWS=30000
 
+# Switch deciding whether to draw false examples only from intragenic region, or from all regions
+# The script then takes examples either from fungi-donor-false-intragenic.fasta of rom fungi-donor-false.fasta
+INTRAGEN_FLAG=True
+
 # ----------- CREATE FALSE SPLICE SITE WINDOWS FOR EACH SHROOM (TAKE-GT/AG-WINDOWS-FROM-ANYWHERE VERSION)-----------------
 # Options for splice site generation
 FALSE_SPLICESITES=1
@@ -29,8 +33,8 @@ WINDOW_DIAMETER=200
 
 function generate_false_splice_site_windows() {
   while read shroom; do
-    $PYTHON splicesite/extract_tools.py ${FALSE_SPLICESITES} "${shroom}" ${WINDOW_DIAMETER} ${EXAMPLE_LIMIT}
-#    $PYTHON splicesite/extract_tools.py ${FALSE_INTRAGEN_SPLICESITES} "${shroom}" ${WINDOW_DIAMETER} ${EXAMPLE_LIMIT}
+#    $PYTHON splicesite/extract_tools.py ${FALSE_SPLICESITES} "${shroom}" ${WINDOW_DIAMETER} ${EXAMPLE_LIMIT}
+    $PYTHON splicesite/extract_tools.py ${FALSE_INTRAGEN_SPLICESITES} "${shroom}" ${WINDOW_DIAMETER} ${EXAMPLE_LIMIT}
   done <${SHROOM_NAMES_ALL}
 }
 
@@ -72,13 +76,13 @@ function create_train_test_csvs() {
   shroom_names=$1
   train_test=$2
   for shroom in $(<"$shroom_names"); do
-    $PYTHON ./splicesite/create_splice_site_windows.py $ASSEMBLIES_LOC "${shroom}" 200 200 200 200 $splicesite_dataloc "${train_test}" ${POSTIVE_WINDOWS} ${NEGATIVE_WINDOWS}
+    $PYTHON ./splicesite/create_splice_site_windows.py "${shroom}" 200 200 200 200 $splicesite_dataloc "${train_test}" ${POSTIVE_WINDOWS} ${NEGATIVE_WINDOWS} ${INTRAGEN_FLAG}
   done
 }
 
 # ----------- MIX WINDOWS FROM ALL MUSHROOMS AND SAMPLE A SINGLE TRAIN/TEST CSV FILE -----------------
 function mix_and_merge_windows_to_single_file() {
-  NO_TRAIN=400000
+  NO_TRAIN=450000
   SHUFFLED_DONOR_SITE_TRAINSET_NAME='shuff_aggreg_donor_site_train.csv'
   SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME='shuff_aggreg_acceptor_site_train.csv'
   bash splicesite/merge_shuffle_datasets.sh $splicesite_dataloc/train/donor $NO_TRAIN $SHUFFLED_DONOR_SITE_TRAINSET_NAME ./
@@ -97,14 +101,14 @@ function mix_and_merge_windows_to_single_file() {
 
 # ===================================================================================================
 # 1. step (only one time step unless you want different samples or bigger window sizes)
-generate_false_splice_site_windows &
-generate_true_splice_site_windows &
-wait
+#generate_false_splice_site_windows &
+#generate_true_splice_site_windows &
+#wait
 
-## 2. step (also a one time step unless you want different set of fungi for training)
+# 2. step (also a one time step unless you want different set of fungi for training)
 #split_species_to_train_test_sets
-### 3. step
-#create_train_test_csvs $SPLICE_TRAIN_NAMES train
-#create_train_test_csvs $SPLICE_TEST_NAMES test
-### 4. step
-#mix_and_merge_windows_to_single_file
+## 3. step
+create_train_test_csvs $SPLICE_TRAIN_NAMES train
+create_train_test_csvs $SPLICE_TEST_NAMES test
+## 4. step
+mix_and_merge_windows_to_single_file

@@ -1,0 +1,11 @@
+INFO:root:Classification of file shuff_aggreg_acceptor_site_test.csv with model amodel-basi-intragen.hd5
+INFO:root:Performance metrics:
+ -TP: 167856
+ -FP: 20956
+ -TN: 286954
+ -FN: 24202
+Accuracy: 0.909678219406042
+Precision: 0.8890112916551914
+Recall: 0.8739859834008477
+Adjusted precision: 0.4436709523243486
+Adj. precision calculated with imbalance ratio: 0.022
