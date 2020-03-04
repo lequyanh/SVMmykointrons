@@ -1,6 +1,6 @@
 ---
-title: "nn-vs-svm"
-author: "AnhVu"
+title: "Intron detection notes"
+author: "Anh Vu Le"
 output: pdf_document
 ---
 
@@ -14,16 +14,24 @@ library("ggpubr")
 ```{r echo=FALSE}
 CATEGORY_SPLICESITE_CLASSIFIED_TRUE <- c("exon region FP", "intergenic FP", "true positive")
 CATEGORY_INTRON_CLASSIFIED_TRUE <- c("exon region FP", "TP or intergenic FP")
+CATEGORY_MODELS <- c("SVM", "SVM (intragen)","NN")
 
-prepare_splicesite_comparison_plot_data <- function(splicesite_classified_true_metrics.svm, splicesite_classified_true_metrics.nn){
+prepare_splicesite_comparison_plot_data <- function(
+  splicesite_classified_true_metrics.svm,
+  splicesite_classified_true_metrics.svm.intragen,
+  splicesite_classified_true_metrics.nn){
+  
   dat <- data.frame(
-    model=rep(c("SVM", "NN"), each=3),
-    category=rep(CATEGORY_SPLICESITE_CLASSIFIED_TRUE, times=2),
+    model=rep(CATEGORY_MODELS, each=3),
+    category=rep(CATEGORY_SPLICESITE_CLASSIFIED_TRUE, times=3),
     count=c(
-        diff(rev(c(splicesite_classified_true_metrics.svm, 0))), 
+        diff(rev(c(splicesite_classified_true_metrics.svm, 0))),
+        diff(rev(c(splicesite_classified_true_metrics.svm.intragen, 0))),
         diff(rev(c(splicesite_classified_true_metrics.nn, 0)))
       )
   )
+  dat$model <- factor(dat$model, levels = CATEGORY_MODELS)
+  
   return(dat)
 }
 
@@ -52,79 +60,71 @@ plot_splicesite_piechart <- function(classified_as_true_metrics, site){
        theme(axis.text=element_blank()) +
        theme(axis.ticks=element_blank()) +
        scale_fill_manual(values=c("#FF595E", "#1982C4", "#8AC926")) +
-       labs(title=paste("Classified as true -", site, "candidates") )
+       labs(title=paste(site, "candidates") )
   
   return(p)
 }
-
-plot_adjusted_intron_precision_piechart <- function(classified_true_data, model_type){
-  dat = data.frame(
-    count=diff(rev(c(classified_true_data, 0))), 
-    category=CATEGORY_INTRON_CLASSIFIED_TRUE
-  )
-  dat.plot.data <- build_piechart_data(dat)
-  dat.plot.data$category <- factor(dat$category, levels = CATEGORY_INTRON_CLASSIFIED_TRUE)
-  
-  p = ggplot(dat.plot.data, aes(fill=category, ymax=ymax, ymin=ymin, xmax=4, xmin=3)) +
-       geom_rect() +
-       coord_polar(theta="y") +
-       xlim(c(0, 4)) +
-       theme(panel.grid=element_blank()) +
-       theme(axis.text=element_blank()) +
-       theme(axis.ticks=element_blank()) +
-       scale_fill_manual(values=c("#FF595E", "#1982C4", "#8AC926")) +
-       labs(title=paste("Adjusted intron cutting precision -", model_type))
-  
-  return(p)
-}
+# 
+# plot_adjusted_intron_precision_piechart <- function(classified_true_data, model_type){
+#   dat = data.frame(
+#     count=diff(rev(c(classified_true_data, 0))), 
+#     category=CATEGORY_INTRON_CLASSIFIED_TRUE
+#   )
+#   dat.plot.data <- build_piechart_data(dat)
+#   dat.plot.data$category <- factor(dat$category, levels = CATEGORY_INTRON_CLASSIFIED_TRUE)
+#   
+#   p = ggplot(dat.plot.data, aes(fill=category, ymax=ymax, ymin=ymin, xmax=4, xmin=3)) +
+#        geom_rect() +
+#        coord_polar(theta="y") +
+#        xlim(c(0, 4)) +
+#        theme(panel.grid=element_blank()) +
+#        theme(axis.text=element_blank()) +
+#        theme(axis.ticks=element_blank()) +
+#        scale_fill_manual(values=c("#FF595E", "#1982C4", "#8AC926")) +
+#        labs(title=paste("Adjusted intron cutting precision -", model_type))
+#   
+#   return(p)
+# }
 
 ```
 
-# Comparison of SVM and NN models (on *Thega1* phylum)
-This section will be devoted to comparing NN and SVM splice site models. In general validation, the models ended up toe to toe in sense of both precision and recall. The tests however do not capture the real nature of the task, which is intron cutting for the purposes of enhancing BLAST search results. Good results here are measured in a slightly more complex manner, as we will see shortly.
+# Comparison of splice site classification models (on *Thega1* phylum)
+This section will be devoted to comparing splice site classification models. In total 3 models were developed - two SVM models and NN model (technically there 6 of them as donors/acceptor site require each its own predictor). The SVM models differ in data, which they were trained on. First one (let's call it "general SVM") was given negative splice site candidates sampled from the entire genome with no distinction, whether they come from an intergenic or an intragenic (i.e. exon) region. Second SVM was given only negative candidates from within exons ("intragenic SVM"). NN models were also trained ignoring intergenic sequences. The motivation behind this decision comes from the assumption, that the accuracy in intergenic regions is irrelevant for the task as hand, which is basically about recognizing intron sequences from exon sequences.  
+
+In general validation, the models ended up toe to toe in sense of both precision and recall. The tests however do not capture the real nature of the task, which is intron cutting for the purposes of enhancing BLAST search results. Good results here are measured in a slightly more complex manner, as we will see shortly.
 
 Intron cutting is a classification task. And as in all such tasks, we measure how we successful we are at solving such a task by means of metrics such as precision and recall. In this case however, we need to adjust (or rather extend) the notion of these metrics, especially precision. In intron classiciation and cutting, not all false positives "hurt" the same - in fact, some false positives are even beneficial. This is because we deal with two types of false positives introns here - those which are in intergenic regions and those that are inside exons. The former do not concern us at all. If we cut into the intergenic region, it is only for good, as BLAST will recieve smaller data at the cost of nothing. Intra-exon cuts are on the other hand the "real" false positives, as they will lower the quality of BLAST hits. 
 
 One way to compare the two models is therefore to look at the composition of examples, to which the models say they are introns (or splice sites). How many of them are true positives? And if they are false positives, how many of them will actually cause damage?
-If we compare SVM and NN splice site models in this fashion, we will reveal, that they are not quite the same, as they may seem after the first round testing. We will be particularly interested in ratios between correctly classified donors/acceptors (green) and falsely classified candidates, that lie inside an exon (red).   
-
-## Splice site classification (SVM models)
+If we compare SVM and NN splice site models in this fashion, we will reveal, that they are not quite the same, as they may seem after the first round testing. 
 ```{r echo=FALSE}
 # Number taken from the output of "intragen/intragen_splice_sites_fp.py" script
 thega.donor.class.metrics <- c(classified_as_true=131246, fp=107595, in_exon_fp=20057)
 thega.acceptor.class.metrics <- c(classified_as_true=191664, fp=168262, in_exon_fp=41325)
 
-p1 <- plot_splicesite_piechart(thega.donor.class.metrics, "donor")
-p2 <- plot_splicesite_piechart(thega.acceptor.class.metrics, "acceptor")
+thega.donor.class.metrics.intragen.svm <- c(classified_as_true=158945, fp=135228, in_exon_fp=18352)
+thega.acceptor.class.metrics.intragen.svm <- c(classified_as_true=228014, fp=204577, in_exon_fp=34888)
 
-grid.arrange(p1, p2, nrow=1)
-```
+thega.donor.class.metrics.nn <- c(classified_as_true=77560, fp=55826, in_exon_fp=6373)
+thega.acceptor.class.metrics.nn <- c(classified_as_true=113595, fp=90925, in_exon_fp=11822)
+# ==========================================================================================================
 
-## Splice site classification (NN models)
-```{r echo=FALSE}
-# Number taken from the output of "intragen/intragen_splice_sites_fp.py" script
-thega.donor.class.metrics.nn <- c(77560, 55826, 6373)
-thega.acceptor.class.metrics.nn <- c(113595, 90925, 11822)
-
-p1 <- plot_splicesite_piechart(thega.donor.class.metrics.nn, "donor")
-p2 <- plot_splicesite_piechart(thega.acceptor.class.metrics.nn, "acceptor")
-
-grid.arrange(p1, p2, nrow=1)
-```
-
-Looking at the two pairs of graphs and the proportions of green-red regions we can clearly see, that NN models have significantly better ratio between correctly classified splice site candidates and incorrectly classified intra-exon ones. The graphs however capture only proportions, not absolute numbers. NN models may easily detect less correct splice sites (even though the general testing indicates this is not the case). 
-
-Plots comparing two models in absolute numbers however show this is indeed not the case. The number of true positives is comparable (with a slight advantage of SVM models for donor site). NN models on the other produce substantialy less false positives. What is even more important, this difference is more prominent in the intra-exon cases - the types of FP actually causing damage.    
-
-```{r echo=FALSE}
-dat_thega_donor <- prepare_splicesite_comparison_plot_data(thega.donor.class.metrics, thega.donor.class.metrics.nn)
+dat_thega_donor <- prepare_splicesite_comparison_plot_data(
+    thega.donor.class.metrics,
+    thega.donor.class.metrics.intragen.svm,
+    thega.donor.class.metrics.nn
+  )
 thega.donor.class.plot <- ggplot(data=dat_thega_donor, aes(x=model, y=count, fill=category)) +
     geom_bar(stat="identity") +
     ggtitle("Thega1 donor classification") +
     ylab("Donor counts") + 
     scale_fill_brewer() + theme_linedraw()
 
-dat_thega_acceptor <- prepare_splicesite_comparison_plot_data(thega.acceptor.class.metrics, thega.acceptor.class.metrics.nn)
+dat_thega_acceptor <- prepare_splicesite_comparison_plot_data(
+    thega.acceptor.class.metrics,
+    thega.acceptor.class.metrics.intragen.svm,
+    thega.acceptor.class.metrics.nn
+  )
 thega.acceptor.class.plot <- ggplot(data=dat_thega_acceptor, aes(x=model, y=count, fill=category)) +
     geom_bar(stat="identity") +
     ggtitle("Thega1 acceptor classification") +
@@ -134,29 +134,124 @@ thega.acceptor.class.plot <- ggplot(data=dat_thega_acceptor, aes(x=model, y=coun
 ggarrange(thega.donor.class.plot, thega.acceptor.class.plot, nrow=1, common.legend = TRUE, legend="bottom")
 ```
 
-# Comparison of SVM and NN models (on *Kocim1* phylum)
-```{r}
+The chart captures several interesting facts about the models - first of all, all models recognized very similar number of true donors and acceptors. This might indicate, that there is set of introns which cannot be detected by neither of the methods. We will verify this hypothesis later on. Second, NN models produce substanitally less false positives, than both SVM models, which carries forward to intragenic false positives, the harmful type of false positives. We can also see, that the intragenic SVM, even though producing more raw FP, than the general SVM, has actually better results in exon regions. Afterall, the model was built for such purpose. 
+
+Let's visualize solely the prportions of the types of classified true candidates. We will be particularly interested in ratios between correctly classified donors/acceptors (green) and falsely classified candidates, that lie inside an exon (red).   
+
+## SVM models
+```{r echo=FALSE}
+p1 <- plot_splicesite_piechart(thega.donor.class.metrics, "donor")
+p2 <- plot_splicesite_piechart(thega.acceptor.class.metrics, "acceptor")
+
+grid.arrange(p1, p2, nrow=1)
+```
+
+## SVM intragen models
+```{r echo=FALSE}
+p1 <- plot_splicesite_piechart(thega.donor.class.metrics.intragen.svm, "donor")
+p2 <- plot_splicesite_piechart(thega.acceptor.class.metrics.intragen.svm, "acceptor")
+
+grid.arrange(p1, p2, nrow=1)
+```
+
+## NN models
+```{r echo=FALSE}
+p1 <- plot_splicesite_piechart(thega.donor.class.metrics.nn, "donor")
+p2 <- plot_splicesite_piechart(thega.acceptor.class.metrics.nn, "acceptor")
+
+grid.arrange(p1, p2, nrow=1)
+```
+
+Looking at the three pairs of graphs and the proportions of green-red regions we can clearly see, that NN models have significantly better ratio between correctly classified splice site candidates and intra-exon false positives. Note, that the green regions capture in all cases very similar number of examples. In case of SVM models, they appear to produce one false intragenic splice site for each correctly detected one. This ratio seems unfavorable and this is why a subsequent intron model is needed to improve those odds. 
+Next, let's look at the the same analysis, this time fo *Kocim1*.
+
+# Comparison of splice site classification models (on *Kocim1* phylum)
+
+The graphs tell a similar story as in the *Thega1* case. Models find almost the same number of correct splice sites, NN however produce less false positives, both intergenic and - more imporantly - intragenic. Intragenic SVM model produces more FP, than the general SVM, but slightly less intragenic FP. 
+
+```{r echo=FALSE}
 # Number taken from the output of "intragen/intragen_splice_sites_fp.py" script
-kocim.donor.class.metrics <- c(39159, 22171, 3499)
-kocim.acceptor.class.metrics <- c(99443, 82582, 29948)
+kocim.donor.class.metrics <- c(classified_as_true=66268, fp=47777, in_exon_fp=13005)
+kocim.acceptor.class.metrics <- c(classified_as_true=99443, fp=82582, in_exon_fp=29948)
+
+kocim.donor.class.metrics.intragen.svm <- c(classified_as_true=76616, fp=57901, in_exon_fp=10866)
+kocim.acceptor.class.metrics.intragen.svm <- c(109092, 91967, 23406)
+
+kocim.donor.class.metrics.nn <- c(classified_as_true=39159, fp=22171, in_exon_fp=3499)
+kocim.acceptor.class.metrics.nn <- c(classified_as_true=51972, fp=34846, in_exon_fp=7344)
+
+dat_kocim_donor <- prepare_splicesite_comparison_plot_data(
+    kocim.donor.class.metrics,
+    kocim.donor.class.metrics.intragen.svm,
+    kocim.donor.class.metrics.nn
+  )
+kocim.donor.class.plot <- ggplot(data=dat_kocim_donor, aes(x=model, y=count, fill=category)) +
+    geom_bar(stat="identity") +
+    ggtitle("Kocim1 donor classification") +
+    ylab("Donor counts") + 
+    scale_fill_brewer() + theme_linedraw()
+
+dat_kocim_acceptor <- prepare_splicesite_comparison_plot_data(
+    kocim.acceptor.class.metrics,
+    kocim.acceptor.class.metrics.intragen.svm,
+    kocim.acceptor.class.metrics.nn
+  )
+kocim.acceptor.class.plot <- ggplot(data=dat_kocim_acceptor, aes(x=model, y=count, fill=category)) +
+    geom_bar(stat="identity") +
+    ggtitle("Kocim1 acceptor classification") +
+    ylab("Acceptor counts") + 
+    scale_fill_brewer() + theme_linedraw()
+
+ggarrange(kocim.donor.class.plot, kocim.acceptor.class.plot, nrow=1, common.legend = TRUE, legend="bottom")
+```
+
+## SVM models
+
+```{r, echo=FALSE}
+p1 <- plot_splicesite_piechart(kocim.donor.class.metrics, "donor")
+p2 <- plot_splicesite_piechart(kocim.acceptor.class.metrics, "acceptor")
+
+grid.arrange(p1, p2, nrow=1)
+```
+
+## SVM intragen models
+```{r echo=FALSE}
+p1 <- plot_splicesite_piechart(kocim.donor.class.metrics.intragen.svm, "donor")
+p2 <- plot_splicesite_piechart(kocim.acceptor.class.metrics.intragen.svm, "acceptor")
+
+grid.arrange(p1, p2, nrow=1)
+```
+
+## NN models
+```{r echo=FALSE}
+p1 <- plot_splicesite_piechart(kocim.donor.class.metrics.nn, "donor")
+p2 <- plot_splicesite_piechart(kocim.acceptor.class.metrics.nn, "acceptor")
+
+grid.arrange(p1, p2, nrow=1)
 ```
 
 
-# Intron classification (*Kocim1*)
-Intron cutting and purging is done in steps. Each steps looses a portion of introns due to some filtration or non-perfect recall. Let's visualize, how many introns are lost in each step. The first stage is the number of introns we start with - all introns on the positive strand. Next, we will loose those introns, which are not in the length range of 40-100. Undetected donors and acceptor will also cause some introns to be lost. Intron classification is an apparent source of losses and some are lost during cutting as well. This final decrease is due to incorrect decisions when dealing with candidate overlaps - we simply chose the wrong candidate.  
+# Follow-up intron classification (*Kocim1*)
+Next step after splice site classification is pairing positively classified donors/acceptor to form intron candidates. Intron model is then trained and candidates classified. Positively classfied introns are then cut out of a scaffold. 
+
+It is prominent, that data introm model gets is determined by what splice site models produce. It is therefore reasonable, that each donor/acceptor pair of models should have a dedicated intron model. At this stage however, our main focus are still splice site models and how they influence the intron one. Therefore, for benchmarking purposes, we use an intron model trained with general SVM data. Even though this will give the general SVM models a slight edge, the comparison should still be possible. As we will see later, this is thanks to the fact there is a considerable overlap in the splice site models outputs.
+
+As mentioned bevore, intron cutting and purging is done in steps. Each steps looses a portion of introns due to some filtration or non-perfect recall. Let's visualize, how many introns are lost in each step. The first stage is the number of introns we start with - all introns on the positive strand. Next, we will loose those introns, which are not in the length range of 40-100. Undetected donors and acceptor will also cause some introns to be lost. Intron classification is an apparent source of losses and some are lost during cutting as well. This final decrease is due to incorrect decisions when dealing with candidate overlaps - two (or more) positively classified introns overlap and only one can be cut. And it may happen, that the wrong candidate is chosen over the correct one.  
 
 ```{r echo=FALSE}
-progress.groups <- c("Total", "Length filter (40-100)", "After splice site classification", "Ater intron classification", "After cutting")
-kocim.basi.progress <- c(19911, 14204, 12156, 9834, 8456)
+CATEGORY_STAGES <- c("Total", "Length filter (40-100)", "After splice site classification", "Ater intron classification", "After cutting")
+kocim.basi.progress <- c(total=19911, len40_100=14204, ss_classif=12156, intron_classif=9834, cut=8456)
+kocim.basi.intragen.progress <- c(19911, 14204, 12156, 9983, 8409)
 kocim.nn.progress <- c(19911, 14204, 12100, 9731, 9011)
 
 dat1 <- data.frame(
-  stage = rep(progress.groups, times=2), 
-  model= rep(c("SVM Basidiomycota", "NN"), each=length(kocim.basi.progress)),
-  count=c(kocim.basi.progress, kocim.nn.progress)
+  stage = rep(CATEGORY_STAGES, times=3), 
+  model= rep(CATEGORY_MODELS, each=length(kocim.basi.progress)),
+  count=c(kocim.basi.progress, kocim.basi.intragen.progress, kocim.nn.progress)
   )
 
-dat1$stage <- factor(dat1$stage, levels = progress.groups)
+dat1$stage <- factor(dat1$stage, levels = CATEGORY_STAGES)
+dat1$model <- factor(dat1$model, levels = CATEGORY_MODELS)
 
 ggplot(data=dat1, aes(x=stage, y=count, group=model, color=model)) +
     geom_line() +
@@ -185,21 +280,35 @@ build_plot_df <- function(counts_intergen, counts_intragen){
 }
 ```
 
-```{r}
-
-kocim.NN.fp.all <- c(20141, 10103, 9495)
-kocim.NN.fp.intragen <- c(2640, 1383, 1143)
+Now, let's explore the number of FP introns and their composition (in terms of location) for each model. The IG SVM has by far the most number of false positives. It is however better, than the general SVM, if we consider only intragenic false positives. In the setting, where the cutting only prepares data for BLAST, high number of false positives might even be beneficial. Considering the number of IG FP (the only adversary FPs) is in both types of SVMs similar, it can be beneficial to employ the IG version as it will shorten the input for the BLAST search. Still, the difference is marginal (after intron classification) and cannot make up for considerably better performance of NN.  
+```{r, echo=FALSE}
+kocim.NN.fp.all <- c(false_cand=20141, fp=10103, false_cuts=9495)
+kocim.NN.fp.intragen <- c(ig_false_cand=2640, ig_fp=1383, ig_false_cuts=1143)
 kocim.NN.fp.intergen <- kocim.NN.fp.all - kocim.NN.fp.intragen
 
-kocim.SVM.fp.all <- c(41001, 18228, 13934)
-kocim.SVM.fp.intragen <- c(8927, 3792, 2975)
+kocim.SVM.fp.all <- c(false_cand=41001, fp=18228, false_cuts=13934)
+kocim.SVM.fp.intragen <- c(ig_false_cand=8927, ig_fp=3792, ig_false_cuts=2975)
 kocim.SVM.fp.intergen <- kocim.SVM.fp.all - kocim.SVM.fp.intragen
 
+kocim.ig.SVM.fp.all <- c(false_cand=54155, fp=24049, false_cuts=17161)
+kocim.ig.SVM.fp.intragen <- c(ig_false_cand=7619, ig_fp=3300, ig_false_cuts=2496)
+kocim.ig.SVM.fp.intergen <- kocim.ig.SVM.fp.all - kocim.ig.SVM.fp.intragen
+# ================================================================================================================
 dat_svm <- build_plot_df(kocim.SVM.fp.intergen, kocim.SVM.fp.intragen)
 
 svm.plot <- ggplot(data=dat_svm, aes(x=stage, y=fp_counts, fill=fp_type)) +
     geom_bar(stat="identity") + 
-    ggtitle("SVM false positives") +
+    ggtitle("SVM") +
+    ylab("False positives counts") +
+    ylim(0,55000) +
+    theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
+# ----------------------------------------------------------------------------------------------------------------
+dat_svm_ig <- build_plot_df(kocim.ig.SVM.fp.intergen, kocim.ig.SVM.fp.intragen)
+
+ig.svm.plot <- ggplot(data=dat_svm_ig, aes(x=stage, y=fp_counts, fill=fp_type)) +
+    geom_bar(stat="identity") + 
+    ggtitle("SVM (intragen)") +
+    ylim(0,55000) +
     ylab("False positives counts") +
     theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
 # ----------------------------------------------------------------------------------------------------------------
@@ -207,20 +316,25 @@ dat_nn <- build_plot_df(kocim.NN.fp.intergen, kocim.NN.fp.intragen)
 
 nn.plot <- ggplot(data=dat_nn, aes(x=stage, y=fp_counts, fill=fp_type)) +
     geom_bar(stat="identity") +
-    ggtitle("Neural net false positives") +
-    ylab("False positives counts") + 
-    ylim(0,40000) +
+    ggtitle("Neural net") +
+    ylab("False positives counts") +
+    ylim(0,55000) +
     theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
 
-ggarrange(svm.plot, nn.plot, nrow=1, common.legend = TRUE, legend="bottom")
+ggarrange(svm.plot, ig.svm.plot, nn.plot, nrow=1, common.legend = TRUE, legend="bottom")
+```
 
+Zooming in and considering the intragenic FP reveals slight advantages of IG SVM. NN models are however still vastly superior to both of them.
+
+```{r, echo=FALSE}
 dat3 <- data.frame(
-  stage=rep(progress.groups, times=2),
-  model=rep(c("SVM (bas.)", "NN"), each=3),
-  intragen_fp=c(kocim.SVM.fp.intragen, kocim.NN.fp.intragen)
+  stage=rep(progress.groups, times=3),
+  model=rep(CATEGORY_MODELS, each=3),
+  intragen_fp=c(kocim.SVM.fp.intragen, kocim.ig.SVM.fp.intragen, kocim.NN.fp.intragen)
   )
 
 dat3$stage <- factor(dat3$stage, levels = progress.groups)
+dat3$model <- factor(dat3$model, levels = CATEGORY_MODELS)
 
 exon.fp.plot <- ggplot(data=dat3, aes(x=stage, y=intragen_fp, fill=model)) +
     geom_bar(stat="identity", position = position_dodge()) +
@@ -231,42 +345,61 @@ exon.fp.plot <- ggplot(data=dat3, aes(x=stage, y=intragen_fp, fill=model)) +
 exon.fp.plot
 ```
 
-## Thega1 experiments
-```{r}
-thega.NN.fp.all <- c(50331, 25251, 20008)
-thega.NN.fp.intragen <- c(5071, 2759, 2195)
-thega.NN.fp.intergen <- thega.NN.fp.all - thega.NN.fp.intragen
+# Follow-up intron classification (*Thega1*)
+Similar results as in splice site classification. 
 
-thega.SVM.fp.all <- c(86685, 41416, 29680)
-thega.SVM.fp.intragen <- c(14131, 6204, 4577)
+```{r, echo=FALSE}
+thega.SVM.fp.all <- c(false_cand=86685, fp=41416, false_cuts=29680)
+thega.SVM.fp.intragen <- c(false_cand=14131, fp=6204, false_cuts=4577)
 thega.SVM.fp.intergen <- thega.SVM.fp.all - thega.SVM.fp.intragen
 
+thega.ig.SVM.fp.all <- c(false_cand=126230, fp=56007, false_cuts=38431)
+thega.ig.SVM.fp.intragen <- c(false_cand=13632, fp=6085, false_cuts=4353)
+thega.ig.SVM.fp.intergen <- thega.ig.SVM.fp.all - thega.ig.SVM.fp.intragen
+
+thega.NN.fp.all <- c(false_cand=50331, fp=25251, false_cuts=20008)
+thega.NN.fp.intragen <- c(false_cand=5071, fp=2759, false_cuts=2195)
+thega.NN.fp.intergen <- thega.NN.fp.all - thega.NN.fp.intragen
+# ================================================================================================================
 dat_svm_thega <- build_plot_df(thega.SVM.fp.intergen, thega.SVM.fp.intragen)
 
 svm.plot <- ggplot(data=dat_svm_thega, aes(x=stage, y=fp_counts, fill=fp_type)) +
     geom_bar(stat="identity") + 
-    ggtitle("SVM false positives") +
+    ggtitle("SVM") +
     ylab("False positives counts") +
+    ylim(0,130000) +
+    theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
+# ----------------------------------------------------------------------------------------------------------------
+dat_ig_svm_thega <- build_plot_df(thega.ig.SVM.fp.intergen, thega.ig.SVM.fp.intragen)
+
+ig.svm.plot <- ggplot(data=dat_ig_svm_thega, aes(x=stage, y=fp_counts, fill=fp_type)) +
+    geom_bar(stat="identity") + 
+    ggtitle("SVM (intragen)") +
+    ylab("False positives counts") +
+    ylim(0,130000) +
     theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
 # ----------------------------------------------------------------------------------------------------------------
 dat_nn_thega <- build_plot_df(thega.NN.fp.intergen, thega.NN.fp.intragen)
 
 nn.plot <- ggplot(data=dat_nn_thega, aes(x=stage, y=fp_counts, fill=fp_type)) +
     geom_bar(stat="identity") +
-    ggtitle("Neural net false positives") +
+    ggtitle("Neural net") +
     ylab("False positives counts") + 
-    ylim(0,87000) +
+    ylim(0,130000) +
     theme(axis.title.x=element_blank(), axis.text.x = element_text(angle = 30, hjust = 1))
+# ----------------------------------------------------------------------------------------------------------------
+ggarrange(svm.plot, ig.svm.plot, nn.plot, nrow=1, common.legend = TRUE, legend="bottom") 
+```
 
-ggarrange(svm.plot, nn.plot, nrow=1, common.legend = TRUE, legend="bottom") 
-
+```{r, echo=FALSE}
 dat3 <- data.frame(
-  stage=rep(progress.groups, times=2),
-  model=rep(c("SVM (bas.)", "NN"), each=3),
-  intragen_fp=c(thega.SVM.fp.intragen, thega.NN.fp.intragen)
+  stage=rep(progress.groups, times=3),
+  model=rep(CATEGORY_MODELS, each=3),
+  intragen_fp=c(thega.SVM.fp.intragen, thega.ig.SVM.fp.intragen, thega.NN.fp.intragen)
   )
 
 dat3$stage <- factor(dat3$stage, levels = progress.groups)
+dat3$model <- factor(dat3$model, levels = CATEGORY_MODELS)
 
 exon.fp.plot <- ggplot(data=dat3, aes(x=stage, y=intragen_fp, fill=model)) +
     geom_bar(stat="identity", position = position_dodge()) +
@@ -275,31 +408,23 @@ exon.fp.plot <- ggplot(data=dat3, aes(x=stage, y=intragen_fp, fill=model)) +
     theme(axis.title.x=element_blank()) +
     scale_fill_brewer() + theme_linedraw()
 exon.fp.plot
-
 ```
 
+# Misc
 
-```{r}
-classified_true_data_nn <- c(exon_fp = 2195, total_classified_true =34963)
-p_nn <- plot_adjusted_intron_precision_piechart(classified_true_data_nn, "NN")
-
-classified_true_data_svm <- c(exon_fp = 4577, total_classified_true =45015)
-p_svm <- plot_adjusted_intron_precision_piechart(classified_true_data_svm, "SVM")
-
-grid.arrange(p_nn, p_svm, ncol = 2)  
-```
-
-## Comparison of models
+## Intron model recall
+This chart shows how many introns we would be able to detect, if we had an intron model with perfect recall. I.e. we see here, how many true introns survived the splice site classification step (and pairing of GT-AG candidates). The orange line represents the relative 100% recall level, as we only pair GT-AG candidates in a range of 40-100nt. Longer or shorter introns are therefore not even included into the classification dataset, not speaking of being detected.
 ```{r, echo=FALSE}
 total <- 19911
 filter40_100 <- 14204
 
 kocim.basido.counts <- 12156
+kocim.basido.ig.svm.counts <- 12313
 kocim.asco.counts <-  10766
 kocim.nn.counts <- 12100
 
-intron_groups <- c("Basidiomycota SVM", "Ascomycota SVM", "Neural Net")
-kocim.intron.counts <- c(kocim.basido.counts, kocim.asco.counts, kocim.nn.counts)
+intron_groups <- c("Basi. SVM", "Basi. IG SVM", "Asco. SVM", "Neural Net")
+kocim.intron.counts <- c(kocim.basido.counts, kocim.basido.ig.svm.counts, kocim.asco.counts, kocim.nn.counts)
 rate <- 100*kocim.intron.counts / total
 
 dat <- data.frame(

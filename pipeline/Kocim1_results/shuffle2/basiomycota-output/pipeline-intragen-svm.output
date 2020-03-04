@@ -1,0 +1,25 @@
+Pipeline log for file /home/anhvu/Desktop/mykointrons-data/data/Assembly/Kocim1_AssemblyScaffolds.fasta
+================================== ./classify-introns-d4.log ==========================================
+INFO:root:Validation of model bestmodels/basidiomycota/intron-model-C-6-d-4.hd5 on testset intron-dataset.csv; d=4
+INFO:root:Performance metrics:
+ -TP: 9934
+ -FP: 23633
+ -TN: 30106
+ -FN: 2379
+Accuracy: 0.6061890631623569
+Precision: 0.2959454225876605
+Recall: 0.8067895719970762
+================================== ./label-introns.log ==========================================
+INFO:root:Parsing introns from /home/anhvu/Desktop/mykointrons-data/new-sequences/Kocim1/Kocim1-introns.fasta file.
+INFO:root:Total number of introns: 38991
+INFO:root:Scaffolds, that the candidates were extracted from: ['scaffold_1' 'scaffold_2' 'scaffold_3' 'scaffold_4' 'scaffold_5'
+ 'scaffold_6' 'scaffold_7' 'scaffold_8' 'scaffold_9' 'scaffold_10'
+ 'scaffold_11' 'scaffold_12' 'scaffold_13' 'scaffold_14' 'scaffold_15'
+ 'scaffold_16' 'scaffold_17' 'scaffold_18' 'scaffold_19' 'scaffold_20'
+ 'scaffold_21' 'scaffold_22' 'scaffold_23' 'scaffold_24' 'scaffold_25'
+ 'scaffold_26' 'scaffold_27' 'scaffold_28' 'scaffold_29' 'scaffold_30'
+ 'scaffold_31' 'scaffold_32' 'scaffold_33' 'scaffold_34' 'scaffold_35'
+ 'scaffold_37']
+INFO:root:Number of true introns on the given (+/-) strand: 19912
+INFO:root:Number of introns in the range 40 - 100: 14205
+INFO:root:12313/66052 candidates are positive introns
