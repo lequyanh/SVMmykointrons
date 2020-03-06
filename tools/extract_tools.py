@@ -247,9 +247,10 @@ def extract_exons(
     """
     Extracts exon positions to a CSV file and exon sequences to FASTA file. Run by:
 
-        ascos = f'../basidiomycota.txt'
-        with open(ascos, 'r') as f:
+        fungi_names = f'../basidiomycota.txt'
+        with open(fungi_names, 'r') as f:
             names = f.readlines()
+            names = map(lambda name: name.rstrip(), names)
             list(map(extract_exons, names))
 
     :param fungi_name: Fungi to extract exons for

@@ -63,16 +63,22 @@ def intragenic_splicesite_fpr(
         site
     )
 
+    true_splicesites = merged_df.query('label == 1').shape[0]
+
     predict_trues = merged_df.query('prediction == 1')
     total_fps = predict_trues.query('label == -1')
+    total_tps = predict_trues.shape[0] - total_fps.shape[0]
+
     intra_exon_fps = total_fps.query('in_exon == 1').shape[0]
 
     fpr = 100 * total_fps.shape[0] / predict_trues.shape[0]
     intragen_fpr = 100 * intra_exon_fps / predict_trues.shape[0]
 
-    print(f'{site} site predicted trues {predict_trues.shape[0]},\n'
-          f'from which false positives {total_fps.shape[0]} (FP rate {fpr:.2f}%),\n'
-          f'from which intra-genic FPs {intra_exon_fps} (intra-genic FP ratio {intragen_fpr:.2f}%)\n')
+    print(f'{site} true examples = {true_splicesites} \n'
+          f'Predicted as true = {predict_trues.shape[0]},\n'
+          f'from which false positives {total_fps.shape[0]} (FP rate {fpr:.2f}%), '
+          f'and true positives {total_tps} (Recall {100 * total_tps / true_splicesites: .2f}%)\n'
+          f'from which intra-genic FPs {intra_exon_fps} (Intragenic FP rate {intragen_fpr:.2f}%)\n')
 
     return intragen_fpr
 
