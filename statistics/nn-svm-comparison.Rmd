@@ -96,9 +96,12 @@ In general validation, the models ended up toe to toe in sense of both precision
 Intron cutting is a classification task. And as in all such tasks, we measure how we successful we are at solving such a task by means of metrics such as precision and recall. In this case however, we need to adjust (or rather extend) the notion of these metrics, especially precision. In intron classiciation and cutting, not all false positives "hurt" the same - in fact, some false positives are even beneficial. This is because we deal with two types of false positives introns here - those which are in intergenic regions and those that are inside exons. The former do not concern us at all. If we cut into the intergenic region, it is only for good, as BLAST will recieve smaller data at the cost of nothing. Intra-exon cuts are on the other hand the "real" false positives, as they will lower the quality of BLAST hits. 
 
 One way to compare the two models is therefore to look at the composition of examples, to which the models say they are introns (or splice sites). How many of them are true positives? And if they are false positives, how many of them will actually cause damage?
-If we compare SVM and NN splice site models in this fashion, we will reveal, that they are not quite the same, as they may seem after the first round testing. 
+If we compare SVM and NN splice site models in this fashion, we will reveal, that they are not quite the same, as they may seem after the first round testing [^1]. 
+
+[^1]: Numbers taken from the output of *intragen/intragen_splice_sites_fp.py* script
+
 ```{r echo=FALSE}
-# Number taken from the output of "intragen/intragen_splice_sites_fp.py" script
+# Numbers taken from the output of "intragen/intragen_splice_sites_fp.py" script
 thega.donor.class.metrics <- c(classified_as_true=131246, fp=107595, in_exon_fp=20057)
 thega.acceptor.class.metrics <- c(classified_as_true=191664, fp=168262, in_exon_fp=41325)
 
@@ -167,10 +170,12 @@ Next, let's look at the the same analysis, this time fo *Kocim1*.
 
 # Comparison of splice site classification models (on *Kocim1* phylum)
 
-The graphs tell a similar story as in the *Thega1* case. Models find almost the same number of correct splice sites, NN however produce less false positives, both intergenic and - more imporantly - intragenic. Intragenic SVM model produces more FP, than the general SVM, but slightly less intragenic FP. 
+The graphs tell a similar story as in the *Thega1* case. Models find almost the same number of correct splice sites, NN however produce less false positives, both intergenic and - more imporantly - intragenic. Intragenic SVM model produces more FP, than the general SVM, but slightly less intragenic FP [^2]. 
+
+[^2]: Numbers taken from the output of *intragen/intragen_splice_sites_fp.py* script
 
 ```{r echo=FALSE}
-# Number taken from the output of "intragen/intragen_splice_sites_fp.py" script
+# Numbers taken from the output of "intragen/intragen_splice_sites_fp.py" script
 kocim.donor.class.metrics <- c(classified_as_true=66268, fp=47777, in_exon_fp=13005)
 kocim.acceptor.class.metrics <- c(classified_as_true=99443, fp=82582, in_exon_fp=29948)
 
@@ -280,8 +285,15 @@ build_plot_df <- function(counts_intergen, counts_intragen){
 }
 ```
 
-Now, let's explore the number of FP introns and their composition (in terms of location) for each model. The IG SVM has by far the most number of false positives. It is however better, than the general SVM, if we consider only intragenic false positives. In the setting, where the cutting only prepares data for BLAST, high number of false positives might even be beneficial. Considering the number of IG FP (the only adversary FPs) is in both types of SVMs similar, it can be beneficial to employ the IG version as it will shorten the input for the BLAST search. Still, the difference is marginal (after intron classification) and cannot make up for considerably better performance of NN.  
-```{r, echo=FALSE}
+We saw earlier, that the recall of splice site models is more or less the same. The area, where the models differed the most, are numbers of false positives and their locations (inter vs. intra exons). Now, let's see, how this translates into intron classification. The IG SVM has by far the most number of false positives. It however becomes better than the general SVM, if we take into account only intragenic false positives. 
+
+Vastly better than both is the NN model, having only 55% and 42% of other two's FPs respectively. The ratio is even better for intra-genic false positives - NN makes only 38% and 46% of "serious" mistakes other two models do, which is a huge reduction. 
+
+In absolute numbers, using SVM for splice site classification we were able to correctly cut out 8456 introns at the cost of "damaging" 2975 exons with wrong cuts (i.e. 2.84 correct cuts for each damaged exon). In case of IG SVM the ratio was 3.37 (8409 correct, 2496 damaged exons). For NN, the ratio was stunning 7.88 with 9011 correctly cut introns and only 1143 damaged exons.
+
+Precision metric, that treats non-exon false positives cuts as true positives (as they don't matter), gives for the three models values 86.71%, 90.24% and 93.47%. Recall, is comparable. 
+
+```{r kocim_intron_class, echo=FALSE}
 kocim.NN.fp.all <- c(false_cand=20141, fp=10103, false_cuts=9495)
 kocim.NN.fp.intragen <- c(ig_false_cand=2640, ig_fp=1383, ig_false_cuts=1143)
 kocim.NN.fp.intergen <- kocim.NN.fp.all - kocim.NN.fp.intragen
@@ -323,6 +335,8 @@ nn.plot <- ggplot(data=dat_nn, aes(x=stage, y=fp_counts, fill=fp_type)) +
 
 ggarrange(svm.plot, ig.svm.plot, nn.plot, nrow=1, common.legend = TRUE, legend="bottom")
 ```
+
+In the setting, where the cutting only prepares data for BLAST, high number of false positives might even be beneficial. Considering the number of intra-genic FP (the only adversary FPs) is in both types of SVMs similar, it can be beneficial to employ the IG version as it will shorten the input for the BLAST search. Still, the difference is marginal (after intron classification) and cannot make up for considerably better performance of NN.  
 
 Zooming in and considering the intragenic FP reveals slight advantages of IG SVM. NN models are however still vastly superior to both of them.
 
@@ -410,7 +424,25 @@ exon.fp.plot <- ggplot(data=dat3, aes(x=stage, y=intragen_fp, fill=model)) +
 exon.fp.plot
 ```
 
+In absolute numbers, using SVM for splice site classification we were able to correctly cut out 15335 introns at the cost of "damaging" 4577 exons with wrong cuts (i.e. 3.35 correct cuts for each damaged exon). In case of IG SVM the ratio was 3.48 (15168 correct, 4353 damaged exons). For NN, the ratio was stunning 6.81 with 14955 correctly cut introns and only 2195 damaged exons.
+
+Precision metric, that treats non-exon false positives as true positives (as they don't matter), gives for the three models values 89.83%, 91.88% and 93.72%. Recall, is comparable. 
+
 # Misc
+SVM and NN repressent two distinct approaches in splice site classification. In previous section we could witness, that recalls of the models is more or less the same. Naturally, it raises a question, whether only the number of true positives is similar, or whether also the set of true positives themselves is similar. This question can further extended to false positives - do the models make similar mistakes? Analyzing classification outputs for donors, we obtain following numbers:  
+
+True positives shared between models: 16954. The intersection makes 90.41% of SVM-intragen model and 99.58% of NN model results
+False positives shared between models: 19645. The intersection makes 33.93% of SVM-intragen model false positives and 88.61% of NN model false positives
+Intragenic false positives shared between models: 2837. The intersection makes 26.11% of SVM-intragen model false positives and 81.08% of NN model false positives [^4]
+
+Several conclusions can be drawn. First of all - the models, despite different in approach, discover very similar set of true introns (over 90% is shared). The fact 99% of NN true donors is shared, basically means, that all splice sites discovered by NN models are discovered by IG SVM model as well. This has a notable caveat - considering non-perfect recall of both models (87% to be precise), there exists a considerable set of introns, which neither model is able to detect. 
+
+In case of false positives, it can be also seen, that intersection of false positives take up almost all NN false positives, meaning SVM makes almost all mistakes NN does. The 33% intersection on the other hand indicates, that SVM makes the same mistakes as NN and a large number of additional ones. This applies also for intra-genetic false positives. The caveat is again, that there is a sizable number of false positives, on which both models make mistakes. 
+
+The proportions are very similar also for *Thega1* division. 
+
+[^4]: Output of the *intragen/compare-splice-site-classification.py* script with parameters (model1 = 'SVM-intragen', model2 = 'NN') for *Kocim1* donors 
+
 
 ## Intron model recall
 This chart shows how many introns we would be able to detect, if we had an intron model with perfect recall. I.e. we see here, how many true introns survived the splice site classification step (and pairing of GT-AG candidates). The orange line represents the relative 100% recall level, as we only pair GT-AG candidates in a range of 40-100nt. Longer or shorter introns are therefore not even included into the classification dataset, not speaking of being detected.

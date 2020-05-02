@@ -12,8 +12,9 @@ def main():
     classification is shared and whether the models tend to do similar mistakes.
     :return:
     """
-    shroom_name = 'Kocim1'
+    shroom_name = 'Thega1'
     site = 'donor'
+
     model1 = 'SVM-intragen'
     model2 = 'NN'
 
@@ -47,8 +48,8 @@ def main():
 
     tp_tp_intersect = positives_df.query('prediction_x == 1 & prediction_y == 1').shape[0]
     print(f'True positives intersection {tp_tp_intersect}. '
-          f'I.e {100 * tp_tp_intersect / TPs_x:.2f}% of model X '
-          f'and {100 * tp_tp_intersect / TPs_y:.2f}% of model Y results')
+          f'I.e {100 * tp_tp_intersect / TPs_x:.2f}% of {model1} model '
+          f'and {100 * tp_tp_intersect / TPs_y:.2f}% of {model2} model results')
 
     negatives_df = joined_results[joined_results['label'] == -1]
     FPs_x = negatives_df[negatives_df['prediction_x'] == 1].shape[0]
@@ -56,8 +57,8 @@ def main():
 
     fp_fp_intersect = negatives_df.query('prediction_x == 1 & prediction_y == 1').shape[0]
     print(f'False positives intersection {fp_fp_intersect}. '
-          f'The intersection makes {100 * fp_fp_intersect / FPs_x:.2f}% of model X false positives '
-          f'and {100 * fp_fp_intersect / FPs_y:.2f}% of model Y false positives')
+          f'The intersection makes {100 * fp_fp_intersect / FPs_x:.2f}% of {model1} model false positives '
+          f'and {100 * fp_fp_intersect / FPs_y:.2f}% of {model2} model false positives')
 
     FPs_x = negatives_df.query('prediction_x == 1 and in_exon_x == 1').shape[0]
     FPs_y = negatives_df.query('prediction_y == 1 and in_exon_y == 1').shape[0]
@@ -66,8 +67,8 @@ def main():
         'prediction_x == 1 & prediction_y == 1 & in_exon_x == 1 & in_exon_y == 1'
     ).shape[0]
     print(f'Intragenic false positives intersection {fp_fp_intersect}. '
-          f'The intersection makes {100 * fp_fp_intersect / FPs_x:.2f}% of model X false positives '
-          f'and {100 * fp_fp_intersect / FPs_y:.2f}% of model Y false positives')
+          f'The intersection makes {100 * fp_fp_intersect / FPs_x:.2f}% of {model1} model false positives '
+          f'and {100 * fp_fp_intersect / FPs_y:.2f}% of {model2} model false positives')
 
 
 if __name__ == '__main__':

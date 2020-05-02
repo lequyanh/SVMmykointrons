@@ -125,8 +125,10 @@ def get_dnn_predictions(model_file, data_file, window_inner, window_outer, site)
 
     inputs = prepare_inputs(input_df, site)
     predictions = model.predict(inputs)
-    predictions = np.squeeze(predictions).round().astype(np.int32)
-    predictions[np.where(predictions == 0)] = -1  # negative classes are -1 as opposed to NN output (which is 0)
+    predictions = np.squeeze(predictions)
+    predictions[np.where(predictions < 0.65)] = -1  # negative classes are -1 as opposed to NN output (which is 0)
+    predictions[np.where(predictions >= 0.65)] = 1
+    predictions = predictions.astype(np.int32)
 
     return input_df, predictions
 

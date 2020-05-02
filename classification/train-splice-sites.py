@@ -98,7 +98,7 @@ def train(train_features, train_labels, kernel_degree, C, imbalance_ratio):
 
     prediction = svm_model.apply_binary(train_features)
 
-    metrics_list = performance_metrics(prediction.get_int_labels(), train_labels.get_int_labels(), imbalance_ratio)
+    metrics_list = performance_metrics(train_labels.get_int_labels(), prediction.get_int_labels(), imbalance_ratio)
     metrics_str = '\n'.join(metrics_list)
     logging.info(f'Train performance metrics:\n'
                  f'{metrics_str}\n')
@@ -110,7 +110,7 @@ def test(svm_model, test_features, test_labels, imbalance_ratio):
     prediction = svm_model.apply_binary(test_features)
     prediction = prediction.get_int_labels()
 
-    metrics_list = performance_metrics(prediction, test_labels, imbalance_ratio)
+    metrics_list = performance_metrics(test_labels, prediction, imbalance_ratio)
     metrics_str = '\n'.join(metrics_list)
     logging.info(f'Test performance metrics:\n'
                  f'{metrics_str}')
