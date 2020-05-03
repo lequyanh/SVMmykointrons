@@ -5,6 +5,7 @@ from pandas import DataFrame
 from pandas.core.groupby import GroupBy
 
 import intragen_tools
+from label_introns import get_introns_from_strand
 from tools import performance_metrics
 
 NEWSEQUENCES_LOC = '/home/anhvu/Desktop/mykointrons-data/new-sequences'
@@ -24,8 +25,8 @@ def main():
                                         >> cut_coords.csv
     @intron_annotation_file     Result or running the pipeline (intron-result.csv file)
     """
-    shroom_name = 'Kocim1'
-    model = 'NN'
+    shroom_name = 'Armosto1'
+    model = 'SVM-intragen'
 
     logging.basicConfig(
         level=logging.INFO,
@@ -34,17 +35,19 @@ def main():
     )
 
     exon_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}_exon_positions.csv'
+    intron_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-introns.fasta'
 
     intron_annotations_file = f'{shroom_name}/{shroom_name}-intron-result-{model}.csv'
     cut_coords_file = f'{shroom_name}/{shroom_name}-cut-coords-{model}.csv'
 
+    # Note - joined_df is missing introns, which did not survive pairing phase
     joined_df = intragen_tools.join_on_position(cut_coords_file, intron_annotations_file)
 
     # Get the accuracy and recall of intron detection after the pruning step
     post_cut_accuracy_metrics(joined_df)
 
     # Determine intra-genic intron FP rate.
-    false_introns_exploration(joined_df, exon_file)
+    false_introns_exploration(joined_df, exon_file, intron_file)
 
 
 def post_cut_accuracy_metrics(joined: DataFrame) -> None:
@@ -70,11 +73,12 @@ def post_cut_accuracy_metrics(joined: DataFrame) -> None:
     print('\n')
 
 
-def false_introns_exploration(joined: DataFrame, exon_file: str):
+def false_introns_exploration(joined: DataFrame, exon_file: str, intron_file: str):
     """
     Explores, where false introns fall into. Determines what portion of them lie inside exons.
     Prints adjusted FP intron rate, where only FP inside exons are considered.
 
+    :param intron_file: Filename of fungi intron sequences
     :param joined: DataFrame joined table of intron coordinates, their labels, their prediction and cut flag
     :param exon_file: Filename of fungi exon positions
     :return: None (only prints the metrics)
@@ -85,23 +89,23 @@ def false_introns_exploration(joined: DataFrame, exon_file: str):
     # See, where potential mistakes of pruning can be (intron dataset before classification)
     potential_fp_candidates = joined.query('label == -1')
     potential_fp_grouped = potential_fp_candidates.groupby(by='scaffold')
-    print(f'------------------ Potential false positives inside exons (before classification) -----------------')
+    print(f'--------------------------- DATASET ----------------------------')
     no_cuts = intraexonic_cuts_count(exon_scaff_grouped, potential_fp_grouped)
     print(
-        f'{no_cuts} out of {len(potential_fp_candidates)} all false candidates => '
-        f'the ratio of intra-genic candidates in dataset is {100 * no_cuts / len(potential_fp_candidates):.2f}%.\n'
+        f'{no_cuts}/{len(potential_fp_candidates)} false CANDIDATES are inside exon => '
+        f'the ratio of exon-breaking candidates in dataset is {100 * no_cuts / len(potential_fp_candidates):.2f}%.\n'
     )
 
     # See, where potential mistakes of pruning can be (intron classification intra-genic FP)
     labeled_true_df = joined.query('prediction == 1')
     intron_classification_fps = labeled_true_df.query('label == -1')
     fps_grouped = intron_classification_fps.groupby(by='scaffold')
-    print(f'----------------- False positives inside exons (after classification, before cut) -----------------')
+    print(f'-------------------------- CLASSIFICATION --------------------------')
     no_cuts = intraexonic_cuts_count(exon_scaff_grouped, fps_grouped)
     print(
-        f'{no_cuts} out of {len(intron_classification_fps)} all false positives (classification) => '
-        f'the proportion of intra-genic FP among all FP is {no_cuts / len(intron_classification_fps):.2f}.\n'
-        f'Intra-genic FP rate is {100 * no_cuts / labeled_true_df.shape[0]:.2f}%'
+        f'{no_cuts}/{len(intron_classification_fps)} false POSITIVES are inside exon => '
+        f'the proportion of exon-breaking FP among all FP is {no_cuts / len(intron_classification_fps):.2f}.\n'
+        f'Exon-breaking FPR is {100 * no_cuts / labeled_true_df.shape[0]:.2f}%'
     )
 
     # See, where false intron cuts happened
@@ -109,18 +113,20 @@ def false_introns_exploration(joined: DataFrame, exon_file: str):
     false_positive_cuts_df = intron_classification_fps.query('cut == 1')
     fp_cuts_grouped = false_positive_cuts_df.groupby(by='scaffold')
 
-    print(f'------------------------------------- False cuts inside exons -------------------------------------')
+    print(f'-------------------------- CUTTING -------------------------------------')
     no_cuts = intraexonic_cuts_count(exon_scaff_grouped, fp_cuts_grouped)
     print(
-        f'{no_cuts} out of {len(false_positive_cuts_df)} all false cuts => '
-        f'the proportion of intra-genic cuts among all false cuts is {no_cuts / len(false_positive_cuts_df):.2f}.\n'
-        f'After cut intra-genic FP rate is {100 * no_cuts / all_cuts_count:.2f}% as there are {all_cuts_count} cuts'
+        f'{no_cuts}/{len(false_positive_cuts_df)} false CUTS => '
+        f'the proportion of exon-breaking cuts among all false cuts is {no_cuts / len(false_positive_cuts_df):.2f}.\n'
+        f'After cut exon-breaking FPR is {100 * no_cuts / all_cuts_count:.2f}% as there are {all_cuts_count} total cuts'
     )
 
     print(f'----------------------------------- Determination coefficient -------------------------------------')
     true_cuts = joined.query('cut == 1 and label == 1').shape[0]
-    print(f'Correctly cut {true_cuts} introns.\n'
-          f'Interfered with {no_cuts} exons.\n'
+    true_all = get_introns_from_strand(intron_file, strand='+')
+
+    print(f'Correctly cut {true_cuts}/{len(true_all)} (positive strand) introns.\n'
+          f'Interfered with {no_cuts}/{exon_pos_df.shape[0]} (positive strand) exons.\n'
           f'Ratio {true_cuts / no_cuts:.2f}')
 
 

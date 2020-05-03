@@ -9,6 +9,15 @@ from Bio.SeqRecord import SeqRecord
 
 import fastalib as fl
 
+ASSEMBLIES_LOC = "/home/anhvu/Desktop/mykointrons-data/data/Assembly"
+NEWSEQUENCES_LOC = "/home/anhvu/Desktop/mykointrons-data/new-sequences"
+
+EXON_CSV_SUFF = "_exon_positions.csv"
+EXON_FASTA_SUFF = "_exons.fasta"
+
+INTRON_CSV_SUFF = "_intron_positions.csv"
+INTRON_FASTA_SUFF = "-introns.fasta"
+
 
 def transform_func(d):
     try:
@@ -34,22 +43,19 @@ def parse_gff(gff_file: str):
 
 def extract_intron_positions(
         gff_file,
-        assembly_fasta,
-        output_csv: str,
-        output_fasta: str,
+        fungi_name: str,
 ) -> None:
     """
     Extracts exon coordinates into a csv with columns [scaffold, start, end]
     Only from positive strand
-    :param output_fasta: FASTA file with exon sequences and positions
     :param gff_file: GFF file that contains fungi gene annotations (exons and their positions)
-    :param assembly_fasta: FASTA file with whole fungi genome. Serves only as validation of extraction
-    :param output_csv: CSV file with exon positions (scaffold and location)
+    :param fungi_name: Fungi name
     :return: None
     """
     db = parse_gff(gff_file)
     gene_identifier = get_gff_identifier(gff_file)
 
+    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
     with open(assembly_fasta, 'r') as f:
         scaffold_seq_dict = {desc: seq for desc, seq in fl.read_fasta(f)}
 
@@ -87,7 +93,7 @@ def extract_intron_positions(
             elif strand == '-':
                 intron_seq = Seq(scaffold_seq[intron_start: intron_end]).reverse_complement()
 
-            intron_positions.append([scaffold, start, end])
+            intron_positions.append([scaffold, strand, start, end])
             intron_sequences.append(
                 SeqRecord(id=' '.join([scaffold, strand, str(start), str(end)]), seq=intron_seq)
             )
@@ -98,35 +104,26 @@ def extract_intron_positions(
             elif strand == '-':
                 intron_end = start
 
-    with open(output_csv, "w") as csv_file:
-        writer = csv.writer(csv_file, delimiter=';')
-        writer.writerow(['scaffold', 'start', 'end'])
-        writer.writerows(intron_positions)
-
-    with open(output_fasta, "w") as out_intron_fasta:
-        SeqIO.write(intron_sequences, out_intron_fasta, 'fasta')
+    write_output(fungi_name, intron_positions, intron_sequences, type='intron')
 
 
 def extract_exon_positions(
         gff_file,
-        assembly_fasta,
-        output_csv: str,
-        output_fasta: str,
+        fungi_name: str,
         validate=False
 ) -> None:
     """
     Extracts exon coordinates into a csv with columns [scaffold, start, end]
     Only from positive strand
-    :param output_fasta: FASTA file with exon sequences and positions
     :param validate: Validate positions
     :param gff_file: GFF file that contains fungi gene annotations (exons and their positions)
-    :param assembly_fasta: FASTA file with whole fungi genome. Serves only as validation of extraction
-    :param output_csv: CSV file with exon positions (scaffold and location)
+    :param fungi_name: fungi abbreviation.
     :return: None
     """
     db = parse_gff(gff_file)
     gene_identifier = get_gff_identifier(gff_file)
 
+    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
     if validate:
         with open(assembly_fasta, 'r') as f:
             scaffold_seq_dict = {desc: seq for desc, seq in fl.read_fasta(f)}
@@ -146,23 +143,42 @@ def extract_exon_positions(
                     scaffold_seq = scaffold_seq_dict[scaffold]
                     assert scaffold_seq[start: end] == exon_seq
 
-                exon_positions.append([scaffold, start, end])
+                exon_positions.append([scaffold, strand, start, end])
                 exon_sequences.append(
                     SeqRecord(id=' '.join([scaffold, strand, str(start), str(end)]), seq=Seq(exon_seq))
                 )
-
+            # TODO Extract also negative strand exons
             if strand == '-':
                 if validate:
                     scaffold_seq = scaffold_seq_dict[scaffold]
                     assert Seq(scaffold_seq[start: end]).reverse_complement() == exon_seq
 
+    write_output(fungi_name, exon_positions, exon_sequences, type='exon')
+
+
+def write_output(fungi_name: str, positions: list, sequences: list, type: str):
+    out_folder = f'{NEWSEQUENCES_LOC}/{fungi_name}'
+    if not os.path.exists(out_folder):
+        os.mkdir(out_folder)
+
+    if type == 'exon':
+        csv_suffix = EXON_CSV_SUFF
+        fasta_suffix = EXON_FASTA_SUFF
+    elif type == 'intron':
+        csv_suffix = INTRON_CSV_SUFF
+        fasta_suffix = INTRON_FASTA_SUFF
+    else:
+        raise ValueError("Type not recognized")
+
+    output_csv = f'{out_folder}/{fungi_name}{csv_suffix}'
     with open(output_csv, "w") as csv_file:
         writer = csv.writer(csv_file, delimiter=';')
-        writer.writerow(['scaffold', 'start', 'end'])
-        writer.writerows(exon_positions)
+        writer.writerow(['scaffold', 'strand', 'start', 'end'])
+        writer.writerows(positions)
 
+    output_fasta = f'{out_folder}/{fungi_name}{fasta_suffix}'
     with open(output_fasta, "w") as out_exon_fasta:
-        SeqIO.write(exon_sequences, out_exon_fasta, 'fasta')
+        SeqIO.write(sequences, out_exon_fasta, 'fasta')
 
 
 def get_gff_identifier(gff_file):
@@ -176,4 +192,4 @@ def get_gff_identifier(gff_file):
 
 
 if __name__ == '__main__':
-    extract_exon_positions(sys.argv[1], sys.argv[2], 'exon_positions.csv', 'exons.fasta')
+    extract_intron_positions(sys.argv[1], sys.argv[2])

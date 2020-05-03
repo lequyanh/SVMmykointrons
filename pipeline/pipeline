@@ -231,7 +231,7 @@ function classify_introns_step() {
 
 function validate_introns_step() {
     echo "Labeling intron dataset"
-    $PYTHON ../preprocessing/intron/label-introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
+    $PYTHON label_introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
     echo "Starting validation of the intron dataset using spectral kernel order ${spect_kernel_order}"
     $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $spect_kernel_order \
