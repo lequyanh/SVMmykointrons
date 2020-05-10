@@ -31,8 +31,8 @@ SPECT_KERNEL_ORDER_BASI=4
 SPECT_KERNEL_ORDER_ASCO=6
 #  - files with intron lengths to build a probability distribution over intron lengths
 #    used as the cutting step to decide which candidate to cut in case of overlap
-INTRON_LENGTH_DATA_BASI="../statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt"
-INTRON_LENGTH_DATA_ASCO="../statistics/intron-lenghts-statistics/ascomycota-intron-lens.txt"
+INTRON_LENGTH_DATA_BASI="basidiomycota-intron-lens.txt"
+INTRON_LENGTH_DATA_ASCO="ascomycota-intron-lens.txt"
 
 # OUTPUT FILES
 #  - names of the splice site datasets
@@ -242,18 +242,18 @@ function cut_introns_step() {
     echo "Cutting introns. Intron length distribution derived from file ${intron_lens_data}"
 
     echo "scaffold;start;end" > ${CUT_COORDS_FILE}
-    $PYTHON ../pruning/prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${intron_lens_data} >> "${CUT_COORDS_FILE}"
+    $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${intron_lens_data} >> "${CUT_COORDS_FILE}"
 }
 
 init
-#extract_donor_acceptor_step
-#classify_splice_sites_step
-#pair_splice_sites_and_extract_introns_step
+extract_donor_acceptor_step
+classify_splice_sites_step
+pair_splice_sites_and_extract_introns_step
 
 ## ===================================== VALIDATE =====================================
-#validate_introns_step
+validate_introns_step
 ## =================================== or CLASIFY =====================================
-classify_introns_step
+#classify_introns_step
 
 cut_introns_step
 

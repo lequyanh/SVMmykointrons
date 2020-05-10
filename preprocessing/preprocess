@@ -2,7 +2,6 @@
 
 PYTHON=/home/anhvu/anaconda3/envs/mykointron/bin/python
 
-ASSEMBLIES_LOC="/home/anhvu/Desktop/mykointrons-data"
 SHROOM_SPECIES="basidiomycota"
 SHROOM_NAMES_ALL="/home/anhvu/PycharmProjects/mycointrons/${SHROOM_SPECIES}.txt"
 
