@@ -1,14 +1,15 @@
 import csv
 import logging
 import os
+import random
 import sys
 from pathlib import Path
-import random
 from typing import Tuple, List
 
 import numpy as np
 from Bio import SeqIO
 
+import config
 from extract_tools import ACCEPTOR, DONOR
 
 POSITIVE_LABEL = '+1'
@@ -16,9 +17,6 @@ NEGATIVE_LABEL = '-1'
 
 logging.getLogger().setLevel(logging.INFO)
 random.seed(42)
-
-ASSEMBLIES_LOC = '/home/anhvu/Desktop/mykointrons-data/data/Assembly'
-NEWSEQUENCES_LOC = '/home/anhvu/Desktop/mykointrons-data/new-sequences'
 
 
 def main():
@@ -31,7 +29,7 @@ def main():
     The file can be either for testing/training, which is specified by @test_train parameter
     :return: 2 files - donor-train/test.csv acceptor-train/test.csv
     """
-    shroom_name = sys.argv[1]
+    fungi_name = sys.argv[1]
 
     donor_lwindow, donor_rwindow = int(sys.argv[2]), int(sys.argv[3])
     acceptor_lwindow, acceptor_rwindow = int(sys.argv[4]), int(sys.argv[5])
@@ -45,7 +43,7 @@ def main():
     intragenic = bool(sys.argv[10])
     suffix = '-intragenic' if intragenic else ''
 
-    # shroom_name = 'Mycreb1'
+    # fungi_name = 'Mycreb1'
     # csv_target_folder = '../data/'
     #
     # donor_lwindow, donor_rwindow = 200, 200
@@ -55,18 +53,18 @@ def main():
     # max_pos_samples = 100000
     # max_neg_samples = 140000
 
-    assembly = f'{ASSEMBLIES_LOC}/{shroom_name}_AssemblyScaffolds.fasta'
+    assembly = config.get_fungi_assembly(fungi_name)
     if not Path(assembly).is_file():
-        logging.warning(f'Assembly data for shroom {shroom_name} not found. Directory {assembly}')
+        logging.warning(f'Assembly data for shroom {fungi_name} not found. Directory {assembly}')
         exit(1)
 
-    false_donor_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-donor-false{suffix}.fasta'
-    false_acceptor_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-acceptor-false{suffix}.fasta'
+    false_donor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-false{suffix}.fasta'
+    false_acceptor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-false{suffix}.fasta'
 
-    true_donor_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-donor-true.fasta'
-    true_acceptor_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-acceptor-true.fasta'
+    true_donor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-true.fasta'
+    true_acceptor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-true.fasta'
 
-    out_donor_csv, out_acceptor_csv = prepare_output(shroom_name, csv_target_folder, test_train)
+    out_donor_csv, out_acceptor_csv = prepare_output(fungi_name, csv_target_folder, test_train)
 
     dwins_pos = get_positive_windows(true_donor_file, donor_lwindow, donor_rwindow, max_pos_samples)
     dwins_neg = get_negative_windows(false_donor_file, donor_lwindow, donor_rwindow, max_neg_samples)

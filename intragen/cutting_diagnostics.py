@@ -4,11 +4,11 @@ import pandas as pd
 from pandas import DataFrame
 from pandas.core.groupby import GroupBy
 
+import config
 import intragen_tools
 from label_introns import get_introns_from_strand
 from tools import performance_metrics
 
-NEWSEQUENCES_LOC = '/home/anhvu/Desktop/mykointrons-data/new-sequences'
 DONOR_SITE = 'donor'
 ACCEPTOR_SITE = 'acceptor'
 
@@ -25,20 +25,20 @@ def main():
                                         >> cut_coords.csv
     @intron_annotation_file     Result or running the pipeline (intron-result.csv file)
     """
-    shroom_name = 'Armosto1'
+    fungi_name = 'Armosto1'
     model = 'SVM-intragen'
 
     logging.basicConfig(
         level=logging.INFO,
-        filename=f'{shroom_name}_intron_intragen_exploration.log',
+        filename=f'{fungi_name}_intron_intragen_exploration.log',
         filemode='w'
     )
 
-    exon_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}_exon_positions.csv'
-    intron_file = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-introns.fasta'
+    exon_file = config.get_fungi_exons_positions(fungi_name)
+    intron_file = config.get_fungi_intron_fasta(fungi_name)
 
-    intron_annotations_file = f'{shroom_name}/{shroom_name}-intron-result-{model}.csv'
-    cut_coords_file = f'{shroom_name}/{shroom_name}-cut-coords-{model}.csv'
+    intron_annotations_file = f'{fungi_name}/{fungi_name}-intron-result-{model}.csv'
+    cut_coords_file = f'{fungi_name}/{fungi_name}-cut-coords-{model}.csv'
 
     # Note - joined_df is missing introns, which did not survive pairing phase
     joined_df = intragen_tools.join_on_position(cut_coords_file, intron_annotations_file)

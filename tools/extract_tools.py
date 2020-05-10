@@ -10,15 +10,12 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+import config
 import fastalib as fl
 import gfflib
 
 DONOR = 'GT'
 ACCEPTOR = 'AG'
-
-NEWSEQUENCES_LOC = '/home/anhvu/Desktop/mykointrons-data/new-sequences'
-ASSEMBLIES_LOC = '/home/anhvu/Desktop/mykointrons-data/data/Assembly'
-GFFS_LOC = '/home/anhvu/Desktop/mykointrons-data/data/GFF'
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,10 +55,10 @@ def main():
         print(f'No valid option {option} for splice site windows extraction. Exiting...')
         return
 
-    with open(f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-{suffix}.fasta', 'w') as f:
+    with open(f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-{suffix}.fasta', 'w') as f:
         SeqIO.write(donor_windows, f, 'fasta')
 
-    with open(f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-{suffix}.fasta', 'w') as f:
+    with open(f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-{suffix}.fasta', 'w') as f:
         SeqIO.write(acceptor_windows, f, 'fasta')
 
 
@@ -69,10 +66,10 @@ def generate_true_splice_sites(
         fungi_name: str,
         margin_size: int,
 ) -> Tuple[List, List]:
-    introns_fasta = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-introns.fasta'
+    introns_fasta = config.get_fungi_intron_fasta(fungi_name)
     donor_positions, acceptor_positions = true_donorac_positions(introns_fasta)
 
-    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
+    assembly_fasta = config.get_fungi_assembly(fungi_name)
     with open(assembly_fasta, 'r') as assembly_f:
         true_donors = list()
         true_acceptors = list()
@@ -115,12 +112,12 @@ def generate_false_splicesites(
     :param fungi_name: Fungi name to extract false intra-genic splice site windows from
     :return: Two list of donor and acceptor windows
     """
-    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
+    assembly_fasta = config.get_fungi_assembly(fungi_name)
     with open(assembly_fasta, 'r') as assembly_f:
         scaffold_records = list(SeqIO.parse(assembly_f, 'fasta'))  # type: List[SeqRecord]
         random.shuffle(scaffold_records)  # shuffle scaffolds for uniform sampling
 
-    introns_fasta = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-introns.fasta'
+    introns_fasta = config.get_fungi_intron_fasta(fungi_name)
     donor_positions, acceptor_positions = true_donorac_positions(introns_fasta)
 
     false_donors = list()
@@ -170,11 +167,11 @@ def generate_false_exon_splicesites(
     :param fungi_name: Fungi name to extract false intra-genic splice site windows from
     :return: Two list of donor and acceptor windows
     """
-    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
+    assembly_fasta = config.get_fungi_assembly(fungi_name)
     with open(assembly_fasta, 'r') as assembly_file:
         scaffolds_input = {desc: seq for desc, seq in fl.read_fasta(assembly_file)}
 
-    exons_file = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}_exons.fasta'
+    exons_file = config.get_fungi_exons_fasta(fungi_name)
     if not Path(exons_file).is_file():
         extract_exons(fungi_name)
 
@@ -256,9 +253,7 @@ def extract_exons(
     :param fungi_name: Fungi to extract exons for
     :return: None
     """
-    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
-
-    gff = glob.glob(f'{GFFS_LOC}/{fungi_name}_GeneCatalog_genes_*.gff')
+    gff = glob.glob(f'{config.GFFS_LOC}/{fungi_name}_GeneCatalog_genes_*.gff')
     if len(gff) == 0:
         print(f'No GFF file for fungi {fungi_name}')
         return
@@ -268,9 +263,7 @@ def extract_exons(
     gff_file = gff[0]
     print(f'Extracting exons for fungi {fungi_name}')
 
-    out_exon_pos = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}_exon_positions.csv'
-    out_exon_fasta = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}_exons.fasta'
-    gfflib.extract_exon_positions(gff_file, assembly_fasta, out_exon_pos, out_exon_fasta, validate=True)
+    gfflib.extract_exon_positions(gff_file, fungi_name, validate=True)
 
 
 def true_donorac_positions(

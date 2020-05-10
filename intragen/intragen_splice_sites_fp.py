@@ -1,27 +1,26 @@
 import logging
-
+import config
 import intragen_tools
 
-NEWSEQUENCES_LOC = '/home/anhvu/Desktop/mykointrons-data/new-sequences'
 DONOR_SITE = 'donor'
 ACCEPTOR_SITE = 'acceptor'
 
 
 def main():
-    shroom_name = 'Kocim1'
+    fungi_name = 'Kocim1'
     model = 'SVM'
 
     logging.basicConfig(
         level=logging.INFO,
-        filename=f'{shroom_name}_splice-site_intragen_exploration.log',
+        filename=f'{fungi_name}_splice-site_intragen_exploration.log',
         filemode='w'
     )
 
-    exon_csv = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}_exon_positions.csv'
-    introns_fasta = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-introns.fasta'
+    exon_csv = config.get_fungi_exons_fasta(fungi_name)
+    introns_fasta = config.get_fungi_intron_fasta(fungi_name)
 
-    donor_dataset_csv = f'{shroom_name}/{shroom_name}-splice-site-donor-dataset.csv'
-    donor_result_csv = f'{shroom_name}/{shroom_name}-splice-site-donor-result-{model}.csv'
+    donor_dataset_csv = f'{fungi_name}/{fungi_name}-splice-site-donor-dataset.csv'
+    donor_result_csv = f'{fungi_name}/{fungi_name}-splice-site-donor-result-{model}.csv'
 
     donor_intragen_fps = intragenic_splicesite_fpr(
         donor_dataset_csv,
@@ -31,8 +30,8 @@ def main():
         DONOR_SITE
     )
 
-    acc_dataset_csv = f'{shroom_name}/{shroom_name}-splice-site-acceptor-dataset.csv'
-    acc_result_csv = f'{shroom_name}/{shroom_name}-splice-site-acceptor-result-{model}.csv'
+    acc_dataset_csv = f'{fungi_name}/{fungi_name}-splice-site-acceptor-dataset.csv'
+    acc_result_csv = f'{fungi_name}/{fungi_name}-splice-site-acceptor-result-{model}.csv'
 
     acceptor_intragen_fps = intragenic_splicesite_fpr(
         acc_dataset_csv,

@@ -1,7 +1,8 @@
 import pandas as pd
+
+import config
 import intragen_tools
 
-NEWSEQUENCES_LOC = '/home/anhvu/Desktop/mykointrons-data/new-sequences'
 DONOR_SITE = 'donor'
 ACCEPTOR_SITE = 'acceptor'
 
@@ -12,18 +13,18 @@ def main():
     classification is shared and whether the models tend to do similar mistakes.
     :return:
     """
-    shroom_name = 'Thega1'
+    fungi_name = 'Thega1'
     site = 'donor'
 
     model1 = 'SVM-intragen'
     model2 = 'NN'
 
-    exon_csv = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}_exon_positions.csv'
-    introns_fasta = f'{NEWSEQUENCES_LOC}/{shroom_name}/{shroom_name}-introns.fasta'
+    exon_csv = config.get_fungi_exons_positions(fungi_name)
+    introns_fasta = config.get_fungi_intron_fasta(fungi_name)
 
-    dataset_csv = f'../intragen/{shroom_name}/{shroom_name}-splice-site-{site}-dataset.csv'
-    model1_result_csv = f'../intragen/{shroom_name}/{shroom_name}-splice-site-{site}-result-{model1}.csv'
-    model2_result_csv = f'../intragen/{shroom_name}/{shroom_name}-splice-site-{site}-result-{model2}.csv'
+    dataset_csv = f'../intragen/{fungi_name}/{fungi_name}-splice-site-{site}-dataset.csv'
+    model1_result_csv = f'../intragen/{fungi_name}/{fungi_name}-splice-site-{site}-result-{model1}.csv'
+    model2_result_csv = f'../intragen/{fungi_name}/{fungi_name}-splice-site-{site}-result-{model2}.csv'
 
     merged_df1 = intragen_tools.merge_classification_data(
         dataset_csv,

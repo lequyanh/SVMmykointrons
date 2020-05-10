@@ -3,8 +3,7 @@ import sys
 import numpy as np
 from Bio import SeqIO
 
-ASSEMBLIES_LOC = '/home/anhvu/Desktop/mykointrons-data/data/Assembly'
-NEWSEQUENCES_LOC = '/home/anhvu/Desktop/mykointrons-data/new-sequences'
+import config
 
 
 def main():
@@ -38,8 +37,8 @@ def extract_fungi_portion(
         scaffolds_portion: float,
         out_reduced: str
 ):
-    assembly = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
-    introns_fasta = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-introns.fasta'
+    assembly = config.get_fungi_assembly(fungi_name)
+    introns_fasta = config.get_fungi_intron_fasta(fungi_name)
 
     out_reduced_assembly = f'{out_reduced}/Assembly/{fungi_name}_AssemblyScaffolds.fasta'
     out_reduced_introns = f'{out_reduced}/new-sequences/{fungi_name}-introns.fasta'

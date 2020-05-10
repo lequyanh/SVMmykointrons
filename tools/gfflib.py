@@ -7,16 +7,8 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
+import config
 import fastalib as fl
-
-ASSEMBLIES_LOC = "/home/anhvu/Desktop/mykointrons-data/data/Assembly"
-NEWSEQUENCES_LOC = "/home/anhvu/Desktop/mykointrons-data/new-sequences"
-
-EXON_CSV_SUFF = "_exon_positions.csv"
-EXON_FASTA_SUFF = "_exons.fasta"
-
-INTRON_CSV_SUFF = "_intron_positions.csv"
-INTRON_FASTA_SUFF = "-introns.fasta"
 
 
 def transform_func(d):
@@ -55,7 +47,7 @@ def extract_intron_positions(
     db = parse_gff(gff_file)
     gene_identifier = get_gff_identifier(gff_file)
 
-    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
+    assembly_fasta = config.get_fungi_assembly(fungi_name)
     with open(assembly_fasta, 'r') as f:
         scaffold_seq_dict = {desc: seq for desc, seq in fl.read_fasta(f)}
 
@@ -123,7 +115,7 @@ def extract_exon_positions(
     db = parse_gff(gff_file)
     gene_identifier = get_gff_identifier(gff_file)
 
-    assembly_fasta = f'{ASSEMBLIES_LOC}/{fungi_name}_AssemblyScaffolds.fasta'
+    assembly_fasta = config.get_fungi_assembly(fungi_name)
     if validate:
         with open(assembly_fasta, 'r') as f:
             scaffold_seq_dict = {desc: seq for desc, seq in fl.read_fasta(f)}
@@ -157,16 +149,16 @@ def extract_exon_positions(
 
 
 def write_output(fungi_name: str, positions: list, sequences: list, type: str):
-    out_folder = f'{NEWSEQUENCES_LOC}/{fungi_name}'
+    out_folder = f'{config.NEWSEQUENCES_LOC}/{fungi_name}'
     if not os.path.exists(out_folder):
         os.mkdir(out_folder)
 
     if type == 'exon':
-        csv_suffix = EXON_CSV_SUFF
-        fasta_suffix = EXON_FASTA_SUFF
+        csv_suffix = config.EXON_CSV_SUFF
+        fasta_suffix = config.EXON_FASTA_SUFF
     elif type == 'intron':
-        csv_suffix = INTRON_CSV_SUFF
-        fasta_suffix = INTRON_FASTA_SUFF
+        csv_suffix = config.INTRON_CSV_SUFF
+        fasta_suffix = config.INTRON_FASTA_SUFF
     else:
         raise ValueError("Type not recognized")
 
