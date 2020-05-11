@@ -21,6 +21,8 @@ def main():
     len_range_start = int(sys.argv[3])
     len_range_end = int(sys.argv[4])
 
+    strand = sys.argv[5] if len(sys.argv) == 6 else '+'
+
     if not os.path.isfile(true_introns_fasta):
         logging.warning(f'Introns file {true_introns_fasta} cannot be found. '
                         f'Candidates in {intron_candidates_csv} will be deleted')
@@ -28,7 +30,7 @@ def main():
         os.remove(intron_candidates_csv)
         exit(0)
 
-    introns = get_introns_from_strand(true_introns_fasta, strand='+')
+    introns = get_introns_from_strand(true_introns_fasta, strand=strand)
 
     right_length_introns = list(filter(lambda seq: len_range_start < len(seq) < len_range_end, introns))
     logging.info(f'Number of introns in the range {len_range_start} - {len_range_end}: {len(right_length_introns)}')
@@ -58,7 +60,7 @@ def get_introns_from_strand(true_introns_fasta: str, strand: str):
         introns = filter(lambda i_rec: is_strand(i_rec, strand), introns_seqrecords)
         introns = set([str(i.seq) for i in introns])
 
-        logging.info(f'Number of true introns on the given (+) strand: {len(introns)}')
+        logging.info(f'Number of true introns on the given ({strand}) strand: {len(introns)}')
 
         return introns
 

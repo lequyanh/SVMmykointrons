@@ -10,6 +10,7 @@ logging.basicConfig(
     filemode='w'
 )
 
+
 def sequences(file):
     for line in file.readlines():
         words = line.strip().split(' ')
@@ -25,8 +26,7 @@ if __name__ == '__main__':
     fasta_filename = sys.argv[1]
     # name of the file containing the sequences
     sequences_filename = sys.argv[2]
-
-    # scaffold start end start end start end
+    strand = sys.argv[3]
 
     scaffold_sequences = defaultdict(list)
 
@@ -39,8 +39,11 @@ if __name__ == '__main__':
     print('scaffold;start;end;sequence')
     with open(fasta_filename, 'r') as fasta_file:
         for scaffold in SeqIO.parse(fasta_file, 'fasta'):
+            if strand == '-':
+                scaffold.seq = scaffold.seq.reverse_complement()
+
             to_extract = scaffold_sequences[scaffold.id]
-            logging.info(f'Extracting from scaffold {to_extract}')
+
             for positions in to_extract:
                 scaffold_seq = str(scaffold.seq)
                 extracted = ''.join(scaffold_seq[positions[i] - 1:positions[i + 1]]

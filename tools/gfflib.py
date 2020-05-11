@@ -130,20 +130,18 @@ def extract_exon_positions(
             scaffold, strand = f.chrom, f.strand
             start, end = f.start - 1, f.end
 
-            if strand == "+":
-                if validate:
-                    scaffold_seq = scaffold_seq_dict[scaffold]
-                    assert scaffold_seq[start: end] == exon_seq
+            if strand == '+' and validate:
+                scaffold_seq = scaffold_seq_dict[scaffold]
+                assert scaffold_seq[start: end] == exon_seq
 
-                exon_positions.append([scaffold, strand, start, end])
-                exon_sequences.append(
-                    SeqRecord(id=' '.join([scaffold, strand, str(start), str(end)]), seq=Seq(exon_seq))
-                )
-            # TODO Extract also negative strand exons
-            if strand == '-':
-                if validate:
-                    scaffold_seq = scaffold_seq_dict[scaffold]
-                    assert Seq(scaffold_seq[start: end]).reverse_complement() == exon_seq
+            if strand == '-' and validate:
+                scaffold_seq = scaffold_seq_dict[scaffold]
+                assert Seq(scaffold_seq[start: end]).reverse_complement() == exon_seq
+
+            exon_positions.append([scaffold, strand, start, end])
+            exon_sequences.append(
+                SeqRecord(id=' '.join([scaffold, strand, str(start), str(end)]), seq=Seq(exon_seq))
+            )
 
     write_output(fungi_name, exon_positions, exon_sequences, type='exon')
 

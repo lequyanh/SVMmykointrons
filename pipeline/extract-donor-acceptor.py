@@ -12,17 +12,23 @@ assembly = sys.argv[1]
 donor = sys.argv[2]
 # acceptor dimer
 acceptor = sys.argv[3]
-# window size for donors without the dimer: {   lwindow}--donor--{rwindow}
+# window size for donors without the dimer: {lwindow}--donor--{rwindow}
 donor_lwindow, donor_rwindow = int(sys.argv[4]), int(sys.argv[5])
 # window size for acceptors without the dimer: {lwindow}--acceptor--{rwindow}
 acceptor_lwindow, acceptor_rwindow = int(sys.argv[6]), int(sys.argv[7])
+# strand
+strand = sys.argv[8]
 
 assert len(donor) == 2, 'donor must be a dimer'
 assert len(acceptor) == 2, 'acceptor must be a dimer'
+assert strand == '+' or strand == '-'
 
 with open(assembly, 'r') as assembly_f:
     # loop through the whole assembly
     for scaffold, sequence in fl.read_fasta(assembly_f):
+        if strand == '-':
+            sequence = fl.complementary(sequence)[::-1]  # Reverse complement
+
         for position, dimer in fl.dimers(sequence):
             if dimer == donor or dimer == acceptor:
                 lwindow = donor_lwindow if dimer == donor else acceptor_lwindow
@@ -41,4 +47,3 @@ with open(assembly, 'r') as assembly_f:
 
                 # print scaffold, position and the window separated with the given separator
                 print(scaffold, position, window, sep=SEPARATOR)
-

@@ -16,6 +16,8 @@ def get_fungi_assembly(fungi_name: str):
 
 def get_fungi_intron_fasta(fungi_name: str):
     introns_fasta = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-introns.fasta'
+    # Uncomment if trimmed introns is to use
+    introns_fasta = f'/home/anhvu/Desktop/mykointrons-data/reduced/new-sequences/{fungi_name}-introns.fasta'
     return introns_fasta
 
 
