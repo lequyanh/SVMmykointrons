@@ -1,4 +1,5 @@
 import logging
+import os
 
 import pandas as pd
 from pandas import DataFrame
@@ -13,21 +14,31 @@ DONOR_SITE = 'donor'
 ACCEPTOR_SITE = 'acceptor'
 
 
-def main():
-    """
-    @cut_coords_file            Result of intron pruning. While pruning, record coords which are cut.
-                                Can be obtained by executing:
-                                        echo "start;end" > cut_coords.csv &
-                                        python ../pruning/prune_probabilistic.py
-                                                ~/Desktop/mykointrons-data/data/Assembly/Kocim1_AssemblyScaffolds.fasta
-                                                intron-result.csv
-                                                ../statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt
-                                        >> cut_coords.csv
-    @intron_annotation_file     Result or running the pipeline (intron-result.csv file)
-    """
-    fungi_name = 'Armosto1'
-    model = 'SVM-intragen'
+def batch_analyze():
+    results_dir = 'sample_results'
+    model = ''
 
+    # Prepare columns
+    results = pd.DataFrame(columns=['fungi', 'recall', 'exon_breaking_fpr'])
+
+    for i, folder_name in enumerate(os.listdir(results_dir)):
+        fungi_name = folder_name.replace('_results', '')
+
+        recall, exon_breaking_fpr = run_diagnostics(fungi_name, model, strand='+', folder=results_dir)
+        results.loc[i] = [fungi_name, recall, exon_breaking_fpr]
+
+    results.to_csv('300basidio_recall_precision.csv', sep=';', index=False)
+
+
+def main():
+    fungi_name = 'Abobi1'
+    model = ''
+    strand = '+'
+
+    run_diagnostics(fungi_name, model, strand)
+
+
+def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.'):
     logging.basicConfig(
         level=logging.INFO,
         filename=f'{fungi_name}_intron_intragen_exploration.log',
@@ -37,17 +48,22 @@ def main():
     exon_file = config.get_fungi_exons_positions(fungi_name)
     intron_file = config.get_fungi_intron_fasta(fungi_name)
 
-    intron_annotations_file = f'{fungi_name}/{fungi_name}-intron-result-{model}.csv'
-    cut_coords_file = f'{fungi_name}/{fungi_name}-cut-coords-{model}.csv'
+    model = f'-{model}' if model else ''
+    # Result or running the pipeline (intron-result.csv file)
+    intron_annotations_file = f'{folder}/{fungi_name}_results/intron-result{model}.csv'
+    # Result of running the pipeline (intron pruning step)
+    cut_coords_file = f'{folder}/{fungi_name}_results/cut-coords{model}.csv'
 
-    # Note - joined_df is missing introns, which did not survive pairing phase
+    # NOTE - joined_df will be missing introns, which did not survive pairing phase
     joined_df = intragen_tools.join_on_position(cut_coords_file, intron_annotations_file)
 
     # Get the accuracy and recall of intron detection after the pruning step
     post_cut_accuracy_metrics(joined_df)
 
-    # Determine intra-genic intron FP rate.
-    false_introns_exploration(joined_df, exon_file, intron_file)
+    # Determine intra-genic intron FP rate. We have to pass strand here as we don't know, against which exons to compare
+    recall, exon_breaking_fpr = false_introns_exploration(joined_df, exon_file, intron_file, strand)
+
+    return recall, exon_breaking_fpr
 
 
 def post_cut_accuracy_metrics(joined: DataFrame) -> None:
@@ -73,7 +89,12 @@ def post_cut_accuracy_metrics(joined: DataFrame) -> None:
     print('\n')
 
 
-def false_introns_exploration(joined: DataFrame, exon_file: str, intron_file: str):
+def false_introns_exploration(
+        joined: DataFrame,
+        exon_file: str,
+        intron_file: str,
+        strand: str
+) -> (float, float):
     """
     Explores, where false introns fall into. Determines what portion of them lie inside exons.
     Prints adjusted FP intron rate, where only FP inside exons are considered.
@@ -81,9 +102,16 @@ def false_introns_exploration(joined: DataFrame, exon_file: str, intron_file: st
     :param intron_file: Filename of fungi intron sequences
     :param joined: DataFrame joined table of intron coordinates, their labels, their prediction and cut flag
     :param exon_file: Filename of fungi exon positions
+    :param strand: +/- so we know, which exons to pick
     :return: None (only prints the metrics)
     """
     exon_pos_df = pd.read_csv(exon_file, delimiter=';')
+    if 'strand' in exon_pos_df.columns:
+        # For legacy reasons - some exon files don't yet have a "strand" column
+        exon_pos_df = exon_pos_df[exon_pos_df['strand'] == strand]
+
+    # NOTE: Uncomment for analyzing pipeline executions on reduced data
+    # exon_pos_df = exon_pos_df[exon_pos_df['scaffold'].isin(joined['scaffold'].unique())]
     exon_scaff_grouped = exon_pos_df.groupby(by='scaffold')
 
     # See, where potential mistakes of pruning can be (intron dataset before classification)
@@ -121,13 +149,18 @@ def false_introns_exploration(joined: DataFrame, exon_file: str, intron_file: st
         f'After cut exon-breaking FPR is {100 * no_cuts / all_cuts_count:.2f}% as there are {all_cuts_count} total cuts'
     )
 
-    print(f'----------------------------------- Determination coefficient -------------------------------------')
+    print(f'--------------------------------Recall and exon-breaking precision ---------------------------------------')
     true_cuts = joined.query('cut == 1 and label == 1').shape[0]
     true_all = get_introns_from_strand(intron_file, strand='+')
 
-    print(f'Correctly cut {true_cuts}/{len(true_all)} (positive strand) introns.\n'
-          f'Interfered with {no_cuts}/{exon_pos_df.shape[0]} (positive strand) exons.\n'
+    print(f'Correctly cut {true_cuts}/{len(true_all)} ({strand} strand) introns.\n'
+          f'Interfered with {no_cuts}/{exon_pos_df.shape[0]} ({strand} strand) exons.\n'
           f'Ratio {true_cuts / no_cuts:.2f}')
+
+    recall = true_cuts / len(true_all)
+    exon_breaking_fpr = no_cuts / exon_pos_df.shape[0]
+
+    return recall, exon_breaking_fpr
 
 
 def intraexonic_cuts_count(exon_grouped: GroupBy, cuts_grouped: GroupBy) -> int:
