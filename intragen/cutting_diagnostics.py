@@ -17,8 +17,9 @@ def main():
     fungi_name = 'Armosto1'
     model = 'SVM-intragen'
     strand = '+'
+    folder = 'full_results'
 
-    run_diagnostics(fungi_name, model, strand)
+    run_diagnostics(fungi_name, model, strand, folder)
 
 
 def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.'):
