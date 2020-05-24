@@ -33,6 +33,7 @@ ACCEPTOR_LWINDOW=70
 ACCEPTOR_RWINDOW=70
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
+STRAND="-"
 INTRON_MIN_LENGTH=40
 INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
@@ -128,17 +129,18 @@ function init() {
 }
 
 function extract_donor_acceptor_step() {
-  echo "Extracting donors and acceptors from [$assembly_filepath]..."
+  echo "Extracting donors and acceptors from [$assembly_filepath] on $STRAND strand..."
 
   # prepare files for the donor and acceptor datasets
-  echo "scaffold;position;sequence" >$DONOR_FILE
-  echo "scaffold;position;sequence" >$ACCEPTOR_FILE
+  echo "scaffold;position;sequence" > $DONOR_FILE
+  echo "scaffold;position;sequence" > $ACCEPTOR_FILE
 
   $PYTHON extract-donor-acceptor.py "${assembly_filepath}" \
     $DONOR $ACCEPTOR \
     $DONOR_LWINDOW $DONOR_RWINDOW \
-    $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW |
-    gawk -v donor="${donor_regex}" \
+    $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
+    $STRAND \
+|gawk -v donor="${donor_regex}" \
       -v acceptor="${acceptor_regex}" \
       -v donor_file=$DONOR_FILE \
       -v acceptor_file=$ACCEPTOR_FILE \
@@ -151,8 +153,8 @@ function extract_donor_acceptor_step() {
 
 function classify_splice_sites_step() {
   # prepare files for the donor and acceptor classification results
-  echo "scaffold;position" >$DONOR_RESULT
-  echo "scaffold;position" >$ACCEPTOR_RESULT
+  echo "scaffold;position" > $DONOR_RESULT
+  echo "scaffold;position" > $ACCEPTOR_RESULT
 
   echo "Positive splice site positions will be saved to ${DONOR_RESULT} and ${ACCEPTOR_RESULT}"
 
@@ -194,13 +196,13 @@ function pair_splice_sites_and_extract_introns_step() {
   echo "Extracting introns from the positions..."
 
   # extract introns from the positions from the previous step
-  $PYTHON extract-introns.py "$assembly_filepath" $INTRON_POSITIONS_FILE >$INTRON_FILE
+  $PYTHON extract-introns.py "$assembly_filepath" $INTRON_POSITIONS_FILE $STRAND > $INTRON_FILE
 
   echo "Intron sequences are extracted in [$INTRON_FILE]."
   echo ""
 
   echo "First 20 most frequent intron candidates:"
-  cat $INTRON_FILE | cut -d ';' -f4 | sort | uniq -c | grep -v '1 ' | sort -r | head -20
+#  cat $INTRON_FILE | cut -d ';' -f4 | sort | uniq -c | grep -v '1 ' | sort -r | head -20
 
 }
 
@@ -208,32 +210,32 @@ function classify_introns_step() {
   echo "Starting classification of the introns using spectral kernel order ${spect_kernel_order}"
 
   # prepare a file for the intron classification results
-  echo "scaffold;start;end" >$INTRON_RESULT
+  echo "scaffold;start;end" > $INTRON_RESULT
 
   # classify the introns
   # keep only the positively classified samples
   # keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
   $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $spect_kernel_order |
     grep $positive_introns |
-    cut -d ';' -f -3 >>$INTRON_RESULT
+    cut -d ';' -f -3 >> $INTRON_RESULT
 
   echo "Detected introns are in [$INTRON_RESULT]."
 }
 
 function validate_introns_step() {
   echo "Labeling intron dataset"
-  $PYTHON label_introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
+  $PYTHON label_introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH $STRAND
 
   echo "Starting validation of the intron dataset using spectral kernel order ${spect_kernel_order}"
   $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $spect_kernel_order |
-    cut --complement -d ';' -f4 >>$INTRON_RESULT
+    cut --complement -d ';' -f4 >> $INTRON_RESULT
 }
 
 function cut_introns_step() {
   echo "Cutting introns. Intron length distribution derived from file ${intron_lens_data}"
 
-  echo "scaffold;start;end" >${CUT_COORDS_FILE}
-  $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${intron_lens_data} >>"${CUT_COORDS_FILE}"
+  echo "scaffold;start;end" > ${CUT_COORDS_FILE}
+  $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${intron_lens_data} $STRAND >> "${CUT_COORDS_FILE}"
 }
 
 init
@@ -248,12 +250,12 @@ validate_introns_step
 
 cut_introns_step
 
-echo "Pipeline log for file ${assembly_filepath}" >pipeline.output
+echo "Pipeline log for file ${assembly_filepath}" > pipeline.output
 for p in ./*.log; do
   {
     echo "================================== ${p} =========================================="
     cat "$p"
-  } >>pipeline.output
+  } >> pipeline.output
 done
 
 result_dir="${fungi_name}_results"

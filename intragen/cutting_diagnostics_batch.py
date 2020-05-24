@@ -1,4 +1,5 @@
 import logging
+import os
 
 import pandas as pd
 from pandas import DataFrame
@@ -13,12 +14,23 @@ DONOR_SITE = 'donor'
 ACCEPTOR_SITE = 'acceptor'
 
 
-def main():
-    fungi_name = 'Armosto1'
-    model = 'SVM-intragen'
+# NOTE: Before running this file, alter ../tools/config.py to use reduced introns (instructions are there)
+
+def batch_analyze():
+    results_dir = 'sample_results_plus_strand'
+    model = ''
     strand = '+'
 
-    run_diagnostics(fungi_name, model, strand)
+    # Prepare columns
+    results = pd.DataFrame(columns=['fungi', 'recall', 'exon_breaking_fpr'])
+
+    for i, folder_name in enumerate(os.listdir(results_dir)):
+        fungi_name = folder_name.replace('_results', '')
+
+        recall, exon_breaking_fpr = run_diagnostics(fungi_name, model, strand=strand, folder=results_dir)
+        results.loc[i] = [fungi_name, recall, exon_breaking_fpr]
+
+    results.to_csv('300basidio_recall_precision.csv', sep=';', index=False)
 
 
 def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.'):
@@ -92,7 +104,7 @@ def false_introns_exploration(
     if 'strand' in exon_pos_df.columns:
         # For legacy reasons - some exon files don't yet have a "strand" column
         exon_pos_df = exon_pos_df[exon_pos_df['strand'] == strand]
-
+    exon_pos_df = exon_pos_df[exon_pos_df['scaffold'].isin(joined['scaffold'].unique())]
     exon_scaff_grouped = exon_pos_df.groupby(by='scaffold')
 
     # See, where potential mistakes of pruning can be (intron dataset before classification)
@@ -172,4 +184,4 @@ def intraexonic_cuts_count(exon_grouped: GroupBy, cuts_grouped: GroupBy) -> int:
 
 
 if __name__ == "__main__":
-    main()
+    batch_analyze()

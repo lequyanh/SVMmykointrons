@@ -23,7 +23,7 @@ ACCEPTOR_LWINDOW=70
 ACCEPTOR_RWINDOW=70
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
-STRAND="-"
+STRAND="+"
 INTRON_MIN_LENGTH=40
 INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
@@ -211,7 +211,7 @@ function pair_splice_sites_and_extract_introns_step() {
     echo ""
 
     echo "First 20 most frequent intron candidates:"
-    cat $INTRON_FILE | cut -d ';' -f4 | sort | uniq -c | grep -v '1 ' | sort -r | head -20
+#    cat $INTRON_FILE | cut -d ';' -f4 | sort | uniq -c | grep -v '1 ' | sort -r | head -20
 
 }
 

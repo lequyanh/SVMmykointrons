@@ -1,0 +1,18 @@
+Pipeline log for file /home/anhvu/Desktop/mykointrons-data/data/Assembly/Walic1_AssemblyScaffolds.fasta
+================================== ./classify-introns-d4.log ==========================================
+INFO:root:Validation of model bestmodels/basidiomycota/intron-model-C-6-d-4.hd5 on testset intron-dataset.csv; d=4
+INFO:root:Performance metrics:
+ -TP: 4548
+ -FP: 21371
+ -TN: 33510
+ -FN: 646
+Accuracy: 0.6335081148564294
+Precision: 0.17546973262857363
+Recall: 0.875625721986908
+================================== ./classify-splice-sites-amodel-basi-intragen-d-25-C-10-win-70.hd5.log ==========================================
+================================== ./label-introns.log ==========================================
+INFO:root:Parsing introns from /home/anhvu/Desktop/mykointrons-data/new-sequences/Walic1/Walic1-introns.fasta file.
+INFO:root:Total number of introns: 11762
+INFO:root:Number of true introns on the given (-) strand: 6005
+INFO:root:Number of introns in the range 40 - 100: 5720
+INFO:root:5194/60075 candidates are positive introns

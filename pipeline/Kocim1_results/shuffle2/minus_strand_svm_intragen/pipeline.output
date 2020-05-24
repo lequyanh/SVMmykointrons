@@ -1,0 +1,18 @@
+Pipeline log for file /home/anhvu/Desktop/mykointrons-data/data/Assembly/Kocim1_AssemblyScaffolds.fasta
+================================== ./classify-introns-d4.log ==========================================
+INFO:root:Validation of model bestmodels/basidiomycota/intron-model-C-6-d-4.hd5 on testset intron-dataset.csv; d=4
+INFO:root:Performance metrics:
+ -TP: 9689
+ -FP: 23498
+ -TN: 30339
+ -FN: 2232
+Accuracy: 0.6087168101219623
+Precision: 0.2919516678217374
+Recall: 0.8127673852864693
+
+================================== ./label-introns.log ==========================================
+INFO:root:Parsing introns from /home/anhvu/Desktop/mykointrons-data/new-sequences/Kocim1/Kocim1-introns.fasta file.
+INFO:root:Total number of introns: 38991
+INFO:root:Number of true introns on the given (-) strand: 19031
+INFO:root:Number of introns in the range 40 - 100: 13820
+INFO:root:11921/65758 candidates are positive introns
