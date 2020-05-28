@@ -40,9 +40,6 @@ def main():
     max_pos_samples = int(sys.argv[8])
     max_neg_samples = int(sys.argv[9])
 
-    intragenic = bool(sys.argv[10])
-    suffix = '-intragenic' if intragenic else ''
-
     # fungi_name = 'Mycreb1'
     # csv_target_folder = '../data/'
     #
@@ -58,8 +55,9 @@ def main():
         logging.warning(f'Assembly data for shroom {fungi_name} not found. Directory {assembly}')
         exit(1)
 
-    false_donor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-false{suffix}.fasta'
-    false_acceptor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-false{suffix}.fasta'
+    suffix = 'false-intragenic'
+    false_donor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-{suffix}.fasta'
+    false_acceptor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-{suffix}.fasta'
 
     true_donor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-true.fasta'
     true_acceptor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-true.fasta'
