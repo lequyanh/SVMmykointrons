@@ -29,3 +29,18 @@ def get_fungi_exons_fasta(fungi_name: str):
 def get_fungi_exons_positions(fungi_name: str):
     exons_positions = f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}_exon_positions.csv'
     return exons_positions
+
+
+def get_fungi_false_wins_fasta(fungi_name: str, strand: str, site: str):
+    suffix = 'false-intragenic'
+    return _get_fungi_wins_fasta(fungi_name, strand, site, suffix)
+
+
+def get_fungi_true_wins_fasta(fungi_name: str, strand: str, site: str):
+    suffix = 'true'
+    return _get_fungi_wins_fasta(fungi_name, strand, site, suffix)
+
+
+def _get_fungi_wins_fasta(fungi_name: str, strand: str, site: str, suffix: str):
+    strand_suff = 'plus' if strand == '+' else 'minus'
+    return f'{NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-{site}-{suffix}-{strand_suff}.fasta'

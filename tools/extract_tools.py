@@ -47,20 +47,23 @@ def main():
     if option == ExtractOptions.FALSE_INTRAGEN_SPLICESITES:
         donor_windows, acceptor_windows = \
             generate_false_exon_splicesites(fungi_name, margin_size, examples_limit, strand)
-        suffix = 'false-intragenic'
+
+        fasta_donor_wins = config.get_fungi_false_wins_fasta(fungi_name, strand, 'donor')
+        fasta_acc_wins = config.get_fungi_false_wins_fasta(fungi_name, strand, 'acceptor')
     elif option == ExtractOptions.TRUE_SPLICESITES:
         donor_windows, acceptor_windows = \
             generate_true_splice_sites(fungi_name, margin_size, strand)
-        suffix = 'true'
+
+        fasta_donor_wins = config.get_fungi_true_wins_fasta(fungi_name, strand, 'donor')
+        fasta_acc_wins = config.get_fungi_true_wins_fasta(fungi_name, strand, 'acceptor')
     else:
         print(f'No valid option {option} for splice site windows extraction. Exiting...')
         return
 
-    strand_suff = 'plus' if strand == '+' else 'minus'
-    with open(f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-{suffix}-{strand_suff}.fasta', 'w') as f:
+    with open(fasta_donor_wins, 'w') as f:
         SeqIO.write(donor_windows, f, 'fasta')
 
-    with open(f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-{suffix}-{strand_suff}.fasta', 'w') as f:
+    with open(fasta_acc_wins, 'w') as f:
         SeqIO.write(acceptor_windows, f, 'fasta')
 
 
@@ -98,9 +101,9 @@ def generate_true_splice_sites(
         donor_wins.dropna(inplace=True)
         acceptor_wins.dropna(inplace=True)
 
-        print(f'\t True splice site windows for fungi {fungi_name} written: '
-              f'{donor_wins.shape[0]} donor, {acceptor_wins.shape[0]} acceptor windows '
-              f'out of {donor_positions.shape[0]} donor, {acceptor_positions.shape[0]} acceptor positions')
+        print(f'\t True splice site windows for fungi {fungi_name} written (windows/positions total): '
+              f'{donor_wins.shape[0]}/{donor_positions.shape[0]} donor, '
+              f'{acceptor_wins.shape[0]}/{acceptor_positions.shape[0]} acceptor windows ')
 
         return donor_wins.to_list(), acceptor_wins.to_list()
 
@@ -137,9 +140,9 @@ def generate_false_exon_splicesites(
     intragenic_false_acceptors = list()
 
     def yield_false_windows():
-        print(f'False intragenic splice site windows for fungi {fungi_name} written:'
-              f'{len(intragenic_false_donors)} donor, {len(intragenic_false_acceptors)} acceptor windows '
-              f'/ {examples_limit} limit')
+        print(f'False intragenic splice site windows for fungi {fungi_name} written: '
+              f'{len(intragenic_false_donors)} donor, {len(intragenic_false_acceptors)} acceptor '
+              f'(limit {examples_limit})')
 
         return intragenic_false_donors, intragenic_false_acceptors
 
@@ -167,7 +170,7 @@ def generate_false_exon_splicesites(
                 return yield_false_windows()
 
             if dimer == DONOR or dimer == ACCEPTOR:
-                dimer_pos = start + position - 1    # The dimers() function adds 1 to the index. Correct for it
+                dimer_pos = start + position - 1  # The dimers() function adds 1 to the index. Correct for it
                 false_splicesite = extract_window(scaffold_seq, dimer_pos, margin_size, scaffold, strand)
 
                 if dimer == DONOR and false_splicesite:
@@ -256,8 +259,8 @@ def true_donorac_positions(
     donor_positions = pd.DataFrame(donor_data, columns=columns)
     acceptor_positions = pd.DataFrame(acceptor_data, columns=columns)
 
-    print(f'Parsed intron file {introns_fasta} to get {strand} strand splice site positions'
-          f'Non-canonic dimers: {non_canonic_don} donors and {non_canonic_acc} acceptors.')
+    print(f'Getting ({strand}) strand splice-site positions. '
+          f'Non-canonic splice-site dimers: {non_canonic_don} donors and {non_canonic_acc} acceptors.')
 
     return donor_positions, acceptor_positions
 
