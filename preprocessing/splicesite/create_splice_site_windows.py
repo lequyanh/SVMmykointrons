@@ -40,6 +40,8 @@ def main():
     max_pos_samples = int(sys.argv[8])
     max_neg_samples = int(sys.argv[9])
 
+    strand = sys.argv[10]
+
     # fungi_name = 'Mycreb1'
     # csv_target_folder = '../data/'
     #
@@ -55,12 +57,11 @@ def main():
         logging.warning(f'Assembly data for shroom {fungi_name} not found. Directory {assembly}')
         exit(1)
 
-    suffix = 'false-intragenic'
-    false_donor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-{suffix}.fasta'
-    false_acceptor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-{suffix}.fasta'
+    false_donor_file = config.get_fungi_false_wins_fasta(fungi_name, strand, 'donor')
+    false_acceptor_file = config.get_fungi_false_wins_fasta(fungi_name, strand, 'acceptor')
 
-    true_donor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-donor-true.fasta'
-    true_acceptor_file = f'{config.NEWSEQUENCES_LOC}/{fungi_name}/{fungi_name}-acceptor-true.fasta'
+    true_donor_file = config.get_fungi_true_wins_fasta(fungi_name, strand, 'donor')
+    true_acceptor_file = config.get_fungi_true_wins_fasta(fungi_name, strand, 'acceptor')
 
     out_donor_csv, out_acceptor_csv = prepare_output(fungi_name, csv_target_folder, test_train)
 
@@ -135,6 +136,10 @@ def get_splice_site_windows(
 
         # Take either max_samples or all available if there is not enough windows
         splice_windows = all_windows[0:min(max_samples, len(all_windows))]
+
+        if not splice_windows:
+            print(f'File {donor_acceptor_file} does not have any windows')
+            return []
 
         window_mid = int(0.5 * (len(splice_windows[1]) - 2))  # -2 for GT/AG dimers
 

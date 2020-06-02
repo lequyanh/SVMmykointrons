@@ -33,10 +33,16 @@ def read_model(filename):
 
 
 def split_data(data, test_size):
-    s = StratifiedShuffleSplit(n_splits=1, test_size=test_size)
-    for train_i, test_i in s.split(data.sequence, data.label):
-        train, test = data.loc[train_i], data.loc[test_i]
-        return train, test
+    #s = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
+    #for train_i, test_i in s.split(data.sequence, data.label):
+    #    train, test = data.loc[train_i], data.loc[test_i]
+    #    return train, test
+
+    no_test_examples = int(test_size * data.shape[0])
+    test_set = data[:no_test_examples]
+    train_set = data[no_test_examples:]
+    print(f'Positive samples test {sum(test_set["label"]==1)}')
+    return train_set, test_set
 
 
 def performance_metrics(labels, predictions, imbalance_rat):

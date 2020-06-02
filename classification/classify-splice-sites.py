@@ -43,6 +43,10 @@ def main():
 
     ncpus = int(arguments['-c'])
 
+    if arguments['<imbalance-ratio>']:
+        imbalance_ratio = float(arguments['<imbalance-ratio>'])
+        print(f'Imbalance ratio {imbalance_ratio}')
+
     # Setup logging
     logging.basicConfig(
         level=logging.INFO,
@@ -64,8 +68,6 @@ def main():
     output_df.to_csv(sys.stdout, sep=';', index=False)
 
     if 'label' in input_df:
-        imbalance_ratio = float(arguments['<imbalance-ratio>'])
-
         log_performance(input_df[["label"]], predictions, imbalance_ratio)
 
 

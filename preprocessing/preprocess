@@ -2,38 +2,42 @@
 
 PYTHON=/home/anhvu/anaconda3/envs/mykointron/bin/python
 
-SHROOM_SPECIES="ascomycota"
+SHROOM_SPECIES="basidiomycota"
 SHROOM_NAMES_ALL="/home/anhvu/PycharmProjects/mycointrons/${SHROOM_SPECIES}.txt"
 
-# Files containing fungi species names, that are used for training and testing
+# Folder, that contains (or will contain) lists of fungi species used for training and testing
 split_dir="shroom_split/$SHROOM_SPECIES/"
 
+# Those lists are stored in following files
 INT_TRAIN_NAMES="$split_dir/intron_train_names.txt"
 INT_TEST_NAMES="$split_dir/intron_test_names.txt"
 SPLICE_TRAIN_NAMES="$split_dir/splice_sites_train_names.txt"
 SPLICE_TEST_NAMES="$split_dir/splice_sites_test_names.txt"
 
+# Radius of the window around a splice site dimer
+WINDOW_RADIUS=200
+
 # Number of positive and negative windows taken from each shroom to construct overall train and test datasets
 POSTIVE_WINDOWS=20000
 NEGATIVE_WINDOWS=30000
 
-# ----------- CREATE FALSE SPLICE SITE WINDOWS FOR EACH SHROOM (TAKE-GT/AG-WINDOWS-FROM-ANYWHERE VERSION)-----------------
-# Options for splice site generation
-FALSE_INTRAGEN_SPLICESITES=1
-TRUE_SPLICESITES=2
-
+# ----------- CREATE FALSE SPLICE SITE WINDOWS FOR EACH SHROOM (TAKE-GT/AG-WINDOWS-FROM-ANYWHERE VERSION)---------------
+# Number of max false splice site windows to take (as there are more false GT/AG, than true GT/AG)
 EXAMPLE_LIMIT=25000
-WINDOW_DIAMETER=200
 
 function generate_false_splice_site_windows() {
   while read shroom; do
-    $PYTHON splicesite/extract_tools.py ${FALSE_INTRAGEN_SPLICESITES} "${shroom}" ${WINDOW_DIAMETER} ${EXAMPLE_LIMIT}
+    # 1 is option for generating false splice site windows
+    $PYTHON splicesite/extract_tools.py 1 "${shroom}" "+" ${WINDOW_RADIUS} ${EXAMPLE_LIMIT}
+    $PYTHON splicesite/extract_tools.py 1 "${shroom}" "-" ${WINDOW_RADIUS} ${EXAMPLE_LIMIT}
   done <${SHROOM_NAMES_ALL}
 }
 
 function generate_true_splice_site_windows() {
   while read shroom; do
-    $PYTHON splicesite/extract_tools.py ${TRUE_SPLICESITES} "${shroom}" ${WINDOW_DIAMETER}
+    # 2 is option for generating true splice site windows
+    $PYTHON splicesite/extract_tools.py 2 "${shroom}" "+" ${WINDOW_RADIUS}
+    $PYTHON splicesite/extract_tools.py 2 "${shroom}" "-" ${WINDOW_RADIUS}
   done <${SHROOM_NAMES_ALL}
 }
 
@@ -56,52 +60,82 @@ function split_species_to_train_test_sets() {
 }
 
 # ----------- FOR MUSHROOMS USED FOR SPLICE SITE TRAINING/TESTING, GENERATE WINDOWS -----------------
-# This should create 2 folders - test and train each containing donor and acceptor windows from a particular shroom
-splicesite_dataloc="../data/$SHROOM_SPECIES"
-mkdir -p $splicesite_dataloc/train/donor/
-mkdir -p $splicesite_dataloc/train/acceptor/
-mkdir -p $splicesite_dataloc/test/donor/
-mkdir -p $splicesite_dataloc/test/acceptor/
-
+# For a given fungi and strand, create CSVs with windows (either for training or testing - depends to which set the fungi belongs)
 function create_train_test_csvs() {
   echo "Generating train and test splice site windows for mushroom $SHROOM_SPECIES. Data will be saved to $splicesite_dataloc"
 
   shroom_names=$1
   train_test=$2
+  strand=$3
+  splicesite_dataloc=$4
+
   for shroom in $(<"$shroom_names"); do
-    $PYTHON ./splicesite/create_splice_site_windows.py "${shroom}" 200 200 200 200 $splicesite_dataloc "${train_test}" ${POSTIVE_WINDOWS} ${NEGATIVE_WINDOWS}
+    $PYTHON ./splicesite/create_splice_site_windows.py "${shroom}" 200 200 200 200 "${splicesite_dataloc}" "${train_test}" ${POSTIVE_WINDOWS} ${NEGATIVE_WINDOWS} "${strand}"
   done
 }
 
 # ----------- MIX WINDOWS FROM ALL MUSHROOMS AND SAMPLE A SINGLE TRAIN/TEST CSV FILE -----------------
-function mix_and_merge_windows_to_single_file() {
-  NO_TRAIN=450000
-  SHUFFLED_DONOR_SITE_TRAINSET_NAME='shuff_aggreg_donor_site_train.csv'
-  SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME='shuff_aggreg_acceptor_site_train.csv'
-  bash splicesite/merge_shuffle_datasets.sh $splicesite_dataloc/train/donor $NO_TRAIN $SHUFFLED_DONOR_SITE_TRAINSET_NAME ./
-  bash splicesite/merge_shuffle_datasets.sh $splicesite_dataloc/train/acceptor $NO_TRAIN $SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME ./
-  mv $SHUFFLED_DONOR_SITE_TRAINSET_NAME $splicesite_dataloc/train
-  mv $SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME $splicesite_dataloc/train
+NO_TRAIN=450000
+SHUFFLED_DONOR_SITE_TRAINSET_NAME='shuff_aggreg_donor_site_train.csv'
+SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME='shuff_aggreg_acceptor_site_train.csv'
 
-  NO_TEST=500000
-  SHUFFLED_DONOR_SITE_TESTSET_NAME='shuff_aggreg_donor_site_test.csv'
-  SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME='shuff_aggreg_acceptor_site_test.csv'
-  bash splicesite/merge_shuffle_datasets.sh $splicesite_dataloc/test/donor $NO_TEST $SHUFFLED_DONOR_SITE_TESTSET_NAME ./
-  bash splicesite/merge_shuffle_datasets.sh $splicesite_dataloc/test/acceptor $NO_TEST $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME ./
-  mv $SHUFFLED_DONOR_SITE_TESTSET_NAME $splicesite_dataloc/test
-  mv $SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME $splicesite_dataloc/test
+NO_TEST=500000
+SHUFFLED_DONOR_SITE_TESTSET_NAME='shuff_aggreg_donor_site_test.csv'
+SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME='shuff_aggreg_acceptor_site_test.csv'
+
+function mix_and_merge_windows_to_single_file() {
+  splicesite_dataloc=$1
+
+  bash splicesite/merge_shuffle_datasets.sh "${splicesite_dataloc}/train/donor" ${NO_TRAIN} ${SHUFFLED_DONOR_SITE_TRAINSET_NAME} ./
+  bash splicesite/merge_shuffle_datasets.sh "${splicesite_dataloc}/train/acceptor" ${NO_TRAIN} ${SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME} ./
+
+  mv ${SHUFFLED_DONOR_SITE_TRAINSET_NAME} "${splicesite_dataloc}/train"
+  mv ${SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME} "${splicesite_dataloc}/train"
+
+  bash splicesite/merge_shuffle_datasets.sh "${splicesite_dataloc}/test/donor" ${NO_TEST} ${SHUFFLED_DONOR_SITE_TESTSET_NAME} ./
+  bash splicesite/merge_shuffle_datasets.sh "${splicesite_dataloc}/test/acceptor" ${NO_TEST} ${SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME} ./
+
+  mv ${SHUFFLED_DONOR_SITE_TESTSET_NAME} "${splicesite_dataloc}/test"
+  mv ${SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME} "${splicesite_dataloc}/test"
 }
 
 # ===================================================================================================
 # 1. step (only one time step unless you want different samples or bigger window sizes)
-generate_true_splice_site_windows &
-generate_false_splice_site_windows &
-wait
+#generate_true_splice_site_windows &
+#generate_false_splice_site_windows &
+#wait
 
 # 2. step (also a one time step unless you want different set of fungi for training)
 #split_species_to_train_test_sets
-## 3. step
-create_train_test_csvs $SPLICE_TRAIN_NAMES train
-create_train_test_csvs $SPLICE_TEST_NAMES test
-## 4. step
-mix_and_merge_windows_to_single_file
+
+# 3. step
+for strand in "plus" "minus"; do
+  splicesite_dataloc="../data/$strand/$SHROOM_SPECIES"
+
+  mkdir -p $splicesite_dataloc/train/donor/
+  mkdir -p $splicesite_dataloc/train/acceptor/
+  mkdir -p $splicesite_dataloc/test/donor/
+  mkdir -p $splicesite_dataloc/test/acceptor/
+
+  # This should create 2 folders - test and train each containing donor and acceptor windows from a particular shroom
+  create_train_test_csvs $SPLICE_TRAIN_NAMES train $strand $splicesite_dataloc
+  create_train_test_csvs $SPLICE_TEST_NAMES test $strand $splicesite_dataloc
+
+  # 4. step
+  mix_and_merge_windows_to_single_file $splicesite_dataloc
+done
+
+# 5. step
+strand="plus"
+cp "../data/${strand}/${SHROOM_SPECIES}/train/${SHUFFLED_DONOR_SITE_TRAINSET_NAME}" "../data/${SHROOM_SPECIES}_donor_plus_minus_trainset.csv"
+cp "../data/${strand}/${SHROOM_SPECIES}/train/${SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME}" "../data/${SHROOM_SPECIES}_acceptor_plus_minus_trainset.csv"
+
+cp "../data/${strand}/${SHROOM_SPECIES}/test/${SHUFFLED_DONOR_SITE_TESTSET_NAME}" "../data/${SHROOM_SPECIES}_donor_plus_minus_testset.csv"
+cp "../data/${strand}/${SHROOM_SPECIES}/test/${SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME}" "../data/${SHROOM_SPECIES}_acceptor_plus_minus_testset.csv"
+
+strand="minus"
+tail -n +2  "../data/${strand}/${SHROOM_SPECIES}/train/${SHUFFLED_DONOR_SITE_TRAINSET_NAME}" >> "../data/${SHROOM_SPECIES}_donor_plus_minus_trainset.csv"
+tail -n +2  "../data/${strand}/${SHROOM_SPECIES}/train/${SHUFFLED_ACCEPTOR_SITE_TRAINSET_NAME}" >> "../data/${SHROOM_SPECIES}_acceptor_plus_minus_trainset.csv"
+
+tail -n +2 "../data/${strand}/${SHROOM_SPECIES}/test/${SHUFFLED_DONOR_SITE_TESTSET_NAME}" >> "../data/${SHROOM_SPECIES}_donor_plus_minus_testset.csv"
+tail -n +2 "../data/${strand}/${SHROOM_SPECIES}/test/${SHUFFLED_ACCEPTOR_SITE_TESTSET_NAME}" >> "../data/${SHROOM_SPECIES}_acceptor_plus_minus_testset.csv"
