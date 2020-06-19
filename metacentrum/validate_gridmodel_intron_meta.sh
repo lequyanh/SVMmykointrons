@@ -25,6 +25,4 @@ cat classify-introns*.log >"${MODEL_FOLDER}/validation-results.txt"
 
 rm classify-introns*.log
 
-mv classify-splice-sites*.log "${MODEL_FOLDER}"
-
 rm -rf $SCRATCHDIR/*

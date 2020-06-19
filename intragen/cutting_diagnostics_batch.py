@@ -17,7 +17,7 @@ ACCEPTOR_SITE = 'acceptor'
 # NOTE: Before running this file, alter ../tools/config.py to use reduced introns (instructions are there)
 
 def batch_analyze():
-    results_dir = 'sample_results_plus_strand'
+    results_dir = 'sample_results_basidio_revisited'
     model = ''
     strand = '+'
 
@@ -26,11 +26,12 @@ def batch_analyze():
 
     for i, folder_name in enumerate(os.listdir(results_dir)):
         fungi_name = folder_name.replace('_results', '')
+        print("=========================================================================================")
 
         recall, exon_breaking_fpr = run_diagnostics(fungi_name, model, strand=strand, folder=results_dir)
         results.loc[i] = [fungi_name, recall, exon_breaking_fpr]
 
-    results.to_csv('300basidio_recall_precision.csv', sep=';', index=False)
+    results.to_csv('300basi_recall_precision_revisited.csv', sep=';', index=False)
 
 
 def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.'):

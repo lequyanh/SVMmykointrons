@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # how to run
-# qsub -l walltime=24:0:0 -l select=1:ncpus=16:mem=8gb:scratch_local=2gb -v MODEL=path/to/model,DATAFILE=ascomycota_acceptor_plus_minus_testset.csv,I_WIN=70,SUBJECT=donor,IMBALANCE_RAT=0.025,CPU=16 classify_splice_sites_perun.sh
+# qsub -l walltime=24:0:0 -l select=1:ncpus=16:mem=8gb:scratch_local=2gb -v MODEL=path/to/model,DATAFILE=ascomycota_acceptor_testset.csv,I_WIN=70,SUBJECT=donor,IMBALANCE_RAT=0.025,CPU=16 classify_splice_sites_perun.sh
 
 ROOT="/storage/praha1/home/$LOGNAME/"
 PYTHONDIR="/storage/praha1/home/$LOGNAME/miniconda3/envs/mykointron/bin"

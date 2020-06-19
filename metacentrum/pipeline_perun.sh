@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# qsub -l walltime=24:0:0 -l select=1:ncpus=10:mem=4gb:scratch_local=2gb -v assembly_filepath=#Assembly,splice_site_donor_model=#Dmodel,splice_site_acceptor_model=#Amodel,intron_model=#Imodel,phylum=#phylum,intron_source=#introns-fasta,fungi_name=#fungi pipeline_perun.sh
+# qsub -l walltime=24:0:0 -l select=1:ncpus=16:mem=8gb:scratch_local=2gb -v assembly_filepath=#Assembly,splice_site_donor_model=#Dmodel,splice_site_acceptor_model=#Amodel,intron_model=#Imodel,phylum=#phylum,intron_source=#introns-fasta,fungi_name=#fungi pipeline_perun.sh
 
 # System settings:
 #  - path to python
@@ -33,12 +33,12 @@ ACCEPTOR_LWINDOW=70
 ACCEPTOR_RWINDOW=70
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
-STRAND="-"
+STRAND="+"
 INTRON_MIN_LENGTH=40
 INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
 #    it is used in the intron prediction and it must be equal to the order used while training
-SPECT_KERNEL_ORDER_BASI=4
+SPECT_KERNEL_ORDER_BASI=6
 SPECT_KERNEL_ORDER_ASCO=6
 #  - files with intron lengths to build a probability distribution over intron lengths
 #    used as the cutting step to decide which candidate to cut in case of overlap

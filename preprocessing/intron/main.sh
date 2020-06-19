@@ -6,13 +6,10 @@ PYTHON=~/anaconda3/envs/mykointron/bin/python
 #  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
 NUMBER_CPUS=12
-
-#   - path to data storage on the remote metacenter
-ROOT="lequyanh@skirit.metacentrum.cz:/storage/praha1/home/lequyanh"
 # -------------------------------------------------------------
 
 # Pipeline settings:
-DIVISION="basidiomycota"
+DIVISION="ascomycota"
 #  - splice site dimers
 DONOR="GT"
 ACCEPTOR="AG"
@@ -24,7 +21,7 @@ ACCEPTOR_LWINDOW=70
 ACCEPTOR_RWINDOW=70
 
 # Maximal number of examples taken from each shroom for intron model training
-EXAMPLES_LIMIT=60000
+EXAMPLES_LIMIT=25000
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
 INTRON_MIN_LENGTH=40
@@ -53,8 +50,10 @@ splice_site_donor_model=$2
 splice_site_acceptor_model=$3
 #  - location of true intron sequences
 true_introns_location=$4  #/home/anhvu/Desktop/mykointrons-data/new-sequences
+#  - strand
+strand=$5
 
-if [ $# -ne 4 ]
+if [ $# -ne 5 ]
 then
     echo "Arguments expected: ASSEMBLY DONOR_MODEL ACCEPTOR_MODEL INTRON_MODEL"
     exit 1
@@ -110,6 +109,7 @@ function generate_splice_site_candidates() {
                                     $DONOR_LWINDOW $DONOR_RWINDOW \
                                     $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
                                     $EXAMPLES_LIMIT \
+                                    "$strand" \
           | gawk -v donor="$donor_regex" \
                 -v acceptor="$acceptor_regex" \
                 -v donor_file="${donor_file}" \
@@ -201,7 +201,7 @@ function generate_intron_candidates() {
     assembly_filepath="${assebmlies_loc}/${shroom_name}_AssemblyScaffolds.fasta"
 
     # extract introns from the positions from the previous step
-    $PYTHON extract-introns.py "$assembly_filepath" "$intron_positions_file" > "$introns_file"
+    $PYTHON extract-introns.py "$assembly_filepath" "$intron_positions_file" "${strand}"> "$introns_file"
 
     echo "Intron sequences are extracted in [$introns_file]."
   done < "${baseloc}/../shroom_split/${DIVISION}/intron_${train_test}_names.txt"
@@ -217,7 +217,7 @@ function label_intron_candidates() {
     intron_source="${true_introns_location}/${shroom_name}/${shroom_name}-introns.fasta"
 
     echo "Labeling intron candidates in ${introns_file} file. True introns from ${intron_source}"
-    $PYTHON label-introns.py "$introns_file" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
+    $PYTHON label_introns.py "$introns_file" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH ${strand}
 
   done < "${baseloc}/../shroom_split/${DIVISION}/intron_${train_test}_names.txt"
 }
@@ -241,10 +241,10 @@ function merge_into_one_dataset() {
     cd ../
 }
 
-#echo "Generate acceptor and donor candidates for intron training"
-#generate_splice_site_candidates "train"
-#echo "Generate acceptor and donor candidates for intron testing"
-#generate_splice_site_candidates "test"
+echo "Generate acceptor and donor candidates for intron training"
+generate_splice_site_candidates "train"
+echo "Generate acceptor and donor candidates for intron testing"
+generate_splice_site_candidates "test"
 
 # determine the number of CPUs available for each classification task
 donor_cpus=$((NUMBER_CPUS/2))
@@ -269,6 +269,4 @@ output_loc="./${DIVISION}/intron_candidates/"
 echo "Merging labeled intron dataset into one file ${INTRON_TRAIN_FILE} and ${INTRON_TEST_FILE} at ${output_loc}"
 merge_into_one_dataset ${output_loc}
 
-#echo "Copying the overal intron train file to ${ROOT}/data/intron"
-#scp "${output_loc}/${INTRON_TRAIN_FILE}" "${ROOT}/data/intron"
 

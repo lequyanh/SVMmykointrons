@@ -28,7 +28,7 @@ INTRON_MIN_LENGTH=40
 INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
 #    it is used in the intron prediction and it must be equal to the order used while training
-SPECT_KERNEL_ORDER_BASI=4
+SPECT_KERNEL_ORDER_BASI=6
 SPECT_KERNEL_ORDER_ASCO=6
 #  - files with intron lengths to build a probability distribution over intron lengths
 #    used as the cutting step to decide which candidate to cut in case of overlap

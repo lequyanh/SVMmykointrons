@@ -24,9 +24,12 @@ donor_lwindow, donor_rwindow = int(sys.argv[4]), int(sys.argv[5])
 acceptor_lwindow, acceptor_rwindow = int(sys.argv[6]), int(sys.argv[7])
 # max number of scaffolds splice site candidates to consider
 splice_sites_limit = int(sys.argv[8])
+# strand
+strand = sys.argv[9]
 
 assert len(donor) == 2, 'donor must be a dimer'
 assert len(acceptor) == 2, 'acceptor must be a dimer'
+assert strand == '+' or strand == '-'
 
 with open(assembly, 'r') as assembly_f:
     # Load scaffolds in assembly
@@ -43,7 +46,7 @@ with open(assembly, 'r') as assembly_f:
     k = 0
 
     for i, scaffold in enumerate(scaffolds):
-        sequence = scaffold.seq
+        sequence = scaffold.seq if strand == '+' else scaffold.seq.reverse_complement()
 
         for position, dimer in fl.dimers(sequence):
             if dimer == donor or dimer == acceptor:
