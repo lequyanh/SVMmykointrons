@@ -17,9 +17,9 @@ ACCEPTOR_SITE = 'acceptor'
 # NOTE: Before running this file, alter ../tools/config.py to use reduced introns (instructions are there)
 
 def batch_analyze():
-    results_dir = 'sample_results_asco_minuss'
+    results_dir = 'sample_results_asco_w_basidio_models'
     model = ''
-    strand = '-'
+    strand = '+'
 
     # Prepare columns
     results = pd.DataFrame(columns=['fungi', 'recall', 'exon_breaking_fpr'])
@@ -31,7 +31,7 @@ def batch_analyze():
         recall, exon_breaking_fpr = run_diagnostics(fungi_name, model, strand=strand, folder=results_dir)
         results.loc[i] = [fungi_name, recall, exon_breaking_fpr]
 
-    results.to_csv('500asco_recall_precision_minuss.csv', sep=';', index=False)
+    results.to_csv('500asco_recall_precision_pluss_basi_models.csv', sep=';', index=False)
 
 
 def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.'):

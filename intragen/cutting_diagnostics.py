@@ -14,7 +14,7 @@ ACCEPTOR_SITE = 'acceptor'
 
 
 def main():
-    fungi_name = 'Armosto1'
+    fungi_name = 'Kocim1'
     model = 'SVM-intragen'
     strand = '+'
     folder = 'full_results'

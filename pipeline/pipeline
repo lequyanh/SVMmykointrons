@@ -164,28 +164,24 @@ function classify_splice_sites_step() {
     else
         echo "Classifying with SVM models"
         date
-        # determine the number of CPUs available for each classification task
-        donor_cpus=$((NUMBER_CPUS/2))
-        acceptor_cpus=$((NUMBER_CPUS-donor_cpus))
 
-        echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
+        echo "Starting classification of splice sites with $NUMBER_CPUS CPUs..."
 
         $PYTHON classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
                                     $DONOR_RWINDOW $DONOR_LWINDOW \
-                                    "donor" -c $donor_cpus \
+                                    "donor" -c $NUMBER_CPUS \
             | grep $positive_splice_sites \
-            | cut -d ';' -f -2 >> $DONOR_RESULT &
-              classify_donor_pid=$!
+            | cut -d ';' -f -2 >> $DONOR_RESULT
+
+      # TODO filter acceptor file and remove some candidates based on  max intron length
+
+        $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
         $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
                                     $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
-                                    "acceptor" -c $acceptor_cpus \
+                                    "acceptor" -c $NUMBER_CPUS \
             | grep $positive_splice_sites \
-            | cut -d ';' -f -2 >> $ACCEPTOR_RESULT &
-              classify_acceptor_pid=$!
-
-        # wait for both the classification tasks to finish
-        wait $classify_donor_pid $classify_acceptor_pid
+            | cut -d ';' -f -2 >> $ACCEPTOR_RESULT
     fi
 
     date
