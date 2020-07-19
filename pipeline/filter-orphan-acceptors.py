@@ -2,20 +2,20 @@ import pandas as pd
 import numpy as np
 import sys
 
-# acceptor_file = sys.argv[1]
-# donor_results_file = sys.argv[2]
-# intron_min_len, intron_max_len = sys.argv[3:4]
+acceptor_file = sys.argv[1]
+donor_results_file = sys.argv[2]
+INTRON_MIN_LEN, INTRON_MAX_LEN = sys.argv[3:4]
 
-acceptor_file = "splice-site-acceptor-dataset.csv"
-donor_results_file = "splice-site-donor-result.csv"
-intron_min_len, intron_max_len = 40, 100
+# acceptor_file = "splice-site-acceptor-dataset.csv"
+# donor_results_file = "splice-site-donor-result.csv"
+# INTRON_MIN_LEN, INTRON_MAX_LEN = 40, 100
 
 acc_cand_df = pd.read_csv(acceptor_file, sep=';')
 donor_res_df = pd.read_csv(donor_results_file, sep=';')
 
 
-def is_acc_pairable(don_pos, acc_pos):
-    return don_pos + 40 < acc_pos < don_pos + 100
+def is_pairable(don_pos, acc_pos):
+    return don_pos + INTRON_MIN_LEN <= acc_pos <= don_pos + INTRON_MAX_LEN
 
 
 def next_acceptor(acc_positions, acc_idx):
@@ -27,46 +27,63 @@ def next_acceptor(acc_positions, acc_idx):
 
 def get_applicable_acceptors(acc_positions, donor_positions):
     acc_idx, don_idx = 0, 0
-    acc_pos = acc_positions[0]
+    acc_pos = acc_positions[acc_idx]
 
-    inrange_accs = np.empty(len(acc_positions))
+    inrange_accs = np.zeros(len(acc_positions), dtype=int)
 
+    # Loop until we run out of donors or acceptors
     while don_idx < len(donor_positions) and acc_idx < len(acc_positions):
-
-        don_pos = donor_positions['position'][don_idx]
-        if is_acc_pairable(don_pos, acc_pos):
-            while is_acc_pairable(don_pos, acc_pos) and acc_idx < len(acc_positions):
+        don_pos = donor_positions[don_idx]
+        if is_pairable(don_pos, acc_pos):
+            while acc_idx < len(acc_positions) and is_pairable(don_pos, acc_pos):
                 # If acceptor candidate in valid range, flag as OK and shift to next one
                 inrange_accs[acc_idx] = True
                 acc_idx, acc_pos = next_acceptor(acc_positions, acc_idx)
 
-            # Now the acceptor is too far. We can move to the next donor
+            # Outside the loop. Now the acceptor is too far. We can move to the next donor
             # .....d.....|..........|..a..
             don_idx += 1
 
-        # Not pairable cases
-        elif don_pos < acc_pos and not is_acc_pairable(don_pos, acc_pos):
-            # case 1: donor preceding acceptor (which is OK), but distance too short
-            # .....d..a..|..........|.....
-            # Label other too close acceptor candidates as false
-            while don_pos < acc_pos and not is_acc_pairable(don_pos, acc_pos) and acc_idx < len(acc_positions):
-                inrange_accs[acc_idx] = False
+        # -------------------------------  Not pairable cases ---------------------------------
+        # Case 1: donor preceding acceptor (which is OK), but distance too long
+        # .....d.....|..........|..a..
+        elif don_pos + INTRON_MAX_LEN < acc_pos:
+            # Just shift to next donor
+            don_idx += 1
+
+        # Case 2: donor preceding acceptor (which is OK), but distance too short
+        # .....d..a..|..........|.....
+        elif don_pos + INTRON_MIN_LEN > acc_pos:
+            # Until a pairable acceptor is found, all other ones are labeled as false
+            while acc_idx < len(acc_positions) and don_pos + INTRON_MIN_LEN > acc_pos:
                 acc_idx, acc_pos = next_acceptor(acc_positions, acc_idx)
+
+        # Case 3: donor is ahead of acceptor (should be vice versa)
+        # a........d....|..........|.....
         elif don_pos > acc_pos:
-            # case 2: donor is ahead of acceptor (should be vice versa)
-            # a........d....|..........|.....
             # Label all acceptor candidates between the current donor and previous acceptor as false
             while don_pos > acc_pos and acc_idx < len(acc_positions):
-                inrange_accs[acc_idx] = False
                 acc_idx, acc_pos = next_acceptor(acc_positions, acc_idx)
         else:
             raise ValueError
 
+    return inrange_accs.astype(bool)
 
+
+new_acc_cand_df = pd.DataFrame(columns=['scaffold', 'position', 'sequence'])
 for scaffold, donor_positions_df in donor_res_df.groupby(by='scaffold'):
-    acc_positions = acc_cand_df[acc_cand_df['scaffold'] == scaffold]['position'].values
+    acceptor_positions_df = acc_cand_df[acc_cand_df['scaffold'] == scaffold]
+
     donor_positions = donor_positions_df['position'].values
+    acc_positions = acceptor_positions_df['position'].values
 
-    applicable_accs = get_applicable_acceptors(acc_positions, donor_positions)
+    inrange_accs_mask = get_applicable_acceptors(acc_positions, donor_positions)    # Boolean mask of chosen accs
 
-    print(f'Number of acceptor candidates / survived candidates: {len(acc_positions) / sum(inrange_accs)}')
+    new_acc_cand_df = pd.concat(
+        [new_acc_cand_df, acceptor_positions_df.loc[inrange_accs_mask]])
+
+    print(f'Portion of surviving acceptor candidates: {sum(inrange_accs_mask) / len(acc_positions)}. '
+          f'Scaffold {scaffold}')
+
+new_acc_cand_df.to_csv(acceptor_file, sep=';', index=False)
+print(f'Number of acceptors before: {acc_cand_df.shape[0]}\nNumber of acceptor candidatess after filtering: {new_acc_cand_df.shape[0]}')
