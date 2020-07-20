@@ -2,16 +2,42 @@ import pandas as pd
 import numpy as np
 import sys
 
-acceptor_file = sys.argv[1]
-donor_results_file = sys.argv[2]
-INTRON_MIN_LEN, INTRON_MAX_LEN = sys.argv[3:4]
+# acceptor_file = sys.argv[1]
+# donor_results_file = sys.argv[2]
+# INTRON_MIN_LEN, INTRON_MAX_LEN = sys.argv[3], sys.argv[4]
 
-# acceptor_file = "splice-site-acceptor-dataset.csv"
-# donor_results_file = "splice-site-donor-result.csv"
-# INTRON_MIN_LEN, INTRON_MAX_LEN = 40, 100
+acceptor_file = "splice-site-acceptor-dataset.csv"
+donor_results_file = "splice-site-donor-result.csv"
+INTRON_MIN_LEN, INTRON_MAX_LEN = 40, 100
 
 acc_cand_df = pd.read_csv(acceptor_file, sep=';')
 donor_res_df = pd.read_csv(donor_results_file, sep=';')
+
+
+def main():
+    print('Removing acceptor candidates with no donor match')
+
+    # Dataframe that will hold the reduced set of acceptor candidates
+    new_acc_cand_df = pd.DataFrame(columns=['scaffold', 'position', 'sequence'])
+
+    # For each scaffold, remove all infeasible acceptors (those that cannot have a matching donor)
+    for scaffold, donor_positions_df in donor_res_df.groupby(by='scaffold'):
+        acceptor_positions_df = acc_cand_df[acc_cand_df['scaffold'] == scaffold]
+
+        donor_positions = donor_positions_df['position'].values
+        acc_positions = acceptor_positions_df['position'].values
+
+        inrange_accs_mask = get_applicable_acceptors(acc_positions, donor_positions)  # Boolean mask of chosen accs
+
+        new_acc_cand_df = pd.concat(
+            [new_acc_cand_df, acceptor_positions_df.loc[inrange_accs_mask]])
+
+        print(f'Portion of surviving acceptor candidates: {sum(inrange_accs_mask) / len(acc_positions)}. '
+              f'Scaffold {scaffold}')
+
+    new_acc_cand_df.to_csv(acceptor_file, sep=';', index=False)
+    print(f'Number of acceptors before: {acc_cand_df.shape[0]}\nNumber of acceptor candidatess after filtering: '
+          f'{new_acc_cand_df.shape[0]}')
 
 
 def is_pairable(don_pos, acc_pos):
@@ -70,20 +96,5 @@ def get_applicable_acceptors(acc_positions, donor_positions):
     return inrange_accs.astype(bool)
 
 
-new_acc_cand_df = pd.DataFrame(columns=['scaffold', 'position', 'sequence'])
-for scaffold, donor_positions_df in donor_res_df.groupby(by='scaffold'):
-    acceptor_positions_df = acc_cand_df[acc_cand_df['scaffold'] == scaffold]
-
-    donor_positions = donor_positions_df['position'].values
-    acc_positions = acceptor_positions_df['position'].values
-
-    inrange_accs_mask = get_applicable_acceptors(acc_positions, donor_positions)    # Boolean mask of chosen accs
-
-    new_acc_cand_df = pd.concat(
-        [new_acc_cand_df, acceptor_positions_df.loc[inrange_accs_mask]])
-
-    print(f'Portion of surviving acceptor candidates: {sum(inrange_accs_mask) / len(acc_positions)}. '
-          f'Scaffold {scaffold}')
-
-new_acc_cand_df.to_csv(acceptor_file, sep=';', index=False)
-print(f'Number of acceptors before: {acc_cand_df.shape[0]}\nNumber of acceptor candidatess after filtering: {new_acc_cand_df.shape[0]}')
+if __name__ == '__main__':
+    main()
