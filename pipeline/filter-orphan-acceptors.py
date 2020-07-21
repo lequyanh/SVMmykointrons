@@ -2,13 +2,9 @@ import pandas as pd
 import numpy as np
 import sys
 
-# acceptor_file = sys.argv[1]
-# donor_results_file = sys.argv[2]
-# INTRON_MIN_LEN, INTRON_MAX_LEN = sys.argv[3], sys.argv[4]
-
-acceptor_file = "splice-site-acceptor-dataset.csv"
-donor_results_file = "splice-site-donor-result.csv"
-INTRON_MIN_LEN, INTRON_MAX_LEN = 40, 100
+acceptor_file = sys.argv[1]
+donor_results_file = sys.argv[2]
+INTRON_MIN_LEN, INTRON_MAX_LEN = int(sys.argv[3]), int(sys.argv[4])
 
 acc_cand_df = pd.read_csv(acceptor_file, sep=';')
 donor_res_df = pd.read_csv(donor_results_file, sep=';')

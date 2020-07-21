@@ -139,8 +139,8 @@ function extract_donor_acceptor_step() {
     $DONOR $ACCEPTOR \
     $DONOR_LWINDOW $DONOR_RWINDOW \
     $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
-    $STRAND \
-|gawk -v donor="${donor_regex}" \
+    $STRAND |
+    gawk -v donor="${donor_regex}" \
       -v acceptor="${acceptor_regex}" \
       -v donor_file=$DONOR_FILE \
       -v acceptor_file=$ACCEPTOR_FILE \
@@ -158,31 +158,21 @@ function classify_splice_sites_step() {
 
   echo "Positive splice site positions will be saved to ${DONOR_RESULT} and ${ACCEPTOR_RESULT}"
 
-  donor_cpus=$((NUMBER_CPUS / 2))
-  acceptor_cpus=$((NUMBER_CPUS - donor_cpus))
-
-  # classify the donors and acceptors in parallel
-  # keep only the positively classified samples
-  # keep only the columns `scaffold`, and `position` (1st and 2nd)
-  echo "Starting classification of splice sites with [$donor_cpus/$acceptor_cpus] CPUs..."
+  echo "Starting classification of splice sites with $NUMBER_CPUS CPUs..."
 
   $PYTHON classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
     $DONOR_RWINDOW $DONOR_LWINDOW \
-    "donor" -c $donor_cpus |
+    "donor" -c $NUMBER_CPUS |
     grep $positive_splice_sites |
-    cut -d ';' -f -2 >>$DONOR_RESULT &
-  classify_donor_pid=$!
+    cut -d ';' -f -2 >>$DONOR_RESULT
+
+  $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
   $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
     $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
-    "acceptor" -c $acceptor_cpus |
+    "acceptor" -c $NUMBER_CPUS |
     grep $positive_splice_sites |
-    cut -d ';' -f -2 >>$ACCEPTOR_RESULT &
-  classify_acceptor_pid=$!
-
-  # wait for both the classification tasks to finish
-  wait $classify_donor_pid $classify_acceptor_pid
-  echo "Done"
+    cut -d ';' -f -2 >>$ACCEPTOR_RESULT
 }
 
 function pair_splice_sites_and_extract_introns_step() {
@@ -241,12 +231,23 @@ function cut_introns_step() {
 init
 extract_donor_acceptor_step
 classify_splice_sites_step
+
+result_dir="${fungi_name}_results"
+mkdir "${result_dir}"
+
+cp "${ACCEPTOR_RESULT}" "${result_dir}/"
+cp "${DONOR_RESULT}" "${result_dir}/"
+
+zip -r "${result_dir}.zip" "${result_dir}/"
+mv "${result_dir}.zip" "${ROOT}/results/"
+
 pair_splice_sites_and_extract_introns_step
 
-## ===================================== VALIDATE =====================================
-validate_introns_step
-## =================================== or CLASIFY =====================================
-#classify_introns_step
+if [ $intron_source == "None" ]; then
+  classify_introns_step
+else
+  validate_introns_step
+fi
 
 cut_introns_step
 
@@ -258,12 +259,7 @@ for p in ./*.log; do
   } >> pipeline.output
 done
 
-result_dir="${fungi_name}_results"
-mkdir "${result_dir}"
-
 mv "${CUT_COORDS_FILE}" "${result_dir}/"
-mv "${ACCEPTOR_RESULT}" "${result_dir}/"
-mv "${DONOR_RESULT}" "${result_dir}/"
 mv "${INTRON_RESULT}" "${result_dir}/"
 
 zip -r "${result_dir}.zip" "${result_dir}/"
