@@ -23,6 +23,9 @@ def main():
         donor_positions = donor_positions_df['position'].values
         acc_positions = acceptor_positions_df['position'].values
 
+        if acc_positions.shape[0] == 0:
+            continue
+
         inrange_accs_mask = get_applicable_acceptors(acc_positions, donor_positions)  # Boolean mask of chosen accs
 
         new_acc_cand_df = pd.concat(

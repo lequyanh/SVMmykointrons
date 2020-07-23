@@ -74,4 +74,4 @@ if __name__ == '__main__':
                                                 donor_position + intron_max_len)
 
         for acceptor_position in acceptor_positions:
-            print(scaffold, donor_position, acceptor_position + 1)
+            print(scaffold, donor_position, acceptor_position + 1, sep=";")

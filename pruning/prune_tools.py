@@ -3,6 +3,7 @@ from typing import List
 from typing import Tuple
 
 import pandas as pd
+from Bio import SeqIO
 from scipy import stats
 
 from fastalib import read_fasta
@@ -25,7 +26,7 @@ def load_as_dicts(fasta_to_purge: str, intron_locs: str):
     # Load FASTA with DNA to cleanse introns from.
     # Load as dictionary where keys are scaffold names
     with open(fasta_to_purge, 'r') as f:
-        scaffolds_input = {desc: seq for desc, seq in read_fasta(f)}
+        scaffolds_input = {seq_record.id: str(seq_record.seq) for seq_record in SeqIO.parse(f, 'fasta')}
 
     # Load intron location data
     intron_pos_df = pd.read_csv(intron_locs, delimiter=";")

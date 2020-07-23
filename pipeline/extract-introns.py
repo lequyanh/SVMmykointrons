@@ -13,7 +13,7 @@ logging.basicConfig(
 
 def sequences(file):
     for line in file.readlines():
-        words = line.strip().split(' ')
+        words = line.strip().split(';')
         assert len(words) >= 3, \
             'each line must contain at least scaffold with a start and stop position'
         assert len(words) % 2 == 1, \

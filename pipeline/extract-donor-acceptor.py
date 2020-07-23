@@ -1,5 +1,7 @@
 import logging
 
+from Bio import SeqIO
+
 import fastalib as fl
 import sys
 
@@ -25,7 +27,10 @@ assert strand == '+' or strand == '-'
 
 with open(assembly, 'r') as assembly_f:
     # loop through the whole assembly
-    for scaffold, sequence in fl.read_fasta(assembly_f):
+    for scaffold_sr in SeqIO.parse(assembly_f, 'fasta'):
+        scaffold = scaffold_sr.id
+        sequence = str(scaffold_sr.seq)
+
         if strand == '-':
             sequence = fl.complementary(sequence)[::-1]  # Reverse complement
 
