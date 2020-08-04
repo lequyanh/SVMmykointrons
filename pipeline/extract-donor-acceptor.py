@@ -44,7 +44,7 @@ with open(assembly, 'r') as assembly_f:
                 win_end = position + rwindow + 1
 
                 if win_start < 0:
-                    logging.warning(f'Insufficient bases for window. Skipping')
+                    # Insufficient bases for window. Skipping
                     continue
 
                 # extract the window

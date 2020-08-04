@@ -237,6 +237,7 @@ mkdir "${result_dir}"
 
 cp "${ACCEPTOR_RESULT}" "${result_dir}/"
 cp "${DONOR_RESULT}" "${result_dir}/"
+cp "${INTRON_POSITIONS_FILE}" "${result_dir}/"
 
 zip -r "${result_dir}.zip" "${result_dir}/"
 mv "${result_dir}.zip" "${ROOT}/results/"

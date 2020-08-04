@@ -1,7 +1,6 @@
 import os
 import sys
 
-from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
@@ -39,17 +38,15 @@ def prune(
             begin_converted, end_converted = convert_coords(cut_idxs[0], cut_idxs[1], fragment_start - 1)
 
         pre_intron_region = scaffold_prepruned[fragment_start:begin_converted]
-        intron = scaffold_prepruned[begin_converted:end_converted]
-
         purged_fragments.append(pre_intron_region)
+
+        intron = scaffold_prepruned[begin_converted:end_converted]
+        assert intron[:2] == 'GT' and intron[- 2:] == 'AG'
         introns.append(intron)
 
-        length_check = len(''.join(purged_fragments)) + len(''.join(introns))
-
-        prev_fragment_origin = fragment_start
         fragment_start = end_converted
 
-        assert intron[:2] == 'GT' and intron[- 2:] == 'AG'
+        length_check = len(''.join(purged_fragments)) + len(''.join(introns))
         assert length_check > len(''.join(purged_fragments))
         try:
             assert length_check == end_converted
@@ -57,7 +54,7 @@ def prune(
             logging.warning(f'Fragment origin is {fragment_start} but length check is {length_check} '
                             f'Scaffold {scaffold}')
 
-        return purged_fragments, introns, fragment_start, prev_fragment_origin
+        return purged_fragments, introns, fragment_start
 
     cut_coords = None
     multioverlap_flag = False
@@ -72,32 +69,48 @@ def prune(
 
         if multioverlap_flag:
             if cut_coords[1] >= next_cut_coords[0]:
-                logging.info("Triple overlap")
+                # We are still in the chain of overlaps. Keep searching for the best cut (by un-doing the last cut)
                 fragment_origin = prev_fragment_origin
                 # noinspection PyUnboundLocalVariable
                 purged_fragments.pop()
                 # noinspection PyUnboundLocalVariable
                 introns.pop()
             else:
-                cut_coords = next_cut_coords  # Only for non-quadra overlap will be skipped
+                # No more chaining overlaps.
+                # Print the best candidate and continue as usual
+                print(f'{scaffold};{cut_coords[0]};{cut_coords[1]}')
+
+                cut_coords = next_cut_coords
                 multioverlap_flag = False
                 continue
 
         multioverlap_flag = cut_coords[1] >= next_cut_coords[0]
-        # In case of double overlap, re-evaluate the best cut
+        # In case of double overlap, re-evaluate the best cut before cutting
         if multioverlap_flag:
             cut_coords = pdf_length_compare(cut_coords[0], cut_coords[1], next_cut_coords[0], next_cut_coords[1])
 
-        print(f'{scaffold};{cut_coords[0]};{cut_coords[1]}')
-        purged_fragments, introns, fragment_origin, prev_fragment_origin = cut_region(fragment_origin, cut_coords)
-        cut_coords = next_cut_coords
+            prev_fragment_origin = fragment_origin
+            purged_fragments, introns, fragment_origin = cut_region(fragment_origin, cut_coords)
 
-    if _overlap_introns and not multioverlap_flag:
-        # Process the last overlap (if not multi-overlap)
-        purged_fragments, introns, fragment_origin, _ = cut_region(fragment_origin, cut_coords)
+            # Do not update 'cut_coords' as 'next_cut_coord' will be an overlapping one
+        else:
+            prev_fragment_origin = fragment_origin
+            purged_fragments, introns, fragment_origin = cut_region(fragment_origin, cut_coords)
 
+            print(f'{scaffold};{cut_coords[0]};{cut_coords[1]}')
+            cut_coords = next_cut_coords
+
+    # Processed all but one overlaps (we are one behind so we can detect multi-overlaps). Finish cutting the last
     if _overlap_introns:
-        # Processed all overlaps. Just add the rest of the sequence
+        if multioverlap_flag:
+            # If finished with multi-overlap, print the last known best candidate
+            print(f'{scaffold};{cut_coords[0]};{cut_coords[1]}')
+        else:
+            # The last overlap is a simple one and has been already printed.
+            # Just update the intron list and purged fragments list
+            purged_fragments, introns, fragment_origin = cut_region(fragment_origin, cut_coords)
+
+        # All overlaps have been resolved. Just add the rest of the sequence
         rest_of_exon = scaffold_prepruned[fragment_origin:]
         purged_fragments.append(rest_of_exon)
 
