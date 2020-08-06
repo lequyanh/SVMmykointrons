@@ -8,7 +8,7 @@ from prune_tools import *
 
 
 def convert_coords(begin, end, start):
-    intron = scaffold_sequences[scaffold][begin - 1:end]
+    intron = scaffold_dna[begin - 1:end]
 
     begin_converted = scaffold_prepruned.find(intron, start)
     end_converted = begin_converted + len(intron)
@@ -129,7 +129,8 @@ def prune(
 if __name__ == "__main__":
     fasta_to_purge = sys.argv[1]  # /home/anhvu/Desktop/Desktop/S21_contigs.fasta
     intron_locs = sys.argv[2]  # CSV with intron locations
-    counts_file = sys.argv[3]  # file with typical intron counts. Used to create prob. dens. function
+    strand = sys.argv[3]
+    counts_file = sys.argv[4]  # file with typical intron counts. Used to create prob. dens. function
     # /home/anhvu/PycharmProjects/mycointrons/statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt
 
     scaffold_sequences, intron_coords = load_as_dicts(fasta_to_purge, intron_locs)
@@ -141,9 +142,12 @@ if __name__ == "__main__":
     pruned_scaffolds = dict()
     for scaffold, (non_overlap_introns, overlap_introns) in overlaps_dict.items():
         logging.info(f'Processing scaffold {scaffold}')
-        scaffold_dna = scaffold_sequences[scaffold]
 
-        scaffold_prepruned, _ = prune_non_overlap_introns(scaffold, scaffold_dna, non_overlap_introns)
+        scaffold_dna = scaffold_sequences[scaffold]
+        if strand == '-':
+            scaffold_dna = str(Seq(scaffold_sequences[scaffold]).reverse_complement())
+
+        scaffold_prepruned = prune_non_overlap_introns(scaffold, scaffold_dna, non_overlap_introns)
         exon_fragments = prune(scaffold_prepruned, overlap_introns)
 
         pruned_scaffolds[scaffold] = ''.join(exon_fragments)

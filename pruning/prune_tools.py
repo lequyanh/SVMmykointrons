@@ -52,8 +52,8 @@ def find_overlaps(_intron_coords: dict):
     overlaps_dict = dict()
     for scaffold, positions in _intron_coords.items():
         # The "last last" vars are needed in case the overlap is not between two immediate neighbours (it skips one)
-        # e.g. for intron positions 10-15, 12-13, 14-16)
-        last_end, last_start, last_last_start, last_last_end = 0, 0, 0, 0
+        # e.g. for intron positions 10-15, 12-14, 14-16)
+        last_end, last_start, max_end_start, max_end = 0, 0, 0, 0
         positions_non_overlap, positions_overlap = [], []
         correction = 0
 
@@ -69,21 +69,21 @@ def find_overlaps(_intron_coords: dict):
 
                 overlap_ratio = (last_end - start) / (last_end - last_start)
                 logging.info(f'{scaffold}> simple overlap ratio {overlap_ratio}')
-            elif last_end <= start <= last_last_end:
+            elif last_end <= start <= max_end:
                 # remove the last overlap. That intron is too short anyways, so ignore it
                 positions_overlap = positions_overlap[:-1]
                 logging.warning("Overlap type: skip one")
 
-                positions_overlap.append((last_last_start, last_last_end, start, end))
+                positions_overlap.append((max_end_start, max_end, start, end))
                 # even though we should increment for multi-overlap count, we removed one overlap pair
                 # Therefore we removed 2 intron positions and added one overlap position, i.e. -2 + 1
                 correction -= 1
             else:
                 positions_non_overlap += [(start, end)]
 
-            last_last_end = last_end
+            max_end = max(max_end, end)
             last_end = end
-            last_last_start = last_start
+            max_end_start = start if max_end == end else max_end_start
             last_start = start
 
         assert len(positions) == len(positions_non_overlap) + 2 * len(positions_overlap) - correction
@@ -102,7 +102,6 @@ def prune_non_overlap_introns(
     :return: Pruned scaffold and mapping between exon coordinates from the unpruned DNA to the pruned one
     """
     exon_begin = 0
-    exon_coord_mapping = []
     purged_scaffold = ''
     for intron_begin, intron_end in non_overlap_introns:
 
@@ -116,17 +115,15 @@ def prune_non_overlap_introns(
 
         # Save coordinates. @exon_begin are the original ones. Coords in pruned DNA are just the current length
         # since the exons there are just glued together one by one.
-        exon_coord_mapping.append((exon_begin, len(purged_scaffold)))
         purged_scaffold += exon_seq
 
         exon_begin = intron_end  # Shift the exon beginning to the intron end
 
     # Add the remainder of the sequence as exon (only if there has been any non-overlap introns)
-    exon_coord_mapping.append((exon_begin, len(purged_scaffold)))
     exon_seq = scaffold_dna[exon_begin:]
     purged_scaffold += exon_seq
 
-    return purged_scaffold, exon_coord_mapping
+    return purged_scaffold
 
 
 def get_scaffold_without_introns(original_scaffolds: dict, to_prune_scaffolds: dict):
