@@ -238,7 +238,7 @@ function cut_introns_step() {
     echo "Cutting introns. Intron length distribution derived from file ${intron_lens_data}"
 
     echo "scaffold;start;end" > ${CUT_COORDS_FILE}
-    $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${intron_lens_data} >> "${CUT_COORDS_FILE}"
+    $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${STRAND} ${intron_lens_data} >> "${CUT_COORDS_FILE}"
 }
 
 init

@@ -33,7 +33,7 @@ ACCEPTOR_LWINDOW=70
 ACCEPTOR_RWINDOW=70
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
-STRAND="+"
+STRAND="-"
 INTRON_MIN_LENGTH=40
 INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
@@ -225,7 +225,7 @@ function cut_introns_step() {
   echo "Cutting introns. Intron length distribution derived from file ${intron_lens_data}"
 
   echo "scaffold;start;end" > ${CUT_COORDS_FILE}
-  $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${intron_lens_data} $STRAND >> "${CUT_COORDS_FILE}"
+  $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${STRAND} ${intron_lens_data} >> "${CUT_COORDS_FILE}"
 }
 
 init
@@ -237,7 +237,6 @@ mkdir "${result_dir}"
 
 cp "${ACCEPTOR_RESULT}" "${result_dir}/"
 cp "${DONOR_RESULT}" "${result_dir}/"
-cp "${INTRON_POSITIONS_FILE}" "${result_dir}/"
 
 zip -r "${result_dir}.zip" "${result_dir}/"
 mv "${result_dir}.zip" "${ROOT}/results/"
@@ -250,6 +249,10 @@ else
   validate_introns_step
 fi
 
+cp "${INTRON_RESULT}" "${result_dir}/"
+zip -r "${result_dir}.zip" "${result_dir}/"
+mv "${result_dir}.zip" "${ROOT}/results/"
+
 cut_introns_step
 
 echo "Pipeline log for file ${assembly_filepath}" > pipeline.output
@@ -261,7 +264,6 @@ for p in ./*.log; do
 done
 
 mv "${CUT_COORDS_FILE}" "${result_dir}/"
-mv "${INTRON_RESULT}" "${result_dir}/"
 
 zip -r "${result_dir}.zip" "${result_dir}/"
 mv "${result_dir}.zip" "${ROOT}/results/"
