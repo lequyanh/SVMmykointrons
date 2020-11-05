@@ -23,7 +23,7 @@ ACCEPTOR_LWINDOW=70
 ACCEPTOR_RWINDOW=70
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
-STRAND="+"
+STRAND="-"
 INTRON_MIN_LENGTH=40
 INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
@@ -246,10 +246,11 @@ extract_donor_acceptor_step
 classify_splice_sites_step
 pair_splice_sites_and_extract_introns_step
 
-## ===================================== VALIDATE =====================================
-#validate_introns_step
-## =================================== or CLASIFY =====================================
-#classify_introns_step
+if [ "$intron_source" ]; then
+  validate_introns_step
+else
+  classify_introns_step
+fi
 
 cut_introns_step
 

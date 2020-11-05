@@ -45,6 +45,11 @@ elif [ "$phylum" == 'basidiomycota' ]; then
   dmodel="${fmodel}/basidio-dmodel-plusminus-C-10-d-25-70.hd5"
   amodel="${fmodel}/basidio-amodel-plusminus-C-10-d-25-70-subsampled.hd5"
   imodel="${fmodel}/intron-model-C-7-d-6.hd5"
+
+elif [ "$phylum" == 'random' ]; then
+  dmodel="random"
+  amodel="random"
+  imodel="random"
 fi
 
 if [ $is_metagenom ]; then

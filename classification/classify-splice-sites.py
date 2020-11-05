@@ -27,6 +27,7 @@ from tools import read_data
 from tools import read_model
 
 DNA_SYMBOLS = np.array(['A', 'T', 'C', 'G', 'N'])
+BASIDIO_DONOR_FREQ = 1 / 40
 
 
 def main():
@@ -55,14 +56,17 @@ def main():
     )
     logging.info(f'Classification of file {data_file} with model {model_file}')
 
-    model_extension = os.path.splitext(model_file)[1]
-    if model_extension == '.hd5':
-        input_df, predictions = get_svm_predictions(model_file, data_file, window_inner, window_outer, site, ncpus)
-    elif model_extension == '.h5':
-        input_df, predictions = get_dnn_predictions(model_file, data_file, window_inner, window_outer, site)
+    if model_file == 'random':
+        input_df, predictions = get_random_predictions(data_file, window_inner, window_outer, site)
     else:
-        logging.warning(f'Unknown model extension {model_extension}. Exiting.')
-        return
+        model_extension = os.path.splitext(model_file)[1]
+        if model_extension == '.hd5':
+            input_df, predictions = get_svm_predictions(model_file, data_file, window_inner, window_outer, site, ncpus)
+        elif model_extension == '.h5':
+            input_df, predictions = get_dnn_predictions(model_file, data_file, window_inner, window_outer, site)
+        else:
+            logging.warning(f'Unknown model extension {model_extension}. Exiting.')
+            return
 
     output_df = input_df.assign(pred=pd.Series(predictions))
     output_df.to_csv(sys.stdout, sep=';', index=False)
@@ -131,6 +135,20 @@ def get_dnn_predictions(model_file, data_file, window_inner, window_outer, site)
     predictions[np.where(predictions < 0.65)] = -1  # negative classes are -1 as opposed to NN output (which is 0)
     predictions[np.where(predictions >= 0.65)] = 1
     predictions = predictions.astype(np.int32)
+
+    return input_df, predictions
+
+
+def get_random_predictions(data_file, window_inner, window_outer, site, ):
+    window = (window_outer, window_inner) if site == 'donor' else (window_inner, window_outer)
+
+    input_df = read_data(data_file, window)  # window can be random
+    n = len(input_df)
+    f = 2 * BASIDIO_DONOR_FREQ
+
+    frequencies = [1 - f, f]
+
+    predictions = np.random.choice([0, 1], n, replace=True, p=frequencies)
 
     return input_df, predictions
 

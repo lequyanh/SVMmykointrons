@@ -46,15 +46,19 @@ if __name__ == "__main__":
     ncpus = int(arguments['-c'])
 
     data = pd.read_csv(data_file, sep=';')
-    model = read_model(model_file)
 
-    sg.Parallel().set_num_threads(ncpus)
+    if model_file != 'random':
+        model = read_model(model_file)
 
-    features = create_features(kernel_order, data['sequence'].tolist())
-    predict = model.apply_binary(features)
+        sg.Parallel().set_num_threads(ncpus)
 
-    data.assign(prediction=pd.Series(list(predict.get_int_labels()))) \
-        .to_csv(sys.stdout, sep=';', index=False)
+        features = create_features(kernel_order, data['sequence'].tolist())
+        predict = model.apply_binary(features)
+        predictions = list(predict.get_int_labels())
+    else:
+        predictions = list([1] * len(data))
+
+    data.assign(prediction=pd.Series(predictions)).to_csv(sys.stdout, sep=';', index=False)
 
     if 'label' in data:
         logging.basicConfig(
@@ -68,7 +72,7 @@ if __name__ == "__main__":
 
         metrics_data = performance_metrics(
             labels.get_int_labels(),
-            predict.get_int_labels(),
+            predictions,
             imbalance_rat=None
         )
 
