@@ -1,6 +1,16 @@
 #!/bin/bash
 
-# qsub -l walltime=24:0:0 -l select=1:ncpus=16:mem=8gb:scratch_local=2gb -v assembly_filepath=#Assembly,splice_site_donor_model=#Dmodel,splice_site_acceptor_model=#Amodel,intron_model=#Imodel,phylum=#phylum,intron_source=#introns-fasta,fungi_name=#fungi pipeline_perun.sh
+# qsub -l walltime=24:0:0 -l select=1:ncpus=16:mem=8gb:scratch_local=2gb -v \
+#   assembly_filepath=#Assembly, \
+#   splice_site_donor_model=#Dmodel, \
+#   splice_site_acceptor_model=#Amodel, \
+#   intron_model=#Imodel, \
+#   dwindow=#donor_window, \
+#   awindow=#acceptor_window, \
+#   strand=#strand
+#   intron_source=#introns-fasta, \
+#   fungi_name=#fungi \
+#   pipeline_perun.sh
 
 # System settings:
 #  - path to python
@@ -25,21 +35,6 @@ cd "${SCRATCHDIR}" || exit 2
 #  - splice site dimers
 DONOR="GT"
 ACCEPTOR="AG"
-#  - window size used when extracting splice sites sequences
-#    the size is equal to the size of window used to train the models
-DONOR_LWINDOW=70
-DONOR_RWINDOW=70
-ACCEPTOR_LWINDOW=70
-ACCEPTOR_RWINDOW=70
-#  - range of intron lengths
-#    considered when extracting introns from the positions of the positively classified splice sites
-STRAND="-"
-INTRON_MIN_LENGTH=40
-INTRON_MAX_LENGTH=100
-#  - order of the spectrum kernel
-#    it is used in the intron prediction and it must be equal to the order used while training
-SPECT_KERNEL_ORDER_BASI=6
-SPECT_KERNEL_ORDER_ASCO=6
 #  - files with intron lengths to build a probability distribution over intron lengths
 #    used as the cutting step to decide which candidate to cut in case of overlap
 INTRON_LENGTH_DATA_BASI="basidiomycota-intron-lens.txt"
@@ -61,17 +56,6 @@ INTRON_FILE="intron-dataset.csv"
 #  - name of the file for intron classification results
 INTRON_RESULT="intron-result.csv"
 CUT_COORDS_FILE="cut-coords.csv"
-# -------------------------------------------------------------
-
-# Derived variables:
-# regex used to determine splice site sequences
-donor_regex=";[ACGT]{$DONOR_LWINDOW}$DONOR[ACGT]{$DONOR_RWINDOW}$"
-acceptor_regex=";[ACGT]{$ACCEPTOR_LWINDOW}$ACCEPTOR[ACGT]{$ACCEPTOR_RWINDOW}$"
-# regex to filter positively classified splice sites
-positive_splice_sites=";1$"
-# regex to filter positively classified introns
-positive_introns=";1$"
-# -------------------------------------------------------------
 
 ## Pipeline inputs:
 ##  - Assembly file (FASTA)
@@ -82,12 +66,38 @@ positive_introns=";1$"
 #splice_site_acceptor_model=$3
 ##  - intron prediction model
 #intron_model=$4
-##  - basiomycota or ascomycota. For adjusting parameters
-#phylum=$5
+## settings for work with sequence windows
+#dwindow=$5
+#awindow=$6
+## strand
+#strand=$7
 ##  - in case of validation
-#intron_source=$6 #"/home/anhvu/Desktop/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta"
-#
-#fungi_name=$7
+#intron_source=$8 #"/home/anhvu/Desktop/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta"
+#fungi_name=$9
+
+#  - window size used when extracting splice sites sequences
+#    the size is equal to the size of window used to train the models
+DONOR_LWINDOW=${dwindow}
+DONOR_RWINDOW=${dwindow}
+ACCEPTOR_LWINDOW=${awindow}
+ACCEPTOR_RWINDOW=${awindow}
+
+# Derived variables:
+# regex used to determine splice site sequences
+donor_regex=";[ACGT]{$DONOR_LWINDOW}$DONOR[ACGT]{$DONOR_RWINDOW}$"
+acceptor_regex=";[ACGT]{$ACCEPTOR_LWINDOW}$ACCEPTOR[ACGT]{$ACCEPTOR_RWINDOW}$"
+# regex to filter positively classified splice sites
+positive_splice_sites=";1$"
+# regex to filter positively classified introns
+positive_introns=";1$"
+# -------------------------------------------------------------
+#  - range of intron lengths
+#    considered when extracting introns from the positions of the positively classified splice sites
+INTRON_MIN_LENGTH=40
+INTRON_MAX_LENGTH=100
+#  - order of the spectrum kernel
+#    it is used in the intron prediction and it must be equal to the order used while training
+SPECT_KERNEL_ORDER=6
 
 # -------------------------------------------------------------
 
@@ -107,29 +117,8 @@ set -e
 # enable pipe fail
 set -o pipefail
 
-function init() {
-  case $phylum in
-  "ascomycota")
-    echo "Loading settings for ${phylum}"
-    spect_kernel_order=${SPECT_KERNEL_ORDER_ASCO}
-    intron_lens_data=${INTRON_LENGTH_DATA_ASCO}
-    ;;
-
-  "basidiomycota")
-    echo "Loading settings for ${phylum}"
-    spect_kernel_order=${SPECT_KERNEL_ORDER_BASI}
-    intron_lens_data=${INTRON_LENGTH_DATA_BASI}
-    ;;
-
-  *)
-    echo "Phylum not known, exiting" &
-    exit
-    ;;
-  esac
-}
-
 function extract_donor_acceptor_step() {
-  echo "Extracting donors and acceptors from [$assembly_filepath] on $STRAND strand..."
+  echo "Extracting donors and acceptors from [$assembly_filepath] on $strand strand..."
 
   # prepare files for the donor and acceptor datasets
   echo "scaffold;position;sequence" > $DONOR_FILE
@@ -139,7 +128,7 @@ function extract_donor_acceptor_step() {
     $DONOR $ACCEPTOR \
     $DONOR_LWINDOW $DONOR_RWINDOW \
     $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
-    $STRAND |
+    $strand |
     gawk -v donor="${donor_regex}" \
       -v acceptor="${acceptor_regex}" \
       -v donor_file=$DONOR_FILE \
@@ -186,7 +175,7 @@ function pair_splice_sites_and_extract_introns_step() {
   echo "Extracting introns from the positions..."
 
   # extract introns from the positions from the previous step
-  $PYTHON extract-introns.py "$assembly_filepath" $INTRON_POSITIONS_FILE $STRAND > $INTRON_FILE
+  $PYTHON extract-introns.py "$assembly_filepath" $INTRON_POSITIONS_FILE "$strand" > $INTRON_FILE
 
   echo "Intron sequences are extracted in [$INTRON_FILE]."
   echo ""
@@ -197,7 +186,7 @@ function pair_splice_sites_and_extract_introns_step() {
 }
 
 function classify_introns_step() {
-  echo "Starting classification of the introns using spectral kernel order ${spect_kernel_order}"
+  echo "Starting classification of the introns using spectral kernel order ${SPECT_KERNEL_ORDER}"
 
   # prepare a file for the intron classification results
   echo "scaffold;start;end" > $INTRON_RESULT
@@ -205,7 +194,7 @@ function classify_introns_step() {
   # classify the introns
   # keep only the positively classified samples
   # keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-  $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $spect_kernel_order |
+  $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER |
     grep $positive_introns |
     cut -d ';' -f -3 >> $INTRON_RESULT
 
@@ -214,10 +203,10 @@ function classify_introns_step() {
 
 function validate_introns_step() {
   echo "Labeling intron dataset"
-  $PYTHON label_introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH $STRAND
+  $PYTHON label_introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH "$strand"
 
-  echo "Starting validation of the intron dataset using spectral kernel order ${spect_kernel_order}"
-  $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $spect_kernel_order |
+  echo "Starting validation of the intron dataset using spectral kernel order ${SPECT_KERNEL_ORDER}"
+  $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER |
     cut --complement -d ';' -f4 >> $INTRON_RESULT
 }
 
@@ -225,10 +214,9 @@ function cut_introns_step() {
   echo "Cutting introns. Intron length distribution derived from file ${intron_lens_data}"
 
   echo "scaffold;start;end" > ${CUT_COORDS_FILE}
-  $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${STRAND} ${intron_lens_data} >> "${CUT_COORDS_FILE}"
+  $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${strand} ${intron_lens_data} >> "${CUT_COORDS_FILE}"
 }
 
-init
 extract_donor_acceptor_step
 classify_splice_sites_step
 
