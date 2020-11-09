@@ -50,6 +50,7 @@ elif [ "$phylum" == 'random' ]; then
   dmodel="random"
   amodel="random"
   imodel="random"
+  phylum="basidiomycota"
 fi
 
 if [ $is_metagenom ]; then

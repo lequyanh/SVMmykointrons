@@ -28,6 +28,7 @@ from tools import read_model
 
 DNA_SYMBOLS = np.array(['A', 'T', 'C', 'G', 'N'])
 BASIDIO_DONOR_FREQ = 1 / 40
+np.random.seed(42)
 
 
 def main():

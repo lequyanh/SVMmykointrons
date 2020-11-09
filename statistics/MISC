@@ -4,11 +4,10 @@ Kocim1
 * We cut 33k intron candidates
 * There are 19042 true introns on one strand and 13819 of them are in range 40-100
 * There are 970 000 donor candidates -> frequency of true GTs is 20k/970k = 1/40 cca
-* Random cuts 2540 introns, gets 5 of them right. If we cut 33k, we would expect 80 right, which is >1% recall
-
+* Random cuts 10k introns, gets 36 of them right. If we cut 33k, we would expect 100 right, which is cca 1% recall
 
 Walic1
 * We cut 26k intron candidates
 * There are 6000 true introns on one strand and 5720 of them are in range 40-100
 * There are 555 000 donor candidates -> frequency of true GTs is 5720/555k = 1/100 cca
-* Random cuts 1400 introns, gets 2 of them right. If we cut 26k, we would expect 40 right, which is >1% recall
+* Random cuts 5542 introns, gets 11 of them right. If we cut 26k, we would expect 55 right, which is cca 1% recall

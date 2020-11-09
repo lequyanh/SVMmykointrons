@@ -23,7 +23,7 @@ ACCEPTOR_LWINDOW=70
 ACCEPTOR_RWINDOW=70
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
-STRAND="-"
+STRAND="+"
 INTRON_MIN_LENGTH=40
 INTRON_MAX_LENGTH=100
 #  - order of the spectrum kernel
@@ -173,7 +173,7 @@ function classify_splice_sites_step() {
             | grep $positive_splice_sites \
             | cut -d ';' -f -2 >> $DONOR_RESULT
 
-        $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
+#        $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
         $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
                                     $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
