@@ -29,6 +29,10 @@ echo "Loaded scripts"
 
 cd "${SCRATCHDIR}" || exit 2
 
+#cp "${ROOT}/results/${fungi_name}_results.zip" "${SCRATCHDIR}" || exit 2
+#unzip "${fungi_name}_results.zip"
+#cp "${fungi_name}_results/*" .
+
 # -------------------------------------------------------------
 
 # Pipeline settings:
@@ -37,8 +41,7 @@ DONOR="GT"
 ACCEPTOR="AG"
 #  - files with intron lengths to build a probability distribution over intron lengths
 #    used as the cutting step to decide which candidate to cut in case of overlap
-INTRON_LENGTH_DATA_BASI="basidiomycota-intron-lens.txt"
-INTRON_LENGTH_DATA_ASCO="ascomycota-intron-lens.txt"
+intron_lens_data="basidiomycota-intron-lens.txt"
 
 # OUTPUT FILES
 #  - names of the splice site datasets
