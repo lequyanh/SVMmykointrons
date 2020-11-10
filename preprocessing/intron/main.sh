@@ -13,12 +13,6 @@ DIVISION="ascomycota"
 #  - splice site dimers
 DONOR="GT"
 ACCEPTOR="AG"
-#  - window size used when extracting splice sites sequences
-#    the size is equal to the size of window used to train the models
-DONOR_LWINDOW=70
-DONOR_RWINDOW=70
-ACCEPTOR_LWINDOW=70
-ACCEPTOR_RWINDOW=70
 
 # Maximal number of examples taken from each shroom for intron model training
 EXAMPLES_LIMIT=25000
@@ -48,14 +42,23 @@ assebmlies_loc=$1   #/home/anhvu/Desktop/mykointrons-data/data/Assembly
 splice_site_donor_model=$2
 #  - acceptor splice site prediction model
 splice_site_acceptor_model=$3
+#  - window size used when extracting splice sites sequences
+#    the size is equal to the size of window used to train the classification models
+dwindow=$4
+awindow=$5
 #  - location of true intron sequences
-true_introns_location=$4  #/home/anhvu/Desktop/mykointrons-data/new-sequences
+true_introns_location=$6  #/home/anhvu/Desktop/mykointrons-data/new-sequences
 #  - strand
-strand=$5
+strand=$7
 
-if [ $# -ne 5 ]
+DONOR_LWINDOW=${dwindow}
+DONOR_RWINDOW=${dwindow}
+ACCEPTOR_LWINDOW=${awindow}
+ACCEPTOR_RWINDOW=${awindow}
+
+if [ $# -ne 7 ]
 then
-    echo "Arguments expected: ASSEMBLY DONOR_MODEL ACCEPTOR_MODEL INTRON_MODEL"
+    echo "Arguments expected: ASSEMBLY DONOR_MODEL ACCEPTOR_MODEL DWINDOW AWINDOW INTRONS_LOC STRAND"
     exit 1
 fi
 

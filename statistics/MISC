@@ -11,3 +11,6 @@ Walic1
 * There are 6000 true introns on one strand and 5720 of them are in range 40-100
 * There are 555 000 donor candidates -> frequency of true GTs is 5720/555k = 1/100 cca
 * Random cuts 5542 introns, gets 11 of them right. If we cut 26k, we would expect 55 right, which is cca 1% recall
+
+Armost1
+Splice site classification took 16h 15minutes

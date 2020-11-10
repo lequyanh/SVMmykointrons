@@ -15,6 +15,7 @@
 # System settings:
 #  - path to python
 PYTHON="/storage/praha1/home/${LOGNAME}/miniconda3/envs/mykointron/bin/python"
+PYTHON_SHOGUN="/storage/praha1/home/${LOGNAME}/miniconda3/envs/mykointron_shogun/bin/python"
 #  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
 NUMBER_CPUS=16
@@ -124,8 +125,8 @@ function extract_donor_acceptor_step() {
   echo "Extracting donors and acceptors from [$assembly_filepath] on $strand strand..."
 
   # prepare files for the donor and acceptor datasets
-  echo "scaffold;position;sequence" > $DONOR_FILE
-  echo "scaffold;position;sequence" > $ACCEPTOR_FILE
+  echo "scaffold;position;sequence" >$DONOR_FILE
+  echo "scaffold;position;sequence" >$ACCEPTOR_FILE
 
   $PYTHON extract-donor-acceptor.py "${assembly_filepath}" \
     $DONOR $ACCEPTOR \
@@ -145,26 +146,50 @@ function extract_donor_acceptor_step() {
 
 function classify_splice_sites_step() {
   # prepare files for the donor and acceptor classification results
-  echo "scaffold;position" > $DONOR_RESULT
-  echo "scaffold;position" > $ACCEPTOR_RESULT
+  echo "scaffold;position" >$DONOR_RESULT
+  echo "scaffold;position" >$ACCEPTOR_RESULT
 
-  echo "Positive splice site positions will be saved to ${DONOR_RESULT} and ${ACCEPTOR_RESULT}"
+  # classify the donors and acceptors, keep only the positively classified samples
+  # keep only the columns `scaffold`, and `position` (1st and 2nd)
+  if [ "${splice_site_donor_model: -3}" == ".h5" ]; then
+    echo "Classifying with NN models"
+    date
 
-  echo "Starting classification of splice sites with $NUMBER_CPUS CPUs..."
+    $PYTHON classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
+      "${DONOR_RWINDOW}" "${DONOR_LWINDOW}" "donor" |
+      grep $positive_splice_sites |
+      cut -d ';' -f -2 >>$DONOR_RESULT
 
-  $PYTHON classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
-    $DONOR_RWINDOW $DONOR_LWINDOW \
-    "donor" -c $NUMBER_CPUS |
-    grep $positive_splice_sites |
-    cut -d ';' -f -2 >>$DONOR_RESULT
+    $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
+      "${ACCEPTOR_LWINDOW}" "${ACCEPTOR_RWINDOW}" "acceptor" |
+      grep $positive_splice_sites |
+      cut -d ';' -f -2 >>$ACCEPTOR_RESULT
 
-  $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
+  else
+    echo "Classifying with SVM models"
+    echo "Starting classification of splice sites with $NUMBER_CPUS CPUs..."
 
-  $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
-    $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
-    "acceptor" -c $NUMBER_CPUS |
-    grep $positive_splice_sites |
-    cut -d ';' -f -2 >>$ACCEPTOR_RESULT
+    date
+
+    $PYTHON_SHOGUN classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
+      "${DONOR_RWINDOW}" "${DONOR_LWINDOW}" \
+      "donor" -c $NUMBER_CPUS |
+      grep $positive_splice_sites |
+      cut -d ';' -f -2 >>$DONOR_RESULT
+
+    $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
+
+    $PYTHON_SHOGUN classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
+      "${ACCEPTOR_LWINDOW}" "${ACCEPTOR_RWINDOW}" \
+      "acceptor" -c $NUMBER_CPUS |
+      grep $positive_splice_sites |
+      cut -d ';' -f -2 >>$ACCEPTOR_RESULT
+  fi
+
+  date
+  echo "Positively classified donors are in [$DONOR_RESULT]."
+  echo "Positively classified acceptors are in [$ACCEPTOR_RESULT]."
+  echo ""
 }
 
 function pair_splice_sites_and_extract_introns_step() {
@@ -178,13 +203,13 @@ function pair_splice_sites_and_extract_introns_step() {
   echo "Extracting introns from the positions..."
 
   # extract introns from the positions from the previous step
-  $PYTHON extract-introns.py "$assembly_filepath" $INTRON_POSITIONS_FILE "$strand" > $INTRON_FILE
+  $PYTHON extract-introns.py "$assembly_filepath" $INTRON_POSITIONS_FILE "$strand" >$INTRON_FILE
 
   echo "Intron sequences are extracted in [$INTRON_FILE]."
   echo ""
 
   echo "First 20 most frequent intron candidates:"
-#  cat $INTRON_FILE | cut -d ';' -f4 | sort | uniq -c | grep -v '1 ' | sort -r | head -20
+  #  cat $INTRON_FILE | cut -d ';' -f4 | sort | uniq -c | grep -v '1 ' | sort -r | head -20
 
 }
 
@@ -192,14 +217,14 @@ function classify_introns_step() {
   echo "Starting classification of the introns using spectral kernel order ${SPECT_KERNEL_ORDER}"
 
   # prepare a file for the intron classification results
-  echo "scaffold;start;end" > $INTRON_RESULT
+  echo "scaffold;start;end" >$INTRON_RESULT
 
   # classify the introns
   # keep only the positively classified samples
   # keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-  $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER |
+  $PYTHON_SHOGUN classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER |
     grep $positive_introns |
-    cut -d ';' -f -3 >> $INTRON_RESULT
+    cut -d ';' -f -3 >>$INTRON_RESULT
 
   echo "Detected introns are in [$INTRON_RESULT]."
 }
@@ -209,15 +234,15 @@ function validate_introns_step() {
   $PYTHON label_introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH "$strand"
 
   echo "Starting validation of the intron dataset using spectral kernel order ${SPECT_KERNEL_ORDER}"
-  $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER |
-    cut --complement -d ';' -f4 >> $INTRON_RESULT
+  $PYTHON_SHOGUN classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER |
+    cut --complement -d ';' -f4 >>$INTRON_RESULT
 }
 
 function cut_introns_step() {
   echo "Cutting introns. Intron length distribution derived from file ${intron_lens_data}"
 
-  echo "scaffold;start;end" > ${CUT_COORDS_FILE}
-  $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} ${strand} ${intron_lens_data} >> "${CUT_COORDS_FILE}"
+  echo "scaffold;start;end" >${CUT_COORDS_FILE}
+  $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} "${strand}" ${intron_lens_data} >>"${CUT_COORDS_FILE}"
 }
 
 extract_donor_acceptor_step
@@ -234,7 +259,7 @@ mv "${result_dir}.zip" "${ROOT}/results/"
 
 pair_splice_sites_and_extract_introns_step
 
-if [ $intron_source == "None" ]; then
+if [ "${intron_source}" == "None" ]; then
   classify_introns_step
 else
   validate_introns_step
@@ -246,12 +271,12 @@ mv "${result_dir}.zip" "${ROOT}/results/"
 
 cut_introns_step
 
-echo "Pipeline log for file ${assembly_filepath}" > pipeline.output
+echo "Pipeline log for file ${assembly_filepath}" >pipeline.output
 for p in ./*.log; do
   {
     echo "================================== ${p} =========================================="
     cat "$p"
-  } >> pipeline.output
+  } >>pipeline.output
 done
 
 mv "${CUT_COORDS_FILE}" "${result_dir}/"

@@ -84,7 +84,10 @@ INSTALLATION
     conda create -n mykointron python=3.6
     conda config --env --add channels conda-forge anaconda
     conda install pandas
+    conda install -c anaconda biopython
+    conda install docopt
+    conda install scikit-learn
+    (pip install gffutils)
+
     conda install -c conda-forge shogun
     conda install -c anaconda keras
-    conda install -c anaconda biopython
-    (pip install gffutils)
