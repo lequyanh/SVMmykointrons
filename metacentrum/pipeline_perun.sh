@@ -5,8 +5,8 @@
 #   splice_site_donor_model=#Dmodel, \
 #   splice_site_acceptor_model=#Amodel, \
 #   intron_model=#Imodel, \
-#   dwindow=#donor_window, \
-#   awindow=#acceptor_window, \
+#   window_inner=#window_inner, \
+#   window_outer=#window_outer, \
 #   strand=#strand
 #   intron_source=#introns-fasta, \
 #   fungi_name=#fungi \
@@ -40,6 +40,7 @@ cd "${SCRATCHDIR}" || exit 2
 #  - splice site dimers
 DONOR="GT"
 ACCEPTOR="AG"
+WINDOW_DIAMETER=200
 #  - files with intron lengths to build a probability distribution over intron lengths
 #    used as the cutting step to decide which candidate to cut in case of overlap
 intron_lens_data="basidiomycota-intron-lens.txt"
@@ -71,8 +72,8 @@ CUT_COORDS_FILE="cut-coords.csv"
 ##  - intron prediction model
 #intron_model=$4
 ## settings for work with sequence windows
-#dwindow=$5
-#awindow=$6
+#window_inner=$5
+#window_outer=$6
 ## strand
 #strand=$7
 ##  - in case of validation
@@ -81,15 +82,15 @@ CUT_COORDS_FILE="cut-coords.csv"
 
 #  - window size used when extracting splice sites sequences
 #    the size is equal to the size of window used to train the models
-DONOR_LWINDOW=${dwindow}
-DONOR_RWINDOW=${dwindow}
-ACCEPTOR_LWINDOW=${awindow}
-ACCEPTOR_RWINDOW=${awindow}
+DONOR_LWINDOW=${window_outer}
+DONOR_RWINDOW=${window_inner}
+ACCEPTOR_LWINDOW=${window_inner}
+ACCEPTOR_RWINDOW=${window_outer}
 
 # Derived variables:
 # regex used to determine splice site sequences
-donor_regex=";[ACGT]{$DONOR_LWINDOW}$DONOR[ACGT]{$DONOR_RWINDOW}$"
-acceptor_regex=";[ACGT]{$ACCEPTOR_LWINDOW}$ACCEPTOR[ACGT]{$ACCEPTOR_RWINDOW}$"
+donor_regex=";[ACGT]{$WINDOW_DIAMETER}$DONOR[ACGT]{$WINDOW_DIAMETER}$"
+acceptor_regex=";[ACGT]{$WINDOW_DIAMETER}$ACCEPTOR[ACGT]{$WINDOW_DIAMETER}$"
 # regex to filter positively classified splice sites
 positive_splice_sites=";1$"
 # regex to filter positively classified introns
@@ -130,8 +131,8 @@ function extract_donor_acceptor_step() {
 
   $PYTHON extract-donor-acceptor.py "${assembly_filepath}" \
     $DONOR $ACCEPTOR \
-    $DONOR_LWINDOW $DONOR_RWINDOW \
-    $ACCEPTOR_LWINDOW $ACCEPTOR_RWINDOW \
+    $WINDOW_DIAMETER $WINDOW_DIAMETER \
+    $WINDOW_DIAMETER $WINDOW_DIAMETER \
     $strand |
     gawk -v donor="${donor_regex}" \
       -v acceptor="${acceptor_regex}" \
@@ -159,6 +160,8 @@ function classify_splice_sites_step() {
       "${DONOR_RWINDOW}" "${DONOR_LWINDOW}" "donor" |
       grep $positive_splice_sites |
       cut -d ';' -f -2 >>$DONOR_RESULT
+
+    $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
     $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
       "${ACCEPTOR_LWINDOW}" "${ACCEPTOR_RWINDOW}" "acceptor" |
@@ -265,6 +268,7 @@ else
   validate_introns_step
 fi
 
+cp "${INTRON_FILE}" "${result_dir}/"
 cp "${INTRON_RESULT}" "${result_dir}/"
 zip -r "${result_dir}.zip" "${result_dir}/"
 mv "${result_dir}.zip" "${ROOT}/results/"

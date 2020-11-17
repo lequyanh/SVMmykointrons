@@ -87,14 +87,21 @@ def prepare_inputs(input_df: pd.DataFrame, site: str):
         except AssertionError:
             print(set(sequence))
 
-        if site == 'acceptor':
+        if site == 'acceptor' and len(sequence) == 400:
             assert sequence[198] == 'A'
             assert sequence[199] == 'G'
-        else:
+        elif site == 'donor' and len(sequence) == 400:
             assert sequence[200] == 'G'
             assert sequence[201] == 'T'
+        elif site == 'acceptor' and len(sequence) == 100:
+            assert sequence[98] == 'A'
+            assert sequence[99] == 'G'
+        elif site == 'donor' and len(sequence) == 100:
+            assert sequence[0] == 'G'
+            assert sequence[1] == 'T'
 
         sequence = np.array(list(sequence))
+        print(sequence)
 
         sequences.append((sequence[:, None] == DNA_SYMBOLS).astype(np.float32))
 
@@ -119,9 +126,6 @@ def get_svm_predictions(model_file, data_file, window_inner, window_outer, site,
 
 
 def get_dnn_predictions(model_file, data_file, window_inner, window_outer, site):
-    assert window_inner == 200
-    assert window_outer == 200
-
     window = (window_outer, window_inner - 2) if site == 'donor' else (window_inner - 2, window_outer)
 
     os.environ['KERAS_BACKEND'] = 'tensorflow'
@@ -133,8 +137,8 @@ def get_dnn_predictions(model_file, data_file, window_inner, window_outer, site)
     inputs = prepare_inputs(input_df, site)
     predictions = model.predict(inputs)
     predictions = np.squeeze(predictions)
-    predictions[np.where(predictions < 0.65)] = -1  # negative classes are -1 as opposed to NN output (which is 0)
-    predictions[np.where(predictions >= 0.65)] = 1
+    predictions[np.where(predictions < 0.5)] = -1  # negative classes are -1 as opposed to NN output (which is 0)
+    predictions[np.where(predictions >= 0.5)] = 1
     predictions = predictions.astype(np.int32)
 
     return input_df, predictions

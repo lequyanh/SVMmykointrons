@@ -43,8 +43,8 @@ if [ "$models_settings" == 'svma' ]; then
   dmodel="${fmodel}/donor-model-C-10-d-25-70.hd5"
   amodel="${fmodel}/acceptor-model-C-10-d-25-win-70-shuffle2.hd5"
   imodel="${fmodel}/intron-model-C-25-d-6.hd5"
-  dwindow=70
-  awindow=70
+  window_inner=70
+  window_outer=70
 
 elif [ "$models_settings" == 'svmb' ]; then
   fmodel="/storage/praha1/home/lequyanh/data/basidiomycota/models"
@@ -52,8 +52,8 @@ elif [ "$models_settings" == 'svmb' ]; then
   dmodel="${fmodel}/basidio-dmodel-plusminus-C-10-d-25-70.hd5"
   amodel="${fmodel}/basidio-amodel-plusminus-C-10-d-25-70-subsampled.hd5"
   imodel="${fmodel}/intron-model-C-7-d-6.hd5"
-  dwindow=70
-  awindow=70
+  window_inner=70
+  window_outer=70
 
 elif [ "$models_settings" == 'nnf' ]; then
   fmodel="/storage/praha1/home/lequyanh/data/nn_models"
@@ -62,15 +62,25 @@ elif [ "$models_settings" == 'nnf' ]; then
   dmodel="${fmodel}/bmodel.h5"
   amodel="${fmodel}/amodel.h5"
   imodel="${fmodel_basi}/intron-model-C-7-d-6.hd5"
-  dwindow=200
-  awindow=200
+  window_inner=200
+  window_outer=200
+
+elif [ "$models_settings" == 'nn100' ]; then
+  fmodel="/storage/praha1/home/lequyanh/data/nn_models"
+  fmodel_basi="/storage/praha1/home/lequyanh/data/basidiomycota/models"
+
+  dmodel="${fmodel}/model_donor_100.h5"
+  amodel="${fmodel}/model_acceptor_100.h5"
+  imodel="${fmodel_basi}/intron-model-C-7-d-6.hd5"
+  window_inner=100
+  window_outer=0
 
 elif [ "$models_settings" == 'random' ]; then
   dmodel="random"
   amodel="random"
   imodel="random"
-  dwindow=70
-  awindow=70
+  window_inner=70
+  window_outer=70
 fi
 
 if [ $is_metagenom ]; then
@@ -78,7 +88,7 @@ if [ $is_metagenom ]; then
     assembly="${fasta_dir}/${shard}"
     echo "Processing metagenom shard ${shard}"
 
-    qsub -l walltime=48:0:0 -l select=1:ncpus=16:mem=8gb:scratch_local=2gb -v assembly_filepath="${assembly}",splice_site_donor_model="${dmodel}",splice_site_acceptor_model="${amodel}",intron_model="${imodel}",dwindow="${dwindow}",awindow="${awindow}",strand="${strand}",intron_source=None,fungi_name="${shard}" pipeline_perun.sh
+    qsub -l walltime=48:0:0 -l select=1:ncpus=16:mem=8gb:scratch_local=2gb -v assembly_filepath="${assembly}",splice_site_donor_model="${dmodel}",splice_site_acceptor_model="${amodel}",intron_model="${imodel}",window_inner="${window_inner}",window_outer="${window_outer}",strand="${strand}",intron_source=None,fungi_name="${shard}" pipeline_perun.sh
   done <"$fasta_list_file"
 
 else
@@ -87,6 +97,6 @@ else
     introns="${fasta_dir}/new-sequences/${fungi}-introns.fasta"
     echo "${fungi} with assembly ${assembly} and introns ${introns}"
 
-    qsub -l walltime=24:0:0 -l select=1:ncpus=16:mem=8gb:scratch_local=2gb -v assembly_filepath="${assembly}",splice_site_donor_model="${dmodel}",splice_site_acceptor_model="${amodel}",intron_model="${imodel}",dwindow="${dwindow}",awindow="${awindow}",strand="${strand}",intron_source="${introns}",fungi_name="${fungi}" pipeline_perun.sh
+    qsub -l walltime=24:0:0 -l select=1:ncpus=16:mem=8gb:scratch_local=2gb -v assembly_filepath="${assembly}",splice_site_donor_model="${dmodel}",splice_site_acceptor_model="${amodel}",intron_model="${imodel}",window_inner="${window_inner}",window_outer="${window_outer}",strand="${strand}",intron_source="${introns}",fungi_name="${fungi}" pipeline_perun.sh
   done <"$fasta_list_file"
 fi
