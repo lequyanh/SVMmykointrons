@@ -7,15 +7,13 @@ PYTHON_SHOGUN=~/anaconda3/envs/mykointron_shogun/bin/python
 #  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
 NUMBER_CPUS=12
-#  - memory limit for caching (in MB)
-#    this is used in the intron prediction
-CACHE_LIMIT=1024
 # -------------------------------------------------------------
 
 # Pipeline settings:
 #  - splice site dimers
 DONOR="GT"
 ACCEPTOR="AG"
+# - size of windows around candidate splice site to extract
 WINDOW_DIAMETER=200
 #  - range of intron lengths
 #    considered when extracting introns from the positions of the positively classified splice sites
