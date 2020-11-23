@@ -42,8 +42,6 @@ done
 FMODEL_NN="/home/anhvu/PycharmProjects/mycointrons/pipeline/bestmodels/nn/"
 FMODEL_BASI="/home/anhvu/PycharmProjects/mycointrons/pipeline/bestmodels/basidiomycota/"
 
-# output csv
-OUT="merged-cut-coords${strand}strand.csv"
 
 ###############################################
 # PIPELINE PARAMETER SETTINGS BASED ON MODEL  #
@@ -103,15 +101,7 @@ if [ $is_metagenom ]; then
     echo "Processing metagenom shard ${shard}"
 
     bash pipeline "$assembly" $dmodel $amodel $imodel $window_inner $window_outer "$strand"
-    bash tidy.sh "$shard"
-  done <"$fasta_list_file"
-
-  # Merge cuts into one file
-  echo "scaffold;start;end" > "${OUT}"
-
-  while read shard; do
-    # Read all lines except for the first one containing headers
-    tail -n +2 "${shard}_results/cut-coords.csv" >> "${OUT}"
+    tidy "$shard"
   done <"$fasta_list_file"
 
 #################################
@@ -124,7 +114,7 @@ else
     echo "${fungi} with assembly ${assembly} and introns ${introns}"
 
     bash pipeline "$assembly" $dmodel $amodel $imodel $window_inner $window_outer "$strand" "$introns"
-    bash tidy.sh "$fungi"
+    tidy "$fungi"
 
   done <"$fasta_list_file"
 fi
