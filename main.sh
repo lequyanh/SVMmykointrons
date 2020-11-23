@@ -32,15 +32,11 @@ META_SHARDS_F='meta_shards'
 mkdir -p $META_SHARDS_F
 find . -maxdepth 1 -type f -name 'metagenom_shard[0-9]*' -type f -exec mv -f {} $META_SHARDS_F \;
 
-# list of metagenom shards to cut
+# List of metagenom shards to cut
+# Can be replaced by custom list of shards (in case we need to re-compute some etc.)
 fasta_list_file="metagenom_shards.txt"
 ls $META_SHARDS_F >$fasta_list_file
-# Can be replaced by custom list of shards (in case we need to re-compute some etc.)
 #fasta_list_file="custom_metagenom_shard_list.txt"
-#todo remove this
-head -3 $fasta_list_file >"reduced-${fasta_list_file}"
-fasta_list_file="reduced-${fasta_list_file}"
-#todo remove this
 
 ###################
 # GET INTRON CUTS #
@@ -73,8 +69,8 @@ mv metagenom_shard*/ ${rev_strand_result_loc}
 merge_cuts ${forw_strand_result_loc} $OUT_FORW
 merge_cuts ${rev_strand_result_loc} $OUT_REV
 
-#mv $OUT_FORW ../annotation
-#mv $OUT_REV ../annotation
+mv $OUT_FORW ../annotation
+mv $OUT_REV ../annotation
 
 #####################
 # ANNOTATE THE CUTS #

@@ -31,8 +31,8 @@ def main():
         new_acc_cand_df = pd.concat(
             [new_acc_cand_df, acceptor_positions_df.loc[inrange_accs_mask]])
 
-        print(f'Portion of surviving acceptor candidates: {sum(inrange_accs_mask) / len(acc_positions)}. '
-              f'Scaffold {scaffold}')
+        # print(f'Portion of surviving acceptor candidates: {sum(inrange_accs_mask) / len(acc_positions)}. '
+        #       f'Scaffold {scaffold}')
 
     new_acc_cand_df.to_csv(acceptor_file, sep=';', index=False)
     print(f'Number of acceptors before: {acc_cand_df.shape[0]}\nNumber of acceptor candidatess after filtering: '

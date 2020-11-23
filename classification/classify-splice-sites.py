@@ -101,7 +101,6 @@ def prepare_inputs(input_df: pd.DataFrame, site: str):
             assert sequence[1] == 'T'
 
         sequence = np.array(list(sequence))
-        print(sequence)
 
         sequences.append((sequence[:, None] == DNA_SYMBOLS).astype(np.float32))
 

@@ -1,0 +1,11 @@
+INFO:root:Classification of file ../data/basidiomycota_donor_plus_minus_testset.csv with model ../pipeline/bestmodels/nn/model_donor_100.h5
+INFO:root:Performance metrics:
+ -TP: 359194
+ -FP: 13746
+ -TN: 570129
+ -FN: 56867
+Accuracy: 0.9293824804787506
+Precision: 0.9631415241057543
+Recall: 0.8633205227118139
+Adjusted precision: 0.777459289095335
+Adj. precision calculated with imbalance ratio: 0.025

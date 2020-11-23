@@ -1,7 +1,31 @@
+USAGE
+=====
+
+The call is:
+`bash main.sh PATH_TO_METAGENOM MODEL_SETTINGS`
+
+for model setting, use one of the following
+    * 'svmb' (standing for SVM models trained on Basidiomycota; very slow)
+    * 'nn100' (standing for neural net with 0-100 windows; faster)
+    * 'nn200' (standing for neural net with 200-200 windows; slower, more accurate)
+
+The process is roughly:
+    1) Split metagenom file into smaller chunks. This allows more parallel and distributed approach
+    2) Perform intron cutting
+        a) Find all donor dimers and perform splice site classification
+        b) Find all acceptor dimers, remove orphan candidates (AG with no GT in acceptable range) and perform splice site classification
+        c) Pair positively classified splice site candidates to form an intron candidate dataset
+        d) Classify the intron dataset
+        e) Cut positively classified introns. Overlaps are resolved with length prior distribution cut-off
+    3) Cuts annotation
+
+The process can be tweeked - see below for details on how to perform partial steps of the pipeline
+
 CONTENTS
 ========
 
-(1) extract-fasta/
+(0) main.sh
+(1) annotation/
 (2) classification/
     (a) classify-introns.py
     (b) classify-splice-sites.py
@@ -9,7 +33,8 @@ CONTENTS
     (c) train-introns.py
     (d) train-splice-sites.py
 (3) pipeline/
-        bash pipeline ~/Desktop/mykointrons-data/data/Assembly/Exova1_AssemblyScaffolds.fasta ../gridsearch/bestmodels/donor_model.hd5 ../gridsearch/bestmodels/acceptor_model.hd5 intron-model-Cpos-3-deg-5.hd5
+    (a) pipeline.sh
+    (b) batch_pipeline.sh
 
 (4) taxonomy.csv
 (5) tools/
@@ -19,16 +44,9 @@ CONTENTS
     (d) process-gff.py
 
 
+(0) main.sh
 
-(1) extract-fasta
-
-    Tool that extracts subsequences from FASTA file.
-
-    Use `make` to build a binary.
-    Uses `g++` for the build (tested with ver. 7.4.0)
-
-    Use `./extract-fasta -h` to understand the usage.
-
+(1) annotation
 
 (2) classification
 
@@ -43,10 +61,12 @@ CONTENTS
 
 (3) pipeline
 
-    Contains a prototype implementation of the classification process.
-    The main component is a bash script called `pipeline`.
+    Contains an implementation of the classification process.
+    The main component is a bash script called `pipeline` and 'batch_pipeline' respectively
     The script calls other python scripts and performs the whole process.
-    The script contains detailed comments.
+
+    This is the main part of intron classification process. Can be used on its own but requires many parameters.
+    On the other hand can allow processing of a single assembly and also provides cuts validation in case true introns are known
 
 
 (4) taxonomy.csv
@@ -74,20 +94,28 @@ CONTENTS
 INSTALLATION
 ============
 
-  All the scripts assume Python3 is used.
+(1) PYTHON libraries
+      All the scripts assume Python3 is used.
 
-  Libraries Shogun and Pandas are required.
-  Instructions on how to install
-    - Shogun are at http://shogun.ml/install
-    - Pandas are at https://pandas.pydata.org/pandas-docs/stable/install.html
+      We need two separate environments with similar libraries, since Shogun and Keras don't work together in one env.
 
-    conda create -n mykointron python=3.6
-    conda config --env --add channels conda-forge anaconda
-    conda install pandas
-    conda install -c anaconda biopython
-    conda install docopt
-    conda install scikit-learn
-    (pip install gffutils)
+        conda create -n mykointron_shogun python=3.6
+        conda config --env --add channels conda-forge anaconda
+        conda activate mykointron_shogun
+        conda install pandas
+        conda install -c anaconda biopython
+        conda install docopt
+        conda install scikit-learn
+        (pip install gffutils)
+        conda install -c conda-forge shogun
 
-    conda install -c conda-forge shogun
-    conda install -c anaconda keras
+        conda create -n mykointron python=3.6
+        conda activate mykointron
+        conda install pandas
+        conda install -c anaconda biopython
+        conda install docopt
+        conda install scikit-learn
+        conda install -c anaconda keras
+
+
+
