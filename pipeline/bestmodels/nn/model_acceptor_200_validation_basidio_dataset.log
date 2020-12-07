@@ -1,0 +1,11 @@
+INFO:root:Classification of file ../data/basidiomycota_acceptor_plus_minus_testset.csv with model ../pipeline/bestmodels/nn/model_acceptor_200.h5
+INFO:root:Performance metrics:
+ -TP: 337909
+ -FP: 14135
+ -TN: 605090
+ -FN: 42802
+Accuracy: 0.9430593557987711
+Precision: 0.959848768903887
+Recall: 0.887573513767661
+Adjusted precision: 0.7296442879068489
+Adj. precision calculated with imbalance ratio: 0.025

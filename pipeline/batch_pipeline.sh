@@ -53,9 +53,9 @@ if [ "$models_settings" == 'svmb' ]; then
   window_inner=70
   window_outer=70
 
-elif [ "$models_settings" == 'nnf' ]; then
-  dmodel="${FMODEL_NN}/bmodel.h5"
-  amodel="${FMODEL_NN}/amodel.h5"
+elif [ "$models_settings" == 'nn200' ]; then
+  dmodel="${FMODEL_NN}/model_donor_200.h5"
+  amodel="${FMODEL_NN}/model_acceptor_200.h5"
   imodel="${FMODEL_BASI}/intron-model-C-7-d-6.hd5"
   window_inner=200
   window_outer=200
@@ -87,6 +87,7 @@ function tidy(){
   mv ./*-result.csv "$target_dir"
   mv cut-coords.csv "$target_dir"
   mv pipeline.output "$target_dir"
+  # mv intron-dataset.csv "$target_dir"
 
   rm ./*-dataset.csv
   rm pruned-*

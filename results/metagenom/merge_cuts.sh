@@ -1,7 +1,7 @@
 #!/bin/bash
 
-DATA_LOC=random_metagenom_results
-OUT=metagenom-cut-coords-random.csv
+DATA_LOC=$1   # Folder with results
+OUT=$2        # Name of the output CSV file
 
 echo "scaffold;start;end" > ${OUT}
 

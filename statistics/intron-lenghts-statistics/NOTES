@@ -1,0 +1,9 @@
+To generate the distribution of intron lengths, apply following steps:
+    1. Create folder 'basi_introns_dataset'
+        a) It will hold labeled intron datasets
+        b) can be created by pairing splice site results with sufficiently large window, e.g. 200
+        c) supply the list of fungi to script `intron_len.sh` a get the folder generated
+    2. Create a text file with fungi, whose intron distributions you'd want to plot
+        a) can be named anyway you want, but change it in the 'length_exploration.R' script
+        b) can be created as
+                `ls basi_introns_dataset | shuf | head -20 > fungi_list.txt `
