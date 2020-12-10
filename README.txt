@@ -68,6 +68,10 @@ CONTENTS
     This is the main part of intron classification process. Can be used on its own but requires many parameters.
     On the other hand can allow processing of a single assembly and also provides cuts validation in case true introns are known
 
+    (3.a) pipeline/bestmodels/
+    Contains models for splice site classification and intron classification.
+    NOTE: Due to larger sizes (for SVM) are models not stored on Git, but must be shared by other means.
+
 
 (4) taxonomy.csv
 
@@ -116,6 +120,9 @@ INSTALLATION
         conda install docopt
         conda install scikit-learn
         conda install -c anaconda keras
+
+(2) Save models into ./pipeline/bestmodels/basidiomycota in case SVM models are used.
+    NN models are included and don't need extra download
 
 
 

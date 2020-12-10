@@ -8,6 +8,9 @@
 
 # Examples (cutting on metagenom - no validation):
 # bash batch_pipeline.sh -m svmb -l metagenom_shards.txt -d /storage/praha1/home/lequyanh/data/metagenom/ -s + -f
+# Location of models
+FMODEL_NN="$(pwd)/bestmodels/nn/"
+FMODEL_BASI="$(pwd)/bestmodels/basidiomycota/"
 
 while getopts "m:l:d:s:f" opt; do
   case $opt in
@@ -37,11 +40,6 @@ while getopts "m:l:d:s:f" opt; do
     ;;
   esac
 done
-
-# Location of models
-FMODEL_NN="/home/anhvu/PycharmProjects/mycointrons/pipeline/bestmodels/nn/"
-FMODEL_BASI="/home/anhvu/PycharmProjects/mycointrons/pipeline/bestmodels/basidiomycota/"
-
 
 ###############################################
 # PIPELINE PARAMETER SETTINGS BASED ON MODEL  #
@@ -78,44 +76,69 @@ fi
 #############################################################
 # CLEANUP FUNCTION (prepares working directory for next run)#
 #############################################################
-function tidy(){
+function setup(){
   assembly_name=$1
 
   target_dir="${assembly_name}_results"
   mkdir -p "$target_dir"
+  cp *.py ${target_dir}
+  cp pipeline ${target_dir}
+  cp basidiomycota-intron-lens.txt ${target_dir}
 
-  mv ./*-result.csv "$target_dir"
-  mv cut-coords.csv "$target_dir"
-  mv pipeline.output "$target_dir"
-  # mv intron-dataset.csv "$target_dir"
-
-  rm ./*-dataset.csv
-  rm pruned-*
+  cd $target_dir
 }
 
-###############################################
-# META-GENOM CUTTING (FROM SHARDED FRAGMENTS) #
-###############################################
+function cleanup(){
+  rm *dataset.csv
+  rm pruned-*
+  rm *.py
+  rm *.txt
+  rm pipeline
+  rm -r ./__pycache__/
+}
+
+function process_fungi(){
+  fungi=$1
+  setup $fungi
+
+  assembly="${fasta_dir}/Assembly/${fungi}_AssemblyScaffolds.fasta"
+  introns="${fasta_dir}/new-sequences/${fungi}-introns.fasta"
+  echo "${fungi} with assembly ${assembly} and introns ${introns}"
+
+  bash pipeline "$assembly" $dmodel $amodel $imodel $window_inner $window_outer "$strand" "$introns"
+  cleanup
+}
+
+function process_metagenom_shard(){
+  shard=$1
+  setup $shard
+
+  assembly="${fasta_dir}/${shard}"
+  echo "Processing metagenom shard ${shard}"
+
+  bash pipeline "$assembly" $dmodel $amodel $imodel $window_inner $window_outer "$strand"
+  cleanup
+}
+
+#######################################################################
+# META-GENOM CUTTING (FROM SHARDED FRAGMENTS) OF FUNGI CUT VALIDATION #
+#######################################################################
+export -f setup
+export -f cleanup
+
+export amodel
+export dmodel
+export imodel
+export window_inner
+export window_outer
+export strand
+export fasta_dir
+
 if [ $is_metagenom ]; then
-  while read shard; do
-    assembly="${fasta_dir}/${shard}"
-    echo "Processing metagenom shard ${shard}"
+  export -f process_metagenom_shard
+  cat "$fasta_list_file" | parallel process_metagenom_shard
 
-    bash pipeline "$assembly" $dmodel $amodel $imodel $window_inner $window_outer "$strand"
-    tidy "$shard"
-  done <"$fasta_list_file"
-
-#################################
-# FUNGI ASSEMBLY CUT VALIDATION #
-#################################
 else
-  while read fungi; do
-    assembly="${fasta_dir}/Assembly/${fungi}_AssemblyScaffolds.fasta"
-    introns="${fasta_dir}/new-sequences/${fungi}-introns.fasta"
-    echo "${fungi} with assembly ${assembly} and introns ${introns}"
-
-    bash pipeline "$assembly" $dmodel $amodel $imodel $window_inner $window_outer "$strand" "$introns"
-    tidy "$fungi"
-
-  done <"$fasta_list_file"
+  export -f process_fungi
+  cat "$fasta_list_file" | parallel process_fungi
 fi
