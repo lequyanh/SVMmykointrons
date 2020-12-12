@@ -1,0 +1,2 @@
+ctg_k141_2751450.fa
+ctg_to_test.fa

@@ -194,18 +194,23 @@ function pair_splice_sites_and_extract_introns_step() {
 
 function classify_introns_step() {
   echo "Starting classification of the introns using spectral kernel order ${SPECT_KERNEL_ORDER}"
-
-  # prepare a file for the intron classification results
-  echo "scaffold;start;end" >$INTRON_RESULT
+  CLASSIFICATION_RESULTS='classified-introns-dataset.csv'
 
   # classify the introns
   # keep only the positively classified samples
   # keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-  $PYTHON_SHOGUN classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER |
-    grep $positive_introns |
-    cut -d ';' -f -3 >>$INTRON_RESULT
+  $PYTHON_SHOGUN classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER >$CLASSIFICATION_RESULTS
 
-  echo "Detected introns are in [$INTRON_RESULT]."
+  if grep -q $positive_introns < $CLASSIFICATION_RESULTS
+  then
+    # prepare a file for the intron classification results
+    echo "scaffold;start;end" >$INTRON_RESULT
+    cat $CLASSIFICATION_RESULTS | grep $positive_introns | cut -d ';' -f -3  >> $INTRON_RESULT
+    echo "Detected introns are in [$INTRON_RESULT]."
+
+  else
+    echo "No positive introns found"
+  fi
 }
 
 function validate_introns_step() {
@@ -221,7 +226,12 @@ function cut_introns_step() {
   echo "Cutting introns. Intron length distribution derived from file ${intron_lens_data}"
 
   echo "scaffold;start;end" >${CUT_COORDS_FILE}
-  $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} "${strand}" ${intron_lens_data} >>"${CUT_COORDS_FILE}"
+  if [[ -f  $INTRON_RESULT ]]
+  then
+    $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} "${strand}" ${intron_lens_data} >>"${CUT_COORDS_FILE}"
+  else
+    echo "No introns to cut"
+  fi
 }
 
 extract_donor_acceptor_step

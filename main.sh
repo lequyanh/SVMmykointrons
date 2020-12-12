@@ -68,12 +68,3 @@ mv metagenom_shard*/ ${rev_strand_result_loc}
 
 merge_cuts ${forw_strand_result_loc} $OUT_FORW
 merge_cuts ${rev_strand_result_loc} $OUT_REV
-
-mv $OUT_FORW ../annotation
-mv $OUT_REV ../annotation
-
-#####################
-# ANNOTATE THE CUTS #
-#####################
-cd ../annotation || exit
-bash INTRONY_PIPELINE.sh "$METAGENOM_FILEPATH" $OUT_FORW $OUT_REV

@@ -78,14 +78,17 @@ fi
 #############################################################
 function setup(){
   assembly_name=$1
+  strand=$2
 
-  target_dir="${assembly_name}_results"
+  if [ "$strand" == '+' ]; then suffix='plus'; else suffix='minus'; fi
+
+  target_dir="${assembly_name}_results_${suffix}"
   mkdir -p "$target_dir"
-  cp *.py ${target_dir}
-  cp pipeline ${target_dir}
-  cp basidiomycota-intron-lens.txt ${target_dir}
+  cp *.py "${target_dir}"
+  cp pipeline "${target_dir}"
+  cp basidiomycota-intron-lens.txt "${target_dir}"
 
-  cd $target_dir
+  cd "$target_dir" || exit
 }
 
 function cleanup(){
@@ -99,7 +102,7 @@ function cleanup(){
 
 function process_fungi(){
   fungi=$1
-  setup $fungi
+  setup "$fungi" "$strand"
 
   assembly="${fasta_dir}/Assembly/${fungi}_AssemblyScaffolds.fasta"
   introns="${fasta_dir}/new-sequences/${fungi}-introns.fasta"
@@ -111,7 +114,7 @@ function process_fungi(){
 
 function process_metagenom_shard(){
   shard=$1
-  setup $shard
+  setup "$shard" "$strand"
 
   assembly="${fasta_dir}/${shard}"
   echo "Processing metagenom shard ${shard}"

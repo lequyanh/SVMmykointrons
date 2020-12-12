@@ -115,7 +115,7 @@ def get_svm_predictions(model_file, data_file, window_inner, window_outer, site,
     input_df = read_data(data_file, window=window)
 
     import shogun as sg  # import it here not to conflict with keras d-NN use
-    sg.Parallel().set_num_threads(ncpus)
+    logging.info(f'{sg.Parallel().get_num_threads()} threads')
 
     features = sg.StringCharFeatures(input_df.sequence.tolist(), sg.RAWBYTE)
     model = read_model(model_file)
