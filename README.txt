@@ -1,3 +1,16 @@
+QUICKSTART
+==========
+Within ./pipeline folder, run:
+
+bash batch_pipeline.sh -m svmb -l ../test/list.txt -d ../test/assemblies/ -s + -f
+bash batch_pipeline.sh -m svmb -l ../test/list.txt -d ../test/assemblies/ -s - -f
+
+Note: Path to the test assemblies might need to be absolute
+
+The runs should create folders, whose names coincide with the test FASTAs.
+Check cut-coords.csv files within each folder, which should be populated
+    The exception is ctg_k141_2751450.fa, whose reverse strand cut file should be empty
+
 USAGE
 =====
 
@@ -121,8 +134,11 @@ INSTALLATION
         conda install scikit-learn
         conda install -c anaconda keras
 
-(2) Save models into ./pipeline/bestmodels/basidiomycota in case SVM models are used.
-    NN models are included and don't need extra download
+(2) If this project is downloaded via Git, ask for models at lequyanh@fel.cvut.cz as they are too large for GitHub
+    Save them to ./pipeline/bestmodels/basidiomycota
+        Applies only for SVM models, NN models are included and don't need extra download
+
+(3) Download and install GNU parallel (https://www.gnu.org/software/parallel/)
 
 
 

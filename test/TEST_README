@@ -1,4 +1,0 @@
-Within ./pipeline folder, run:
-
-bash batch_pipeline.sh -m svmb -l ../test/list.txt -d ~/PycharmProjects/mycointrons/test/assemblies/ -s + -f
-bash batch_pipeline.sh -m svmb -l ../test/list.txt -d ~/PycharmProjects/mycointrons/test/assemblies/ -s - -f
