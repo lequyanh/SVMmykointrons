@@ -21,8 +21,8 @@ get.intron.lens <- function(data_filename) {
     select(species, len, label)
 }
 
-basidio_i_lens <- read.table('../../pipeline/basidiomycota-intron-lens.txt')
-asco_i_lens <- read.table('../../pipeline/ascomycota-intron-lens.txt')
+basidio_i_lens <- read.table('./phyla_lengths/basidiomycota-intron-lens.txt')
+asco_i_lens <- read.table('./phyla_lengths/ascomycota-intron-lens.txt')
 
 fungi_files <- read.table('fungi_list.txt')
 
@@ -49,6 +49,6 @@ i_distr_plot
 ggsave(filename = 'i_distr_plot.png', plot = i_distr_plot)
 
 # Print quantiles of the distribution
-quantile((intron_data_long %>% filter(label == 1))$len, c(0.05, 0.10, 0.9, 0.95), na.rm=T)
+quantile((intron_data_long %>% filter(label == 1))$len, c(0.025, 0.05, 0.95, 0.975), na.rm=T)
 ecdf((intron_data_long %>% filter(label == 1))$len)(40)
 ecdf((intron_data_long %>% filter(label == 1))$len)(100)

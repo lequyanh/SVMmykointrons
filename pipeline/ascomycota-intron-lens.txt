@@ -1,1 +1,0 @@
-../statistics/intron-lenghts-statistics/ascomycota-intron-lens.txt
