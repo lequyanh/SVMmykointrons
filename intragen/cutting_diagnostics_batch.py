@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 
 import pandas as pd
 from pandas import DataFrame
@@ -17,21 +18,24 @@ ACCEPTOR_SITE = 'acceptor'
 # NOTE: Before running this file, alter ../tools/config.py to use reduced introns (instructions are there)
 
 def batch_analyze():
-    results_dir = 'sample_results_asco_w_basidio_models'
+    results_dir = 'sample_results_zoopago'
     model = ''
     strand = '+'
 
     # Prepare columns
-    results = pd.DataFrame(columns=['fungi', 'recall', 'exon_breaking_fpr'])
+    results = pd.DataFrame(
+        columns=['fungi', 'true_cuts', 'exon_cuts', 'all_cuts', 'all_introns', 'detectable_introns', 'exons']
+    )
 
     for i, folder_name in enumerate(os.listdir(results_dir)):
-        fungi_name = folder_name.replace('_results', '')
+        fungi_name = re.sub('_results.*', '', folder_name)
         print("=========================================================================================")
 
-        recall, exon_breaking_fpr = run_diagnostics(fungi_name, model, strand=strand, folder=results_dir)
-        results.loc[i] = [fungi_name, recall, exon_breaking_fpr]
+        true_cuts, exon_cuts, all_cuts, all_introns, detectable_introns, exons = \
+            run_diagnostics(fungi_name, model, strand=strand, folder=results_dir)
+        results.loc[i] = [fungi_name, true_cuts, exon_cuts, all_cuts, all_introns, detectable_introns, exons]
 
-    results.to_csv('500asco_recall_precision_pluss_basi_models.csv', sep=';', index=False)
+    results.to_csv('zoopagomycota_metrics.csv', sep=';', index=False)
 
 
 def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.'):
@@ -40,15 +44,15 @@ def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.')
         filename=f'{fungi_name}_intron_intragen_exploration.log',
         filemode='w'
     )
-
+    strand_text = "plus" if strand == "+" else "minus"
     exon_file = config.get_fungi_exons_positions(fungi_name)
     intron_file = config.get_fungi_intron_fasta(fungi_name)
 
     model = f'-{model}' if model else ''
     # Result or running the pipeline (intron-result.csv file)
-    intron_annotations_file = f'{folder}/{fungi_name}_results/intron-result{model}.csv'
+    intron_annotations_file = f'{folder}/{fungi_name}_results_{strand_text}/intron-result{model}.csv'
     # Result of running the pipeline (intron pruning step)
-    cut_coords_file = f'{folder}/{fungi_name}_results/cut-coords{model}.csv'
+    cut_coords_file = f'{folder}/{fungi_name}_results_{strand_text}/cut-coords{model}.csv'
 
     # NOTE - joined_df will be missing introns, which did not survive pairing phase
     joined_df = intragen_tools.join_on_position(cut_coords_file, intron_annotations_file)
@@ -57,9 +61,10 @@ def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.')
     post_cut_accuracy_metrics(joined_df)
 
     # Determine intra-genic intron FP rate. We have to pass strand here as we don't know, against which exons to compare
-    recall, exon_breaking_fpr = false_introns_exploration(joined_df, exon_file, intron_file, strand)
+    true_cuts, exon_cuts, all_cuts, all_introns, detectable_introns, exons = \
+        false_introns_exploration(joined_df, exon_file, intron_file, strand)
 
-    return recall, exon_breaking_fpr
+    return true_cuts, exon_cuts, all_cuts, all_introns, detectable_introns, exons
 
 
 def post_cut_accuracy_metrics(joined: DataFrame) -> None:
@@ -146,6 +151,7 @@ def false_introns_exploration(
     print(f'--------------------------------Recall and exon-breaking precision ---------------------------------------')
     true_cuts = joined.query('cut == 1 and label == 1').shape[0]
     true_all = get_introns_from_strand(intron_file, strand='+')
+    detectable_all = [i for i in true_all if 100 >= len(i) >= 40]
 
     print(f'Correctly cut {true_cuts}/{len(true_all)} ({strand} strand) introns.\n'
           f'Interfered with {no_cuts}/{exon_pos_df.shape[0]} ({strand} strand) exons.\n'
@@ -154,7 +160,7 @@ def false_introns_exploration(
     recall = true_cuts / len(true_all) if true_cuts > 0 else 0
     exon_breaking_fpr = no_cuts / exon_pos_df.shape[0]
 
-    return recall, exon_breaking_fpr
+    return true_cuts, no_cuts, all_cuts_count, len(true_all), len(detectable_all), exon_pos_df.shape[0]
 
 
 def intraexonic_cuts_count(exon_grouped: GroupBy, cuts_grouped: GroupBy) -> int:

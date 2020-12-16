@@ -19,20 +19,6 @@ get.intron.lens <- function(data_filename) {
     mutate(len = lens,
            species = fungi) %>%
     select(species, len, label)
-  
-  # tp_vs_fp <- sapply(20:200, function(x) {
-  #   introns_dataset %>% filter(len < x) %>% 
-  #     group_by(label) %>% 
-  #     summarise(count = n()) %>%
-  #     select(count)
-  # })
-  
-  # temp <- as.data.frame(tp_vs_fp) %>% t() %>% as.data.frame()
-  # temp <- temp %>% mutate(candidate_lens = 20:200)
-  # 
-  # ggplot(temp, aes(x=candidate_lens)) +
-  #   geom_line(aes(y=V1)) +
-  #   geom_line(aes(y=V2))
 }
 
 basidio_i_lens <- read.table('../../pipeline/basidiomycota-intron-lens.txt')

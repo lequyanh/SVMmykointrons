@@ -1,3 +1,4 @@
+import os
 import sys
 
 import numpy as np
@@ -42,6 +43,10 @@ def extract_fungi_portion(
 
     out_reduced_assembly = f'{out_reduced}/Assembly/{fungi_name}_AssemblyScaffolds.fasta'
     out_reduced_introns = f'{out_reduced}/new-sequences/{fungi_name}-introns.fasta'
+
+    if f'{fungi_name}_AssemblyScaffolds.fasta' in os.listdir(f'{out_reduced}/Assembly/'):
+        print(f'Fungi {fungi_name} already extracted. Returning')
+        return
 
     with open(assembly, 'r') as assembly_f:
         # Load scaffolds in assembly

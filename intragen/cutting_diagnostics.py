@@ -45,9 +45,10 @@ def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.')
     post_cut_accuracy_metrics(joined_df)
 
     # Determine intra-genic intron FP rate. We have to pass strand here as we don't know, against which exons to compare
-    recall, exon_breaking_fpr = false_introns_exploration(joined_df, exon_file, intron_file, strand)
+    true_cuts, exon_cuts, all_cuts, all_introns, detectable_introns, exons = \
+        false_introns_exploration(joined_df, exon_file, intron_file, strand)
 
-    return recall, exon_breaking_fpr
+    return true_cuts, exon_cuts, all_cuts, all_introns, detectable_introns, exons
 
 
 def post_cut_accuracy_metrics(joined: DataFrame) -> None:
@@ -134,6 +135,7 @@ def false_introns_exploration(
     print(f'--------------------------------Recall and exon-breaking precision ---------------------------------------')
     true_cuts = joined.query('cut == 1 and label == 1').shape[0]
     true_all = get_introns_from_strand(intron_file, strand='+')
+    detectable_all = [i for i in true_all if 100 >= len(i) >= 40]
 
     print(f'Correctly cut {true_cuts}/{len(true_all)} ({strand} strand) introns.\n'
           f'Interfered with {no_cuts}/{exon_pos_df.shape[0]} ({strand} strand) exons.\n'
@@ -142,7 +144,9 @@ def false_introns_exploration(
     recall = true_cuts / len(true_all) if true_cuts > 0 else 0
     exon_breaking_fpr = no_cuts / exon_pos_df.shape[0]
 
-    return recall, exon_breaking_fpr
+    print(f'Recall on detectable introns (40-100nt): {true_cuts}/{len(detectable_all)}')
+
+    return true_cuts, no_cuts, all_cuts_count, len(true_all), len(detectable_all), exon_pos_df.shape[0]
 
 
 def intraexonic_cuts_count(exon_grouped: GroupBy, cuts_grouped: GroupBy) -> int:
