@@ -51,15 +51,17 @@ def extract_gff_introns(
         intron_start = None
 
         print_next = False
+        print('Gene ' + gene['name'][0])
         for i, f in enumerate(db.children(gene[gene_identifier][0], featuretype='exon')):
             scaffold, strand, start, end = \
                 f.chrom, f.strand, f.start - 1, f.end
-
             # If first exon, just set the start/end of the following intron
             if i == 0:
                 intron_start = end  # If first exon and + strand, the exon's end is the intron start
                 continue
             intron_end = start
+            print(intron_start)
+            print(intron_end)
 
             if intron_start > intron_end:
                 print(f'Anomally at strand {strand}. Next introns of the gene are:')

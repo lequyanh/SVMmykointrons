@@ -200,7 +200,7 @@ def extract_intron_exons(
     :param fungi_name: Fungi to extract exons/introns for
     :return: None
     """
-    gff = glob.glob(f'{config.GFFS_LOC}/{fungi_name}_GeneCatalog_genes_*.gff')
+    gff = glob.glob(f'{config.GFFS_LOC}/{fungi_name}_GeneCatalog_genes_*.gff*')
     if len(gff) == 0:
         print(f'No GFF file for fungi {fungi_name}')
         return
@@ -297,4 +297,10 @@ def extract_window(
 
 
 if __name__ == '__main__':
-    main()
+    fungi_names = f'./taxonomy/temp.txt'
+    exons = False
+    with open(fungi_names, 'r') as f:
+        names = f.readlines()
+        names = map(lambda name: name.rstrip(), names)
+        list(map(lambda name: extract_intron_exons(name, exons), names))
+
