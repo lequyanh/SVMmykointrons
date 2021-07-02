@@ -92,7 +92,7 @@ function setup(){
 }
 
 function cleanup(){
-  rm *dataset.csv
+  rm splice-*dataset.csv
   rm pruned-*
   rm *.py
   rm *.txt

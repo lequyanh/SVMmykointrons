@@ -1,10 +1,12 @@
-setwd("C:/Users/vuleq/Desktop/mykointron")
+# setwd("C:/Users/vuleq/Desktop/mykointron")
+setwd("/home/anhvu/PycharmProjects/mycointrons/statistics/phyla_results/")
 library(tidyverse)
 library(RColorBrewer)
 library(reshape2)
 
 fungi_phyla <- c('ascomycota', 
-                 'basidiomycota', 
+                 'basidiomycota',
+                 'basidiomycota_nn100',
                  'blastocladiomycota', 
                  'cryptomycota', 
                  'chytridiomycota', 
@@ -36,11 +38,28 @@ metrics_data_all <- Reduce(my_merge, phyla_metrics_list) %>%
 metrics_data_all <- metrics_data_all %>% 
   mutate(recall_all = 100 * true_cuts / all_introns,
          recall_detectable = 100 * true_cuts / detectable_introns,
-         dmg_exons = 100 * exon_cuts / exons)
+         dmg_exons = 100 * exon_cuts / exons,
+         adj_prec = 100 * (all_cuts - exon_cuts) / all_cuts)
 
 ################
 # RECALL PLOTS #
 ################
+my_count <- function(y, x_){
+  data.frame(
+    y=max(y) + 3,
+    label=paste('n=', length(y))
+  )
+}
+
+p <- metrics_data_all %>% ggplot(aes(x=phylum, y=recall_all, fill=phylum)) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) +
+  stat_summary(fun.data = my_count, geom = "text", size=3) +
+  ylab("Recall (%)") +
+  scale_color_brewer(palette = "Set3")
+
+ggsave(plot = p, filename = 'phyla_recall_with_nn.png', scale = 1.5)
+
+# ============ 2 plots ===================
 metrics_recall <- metrics_data_all %>% 
   mutate_all(~replace(., is.na(.), 0)) %>%
   select(fungi, phylum, recall_all, recall_detectable) %>%
@@ -64,17 +83,17 @@ metrics_recall %>% ggplot(aes(x=phylum, y=value, fill=phylum)) +
 ###################
 # PRECISION PLOTS #
 ###################
-metrics_exon_dmg <- metrics_data_all %>% 
+metrics_adj_prec <- metrics_data_all %>% 
   mutate_all(~replace(., is.na(.), 0)) %>%
-  select(fungi, phylum, dmg_exons)
+  select(fungi, phylum, adj_prec)
 
-
-metrics_exon_dmg %>% ggplot(aes(x=phylum, y=dmg_exons, fill=phylum)) +
+p <- metrics_adj_prec %>% ggplot(aes(x=phylum, y=adj_prec, fill=phylum)) +
   geom_violin(draw_quantiles = c(0.25, 0.5, 0.75)) +
-  stat_summary(fun.data = give.n, geom = "text", fun.y = median) +
-  ylab("Damaged exons (%)") +
-  scale_color_brewer(palette = "Set3") +
-  ggtitle("Damaged exons due to cuts")
+  stat_summary(fun.data = my_count, geom = "text", size=3) +
+  ylab("Adjusted prec. (%)") +
+  scale_color_brewer(palette = "Set3")
+
+ggsave(plot = p, filename = 'phyla_adj_prec_with_nn.png', scale = 1.5)
 
 ####################
 # Proportions plot #
@@ -96,7 +115,7 @@ metrics_gain <- metrics_gain %>% group_by(phylum) %>%
 
 GRAND_MEAN <- mean(metrics_gain$gain)
 
-metrics_gain %>% ggplot(aes(x=phylum, y=gain, fill = phylum)) +
+p <- metrics_gain %>% ggplot(aes(x=phylum, y=gain, fill = phylum)) +
   geom_boxplot() +
   scale_y_continuous(trans = 'log2', breaks = c(0.125, 1, round(GRAND_MEAN,3), 8, 64)) +
   geom_hline(yintercept=GRAND_MEAN, color = "black") +
@@ -104,6 +123,7 @@ metrics_gain %>% ggplot(aes(x=phylum, y=gain, fill = phylum)) +
   geom_text_repel(aes(label = outlier), na.rm = TRUE, hjust = -0.3) +
   ylab("Gain ratio") +
   scale_color_brewer(palette = "Set3") +
-  ggtitle("Gain ratio (intron recall/exon damage)") +
-  theme(axis.text.x = element_text(angle = 35, hjust = 1),
-        legend.position = "none")
+  ggtitle("Gain ratio (correctly removed introns / incorrect removals in exons)") +
+  theme(legend.position = "none")
+
+ggsave(plot = p, filename = 'phyla_gain_with_nn.png', scale = 1.5)

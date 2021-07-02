@@ -1,5 +1,4 @@
 setwd('/home/anhvu/PycharmProjects/mycointrons/statistics/intron-lenghts-statistics/')
-#setwd('C:/Users/AnhVu/Desktop/myko')
 library(dplyr)
 library(ggplot2)
 
@@ -28,7 +27,7 @@ fungi_files <- read.table('fungi_list.txt')
 
 # Get list of labeled intron data for each fungi in file
 # Each DF has # scaffold # start # end # sequence # label #
-# Remove unused columns and compute lenght of each sequence
+# Remove unused columns and compute length of each sequence
 intron_lens <- lapply(fungi_files$V1, get.intron.lens)
 
 # Transform the list into long-form DF (for plotting)
@@ -52,3 +51,26 @@ ggsave(filename = 'i_distr_plot.png', plot = i_distr_plot)
 quantile((intron_data_long %>% filter(label == 1))$len, c(0.025, 0.05, 0.95, 0.975), na.rm=T)
 ecdf((intron_data_long %>% filter(label == 1))$len)(40)
 ecdf((intron_data_long %>% filter(label == 1))$len)(100)
+
+###################################
+# Process phyla_intron_gene_stats #
+###################################
+
+fungi_phyla <- c('ascomycota', 
+                 'basidiomycota',
+                 'blastocladiomycota', 
+                 'cryptomycota', 
+                 'chytridiomycota', 
+                 'microsporidia', 
+                 'mucoromycota',
+                 'zoopagomycota')
+
+summary_table <- sapply(fungi_phyla, function(phylum) {
+  stats_df <- read_csv(sprintf('./phyla_introns_genes_stats/%s_intron_gene_stats.csv', phylum))
+  # hist(stats_df$intron_count, main = phylum)
+  return(list(median_gene_count = median(stats_df$gene_count),
+              mean_introns_per_gene = mean(stats_df$median_introns_per_gene),
+              median_intron_count = median(stats_df$intron_count)))
+}) %>% t()
+
+summary_table

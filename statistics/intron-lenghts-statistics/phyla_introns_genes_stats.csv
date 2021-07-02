@@ -1,0 +1,9 @@
+,median_gene_count,median_intron_count,mean_introns_per_gene
+ascomycota,11909,22101,1.29
+basidiomycota,13940,64907,3.22
+blastocladiomycota,11832,34156,2
+cryptomycota,6522,18936,2
+chytridiomycota,13367,42565,2.05
+microsporidia,2028,10,0
+mucoromycota,12155,40686,2.52
+zoopagomycota,7803,11700,1.06

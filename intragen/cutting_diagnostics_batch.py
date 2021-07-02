@@ -2,6 +2,7 @@ import logging
 import os
 import re
 
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pandas.core.groupby import GroupBy
@@ -18,7 +19,7 @@ ACCEPTOR_SITE = 'acceptor'
 # NOTE: Before running this file, alter ../tools/config.py to use reduced introns (instructions are there)
 
 def batch_analyze():
-    results_dir = 'sample_results_zoopago'
+    results_dir = 'sample_results_basidio_pluss_nn100'
     model = ''
     strand = '+'
 
@@ -35,7 +36,7 @@ def batch_analyze():
             run_diagnostics(fungi_name, model, strand=strand, folder=results_dir)
         results.loc[i] = [fungi_name, true_cuts, exon_cuts, all_cuts, all_introns, detectable_introns, exons]
 
-    results.to_csv('zoopagomycota_metrics.csv', sep=';', index=False)
+    results.to_csv('300basidio_nn100_metrics.csv', sep=';', index=False)
 
 
 def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.'):
@@ -44,6 +45,8 @@ def run_diagnostics(fungi_name: str, model: str, strand: str, folder: str = '.')
         filename=f'{fungi_name}_intron_intragen_exploration.log',
         filemode='w'
     )
+    print(fungi_name)
+
     strand_text = "plus" if strand == "+" else "minus"
     exon_file = config.get_fungi_exons_positions(fungi_name)
     intron_file = config.get_fungi_intron_fasta(fungi_name)
@@ -155,7 +158,7 @@ def false_introns_exploration(
 
     print(f'Correctly cut {true_cuts}/{len(true_all)} ({strand} strand) introns.\n'
           f'Interfered with {no_cuts}/{exon_pos_df.shape[0]} ({strand} strand) exons.\n'
-          f'Ratio {true_cuts / no_cuts:.2f}')
+          f'Ratio {true_cuts / no_cuts if no_cuts > 0 else np.Inf:.2f}')
 
     recall = true_cuts / len(true_all) if true_cuts > 0 else 0
     exon_breaking_fpr = no_cuts / exon_pos_df.shape[0]

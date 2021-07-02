@@ -199,7 +199,12 @@ function classify_introns_step() {
   # classify the introns
   # keep only the positively classified samples
   # keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-  $PYTHON_SHOGUN classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER >$CLASSIFICATION_RESULTS
+  if [ "${splice_site_donor_model: -3}" == ".h5" ]; then
+    echo "Using NN models - skipping intron classification"
+    $PYTHON classify-introns-stub.py $INTRON_FILE >$CLASSIFICATION_RESULTS
+  else
+    $PYTHON_SHOGUN classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER >$CLASSIFICATION_RESULTS
+  fi
 
   if grep -q $positive_introns < $CLASSIFICATION_RESULTS
   then
@@ -217,9 +222,14 @@ function validate_introns_step() {
   echo "Labeling intron dataset"
   $PYTHON label_introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH "$strand"
 
-  echo "Starting validation of the intron dataset using spectral kernel order ${SPECT_KERNEL_ORDER}"
-  $PYTHON_SHOGUN classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER |
-    cut --complement -d ';' -f4 >>$INTRON_RESULT
+  if [ "${splice_site_donor_model: -3}" == ".h5" ]; then
+    echo "Using NN models - skipping intron classification. \nValidating candidates right away"
+    $PYTHON classify-introns-stub.py $INTRON_FILE >$INTRON_RESULT
+  else
+    echo "Starting validation of the intron dataset using spectral kernel order ${SPECT_KERNEL_ORDER}"
+    $PYTHON_SHOGUN classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER |
+      cut --complement -d ';' -f4 >>$INTRON_RESULT
+  fi
 }
 
 function cut_introns_step() {
