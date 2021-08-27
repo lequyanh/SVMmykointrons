@@ -7,8 +7,8 @@ eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
 conda activate mykointron
 PYTHON=$(which python)
 
-conda activate mykointron_shogun
-PYTHON_SHOGUN=$(which python)
+#conda activate mykointron_shogun
+#PYTHON_SHOGUN=$(which python)
 #  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
 NUMBER_CPUS=12
@@ -62,8 +62,12 @@ window_inner=$5
 window_outer=$6
 # strand
 strand=$7
+# working directory (the .py scripts must be present)
+working_dir=$8
+# results directory (where to put result files)
+results_dir=$9
 #  - in case of validation
-intron_source=$8 #"/home/anhvu/Desktop/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta"
+intron_source=${10} #"/home/anhvu/Desktop/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta"
 
 #  - window size used when extracting splice sites sequences
 #    the size is equal to the size of window used to train the models
@@ -97,6 +101,7 @@ positive_introns=";1$"
 set -e
 # enable pipe fail
 set -o pipefail
+cd "$working_dir" || exit
 
 function extract_donor_acceptor_step() {
   echo "Extracting donors and acceptors from [$assembly_filepath] on $strand strand..."
@@ -244,6 +249,14 @@ function cut_introns_step() {
   fi
 }
 
+function cleanup(){
+  rm ./*dataset.csv
+  rm ./*.py
+  rm ./*.txt
+  rm -rf ./__pycache__/
+  rm ./*.log
+}
+
 extract_donor_acceptor_step
 classify_splice_sites_step
 pair_splice_sites_and_extract_introns_step
@@ -264,4 +277,8 @@ for p in ./*.log; do
   } >>pipeline.output
 done
 
-rm ./*.log
+cleanup
+
+mkdir -p "$results_dir"
+mv ./* "$results_dir"
+echo "Results are saved into $results_dir"

@@ -23,7 +23,7 @@ strand = sys.argv[8]
 
 assert len(donor) == 2, 'donor must be a dimer'
 assert len(acceptor) == 2, 'acceptor must be a dimer'
-assert strand == '+' or strand == '-'
+assert strand == 'plus' or strand == 'minus'
 
 with open(assembly, 'r') as assembly_f:
     # loop through the whole assembly
@@ -31,7 +31,7 @@ with open(assembly, 'r') as assembly_f:
         scaffold = scaffold_sr.id
         sequence = str(scaffold_sr.seq)
 
-        if strand == '-':
+        if strand == 'minus':
             sequence = fl.complementary(sequence)[::-1]  # Reverse complement
 
         for position, dimer in fl.dimers(sequence):

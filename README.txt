@@ -133,6 +133,7 @@ INSTALLATION
         conda install docopt
         conda install scikit-learn
         conda install -c anaconda keras
+        pip3 install --upgrade tensorflow
 
 (2) If this project is downloaded via Git, ask for models at lequyanh@fel.cvut.cz as they are too large for GitHub
     Save them to ./pipeline/bestmodels/basidiomycota

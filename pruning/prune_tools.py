@@ -6,8 +6,6 @@ import pandas as pd
 from Bio import SeqIO
 from scipy import stats
 
-from fastalib import read_fasta
-
 logging.basicConfig(
     level=logging.INFO,
     filename='prune-tools.log',
