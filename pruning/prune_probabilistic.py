@@ -144,7 +144,7 @@ if __name__ == "__main__":
         logging.info(f'Processing scaffold {scaffold}')
 
         scaffold_dna = scaffold_sequences[scaffold]
-        if strand == '-':
+        if strand == 'minus':
             scaffold_dna = str(Seq(scaffold_sequences[scaffold]).reverse_complement())
 
         scaffold_prepruned = prune_non_overlap_introns(scaffold, scaffold_dna, non_overlap_introns)

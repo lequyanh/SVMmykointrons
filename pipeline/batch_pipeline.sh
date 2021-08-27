@@ -1,13 +1,18 @@
 #!/bin/bash
 
-# Basic usage:
-# bash batch_pipeline.sh -m #models_settings -p #project_path -s #strand [-l #custom_shards_list]
-
+# SYNOPSIS
+#     bash batch_pipeline.sh -m models_settings -p project_path -s strand [-l #custom_shards_list]
+#
+# OPTIONS
+#     -m    model settings (nn100/svmb)
+#     -p    project path with the fasta to clean sharded into fragments (stored in ./assembly_shards)
+#     -s    specify strand reading direction (plus/minus/both)
+#     -l    text file with the list specific assembly shards to process (e.g. to process a subset of shards)
 # EXAMPLES
-# bash batch_pipeline.sh -m nn100 -p /home/johndoe/Desktop/project/ -s plus
-
-# Specifying only a subset of assembly shards to process (using SVMs)
-# bash main.sh -m svmb -p /home/johndoe/Desktop/project/ -l custom_assembly_shard_list.txt
+#     bash batch_pipeline.sh -m nn100 -p /home/johndoe/Desktop/project/ -s plus
+#
+#     Specifying only a subset of assembly shards to process (using SVMs)
+#     bash main.sh -m svmb -p /home/johndoe/Desktop/project/ -l custom_assembly_shard_list.txt
 
 # OBSOLETE: cutting and intron validation on fungal species):
 # bash batch_pipeline.sh -m svmb -l basidiomycota.txt -d /storage/praha1/home/lequyanh/data/reduced/ -s minus
@@ -16,11 +21,15 @@
 # FUNCTION FOR DISTRIBUTED COMPUTATION                             #
 #    Please modify the function by inserting a job submission call #
 #    according to standards of your cluster                        #
+#                                                                  #
+#    The call should execute the script 'pipeline' with given args #
+#    All arguments are supplied and don't need to be modified      #
+#    Their order must be however preserved                         #
 ####################################################################
 function submit_job(){
-  assembly=$1
-  working_dir=$2
-  results_dir=$3
+  assembly=$1     # The path to the assembly shard
+  working_dir=$2  # Isolated working directory for temporary files
+  results_dir=$3  # Partial results directory for a given shard
 
   # >>>> !! CHANGE ME !! <<<
   # Use this call for local execution or replace it a job submission call
@@ -125,10 +134,12 @@ export imodel
 export window_inner
 export window_outer
 
-#############################################################
-# FUNCTIONS (prepares working directory for next run)#
-#############################################################
-function process_assembly_assembly_shard(){
+##########################################################
+# Prepare a working directory for a given assembly shard #
+# for independent processing and submits the shard       #
+# for execution                                          #
+##########################################################
+function process_assembly_shard(){
   assembly_shard=$1
 
   # Prepare working and results directories for independent processing
@@ -144,25 +155,40 @@ function process_assembly_assembly_shard(){
 
   ln -s -f "$ROOT/tools/fastalib.py" "${working_dir}/fastalib.py"
   ln -s -f "$ROOT/tools/generate-pairs.py" "${working_dir}/generate-pairs.py"
+  ln -s -f "$ROOT/tools/extract-donor-acceptor.py" "${working_dir}/extract-donor-acceptor.py"
+  ln -s -f "$ROOT/tools/filter-orphan-acceptors.py" "${working_dir}/filter-orphan-acceptors.py"
+  ln -s -f "$ROOT/tools/extract-introns.py" "${working_dir}/extract-introns.py"
 
   ln -s -f "$ROOT/pruning/prune_tools.py" "${working_dir}/prune_tools.py"
   ln -s -f "$ROOT/pruning/prune_probabilistic.py" "${working_dir}/prune_probabilistic.py"
 
-  ln -s -f "$ROOT/pipeline/filter-orphan-acceptors.py" "${working_dir}/filter-orphan-acceptors.py"
-  ln -s -f "$ROOT/pipeline/extract-donor-acceptor.py" "${working_dir}/extract-donor-acceptor.py"
-  ln -s -f "$ROOT/pipeline/extract-introns.py" "${working_dir}/extract-introns.py"
   ln -s -f "$ROOT/pipeline/basidiomycota-intron-lens.txt" "${working_dir}"
 
   # tell a HPC to run the pipeline script with these parameters (register a job or something similar)
   submit_job "$assembly" "$working_dir" "$results_dir"
 }
 
-###############################################
-# META-GENOM CUTTING (FROM SHARDED FRAGMENTS) #
-###############################################
-export -f process_assembly_assembly_shard
+function send_shards_for_execution() {
+  while read assembly_shard; do
+    echo "Sending for execution the assembly shard ${assembly_shard}"
+    process_assembly_shard "${assembly_shard}"
+  done <"$fasta_list_file"
+}
 
-while read assembly_shard; do
-  echo "Sending for execution the assembly shard ${assembly_shard}"
-  process_assembly_assembly_shard "${assembly_shard}"
-done <"$fasta_list_file"
+#############################################
+# ASSEMBLY CUTTING (FROM SHARDED FRAGMENTS) #
+#############################################
+export -f process_assembly_shard
+
+if [ "$strand" == 'both' ]; then
+  strand='plus'
+  export strand
+  send_shards_for_execution
+
+  strand='minus'
+  export strand
+  send_shards_for_execution
+else
+  send_shards_for_execution
+fi
+

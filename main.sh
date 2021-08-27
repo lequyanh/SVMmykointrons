@@ -1,19 +1,20 @@
-ASSEMBLY_FILEPATH=$1
+# Path to project folder containing an fasta assembly to purge
+project_path=$1
 # Type of model to cut the introns with (determines other pipeline settings)
-MODEL_SETTINGS=$2 #nn100 for instance
+model_settings=$2 #nn100 of svmb
+
+assembly_path=$(find "$project_path" -maxdepth 1 -name "*.fasta" -o -name "*.fa")
 
 # Sharding settings (metagenom can be split to chunks for parallel processing)
 NUM_FILES=300
-# Output file names
-OUT_FORW='metagenom-cut-coords.csv'
-OUT_REV='metagenom-cut-coords-reverse.csv'
 
-##########################
-# SHARDING THE METAGENOM #
-##########################
+
+##############################
+# SHARDING THE MAIN ASSEMBLY #
+##############################
 cd ./pipeline || exit
 
-total_lines=$(wc -l <"${ASSEMBLY_FILEPATH}")
+total_lines=$(wc -l <"${assembly_path}")
 ((lines_per_file = (total_lines + NUM_FILES - 1) / NUM_FILES))
 
 if ((lines_per_file % 2 != 0)); then
@@ -21,8 +22,8 @@ if ((lines_per_file % 2 != 0)); then
 fi
 
 # Split the actual file, maintaining lines.
-assembly_name=$(basename ASSEMBLY_FILEPATH) #TODO remove extension
-split --lines="${lines_per_file}" "${ASSEMBLY_FILEPATH}" "${assembly_name}" -d -a 3
+assembly_name=$(basename assembly_path) #TODO remove extension
+split --lines="${lines_per_file}" "${assembly_path}" "${assembly_name}" -d -a 3
 
 # Debug information
 echo "Total lines     = ${total_lines}"
@@ -53,11 +54,11 @@ function merge_cuts() {
 forw_strand_result_loc="metagenom_forw_stand_res"
 rev_strand_result_loc="metagenom_rev_stand_res"
 
-bash batch_pipeline.sh -m "$MODEL_SETTINGS" -l "$fasta_list_file" -d $ASSEMBL_SHARDS_DIR -s + -f
+bash batch_pipeline.sh -m "$model_settings" -l "$fasta_list_file" -d $ASSEMBL_SHARDS_DIR -s plus
 mkdir -p ${forw_strand_result_loc}
 mv assembly_shard*/ ${forw_strand_result_loc}
 
-bash batch_pipeline.sh -m "$MODEL_SETTINGS" -l "$fasta_list_file" -d $ASSEMBL_SHARDS_DIR -s - -f
+bash batch_pipeline.sh -m "$model_settings" -l "$fasta_list_file" -d $ASSEMBL_SHARDS_DIR -s minus
 mkdir -p ${rev_strand_result_loc}
 mv assembly_shard*/ ${rev_strand_result_loc}
 
