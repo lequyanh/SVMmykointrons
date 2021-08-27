@@ -66,7 +66,8 @@ while getopts "m:p:s:l:" opt; do
     ;;
   p)
     project_path=$OPTARG
-    echo "FASTAs of the assemblies will be taken from location ${SHARDS_DIR}"
+    echo "Assembly shards from the directory ${project_path} will be processed.
+          Results will be saved in this directory as well."
     ;;
   l)
     fasta_list_file=$OPTARG
