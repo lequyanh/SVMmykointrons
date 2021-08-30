@@ -1,6 +1,0 @@
-INFO:root:Classification of file shuffeled_valid_Blade1-acceptor-windows.csv with model acceptor_gridmodels/ascomycota//train-splice-site-shuffeled_train_Blade1-acceptor-windows.csv-10-20-80-70-14067067.arien-pro.ics.muni.cz//model.hd5
-INFO:root:Accuracy: 0.945190977443609
- -TP: 9835.0
- -FP: 1238.0
- -TN: 68734.0
- -FN: 3318.0
