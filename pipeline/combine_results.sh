@@ -1,20 +1,51 @@
 #!/bin/bash
 
-# Function for merging cuts into one file
-function merge_cuts() {
-  results_folder=$1
-  out=$2
+# SYNOPSIS
+#     bash combine_results.sh -p project_path
+#
+# OPTIONS
+#     -p    project path with the fasta to be sharded into fragments (stored in ./assembly_shards)
+# EXAMPLES
+#     bash combine_results.sh -p /home/johndoe/Desktop/project/
 
-  echo "scaffold;start;end" >"${out}"
+while getopts "p:" opt; do
+  case $opt in
+  p)
+    project_path=$OPTARG
+    echo "Assembly FASTA for sharding will be taken from location ${project_path}"
+    ;;
+  *)
+    echo "Invalid option or argument"
+    exit 1
+    ;;
+  esac
+done
 
-  for f in "${results_folder}"/*/; do
-    # Read all lines except for the first one containing headers
-    tail -n +2 "$f/cut-coords.csv" >>"${out}"
-  done
-}
-# Output file names
-OUT_FORW='metagenom-cut-coords.csv'
-OUT_REV='metagenom-cut-coords-reverse.csv'
+results_folder="$project_path/results"
 
-merge_cuts ${forw_strand_result_loc} $OUT_FORW
-merge_cuts ${rev_strand_result_loc} $OUT_REV
+if [ -z "$results_folder" ]; then
+  echo 'Result directory not found or empty. Exiting'
+  exit
+fi
+
+cut_coords_full_plus="$project_path/cut-coords-plus-strand-full.csv"
+cut_coords_full_minus="$project_path/cut-coords-plus-strand-minus.csv"
+
+echo "scaffold;start;end" >"${cut_coords_full_plus}"
+echo "scaffold;start;end" >"${cut_coords_full_minus}"
+
+for f in "${results_folder}"/*_results_plus/; do
+  # Read all lines except for the first one containing headers
+  tail -n +2 "$f/cut-coords.csv" >>"${cut_coords_full_plus}"
+done
+
+for f in "${results_folder}"/*_results_minus/; do
+  # Read all lines except for the first one containing headers
+  tail -n +2 "$f/cut-coords.csv" >>"${cut_coords_full_minus}"
+done
+
+pruned_assembly_plus="$project_path/pruned_assembly_plus.fa"
+pruned_assembly_minus="$project_path/pruned_assembly_minus.fa"
+
+cat "${results_folder}/*_results_plus/pruned-*.fa*" > "${pruned_assembly_plus}"
+cat "${results_folder}/*_results_minus/pruned-*.fa*" > "${pruned_assembly_minus}"

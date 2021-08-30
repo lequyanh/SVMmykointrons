@@ -49,6 +49,8 @@ if [ "$(ls -A "$assembly_shards_path")" ]; then
         echo 'Aborting sharding and exiting'
         exit
     fi
+
+    rm "$assembly_shards_path/*"
 fi
 
 ##############################
@@ -56,6 +58,25 @@ fi
 ##############################
 assembly_path=$(find "$project_path" -maxdepth 1 -name "*.fasta" -o -name "*.fa")
 assembly_name=$(basename "$assembly_path" | cut -d '.' -f 1)
+
+# Remove duplicated entries (save to a separate fasta)
+assembly_unique="${project_path}/${assembly_name}_no_duplicates.fa"
+
+printf "\nRemoving duplicated sequences..."
+if [ -z "${assembly_unique}" ]
+then
+  printf "\tNon-duplicated fasta existing. Proceed to sharding"
+else
+  printf "\tOriginal number of sequences: %s \n"  "$(grep -c '>' < "$assembly_path")"
+
+  awk '/^>/ { f = !($0 in a); a[$0] } f' "$assembly_path" > "$assembly_unique"
+
+  printf "\tNumber of unique sequences after cleaning: %s \n" "$(grep -c '>' < "$assembly_unique")"
+  printf "Non-duplicated sequences are saved to %s \n\n" "$assembly_unique"
+fi
+
+# Sharding
+echo "Sharding the assembly..."
 
 awk -v seqs_per_file="$seqs_per_file" \
     -v assembly_name="$assembly_name" \
@@ -67,6 +88,6 @@ awk -v seqs_per_file="$seqs_per_file" \
       n_seq++;
       next;
     }
-    {print >> file;}' < "$assembly_path"
+    {print >> file;}' < "$assembly_unique"
 
 echo "Assembly shards generated to the directory $assembly_shards_path"
