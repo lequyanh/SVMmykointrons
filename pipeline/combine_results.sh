@@ -31,21 +31,34 @@ fi
 cut_coords_full_plus="$project_path/cut-coords-plus-strand-full.csv"
 cut_coords_full_minus="$project_path/cut-coords-plus-strand-minus.csv"
 
-echo "scaffold;start;end" >"${cut_coords_full_plus}"
-echo "scaffold;start;end" >"${cut_coords_full_minus}"
-
-for f in "${results_folder}"/*_results_plus/; do
-  # Read all lines except for the first one containing headers
-  tail -n +2 "$f/cut-coords.csv" >>"${cut_coords_full_plus}"
-done
-
-for f in "${results_folder}"/*_results_minus/; do
-  # Read all lines except for the first one containing headers
-  tail -n +2 "$f/cut-coords.csv" >>"${cut_coords_full_minus}"
-done
-
 pruned_assembly_plus="$project_path/pruned_assembly_plus.fa"
 pruned_assembly_minus="$project_path/pruned_assembly_minus.fa"
 
-cat "${results_folder}/*_results_plus/pruned-*.fa*" > "${pruned_assembly_plus}"
-cat "${results_folder}/*_results_minus/pruned-*.fa*" > "${pruned_assembly_minus}"
+# ASSEMBLE PLUS STRAND RESULTS IF PRESENT
+match="$(find "$project_path" -path "*results_plus*" -printf "." | wc -c)"
+if [ "${match}" -gt 0 ]
+then
+  echo "scaffold;start;end" >"${cut_coords_full_plus}"
+
+  for f in "${results_folder}"/*_results_plus/; do
+    # Read all lines except for the first one containing headers
+    tail -n +2 "$f/cut-coords.csv" >>"${cut_coords_full_plus}"
+  done
+
+  cat "${results_folder}"/*_results_plus/pruned-*.fa* > "${pruned_assembly_plus}"
+fi
+
+# ASSEMBLE MINUS STRAND RESULTS IF PRESENT
+match="$(find "$project_path" -path "*results_minus*" -printf "." | wc -c)"
+
+if [ "${match}" -gt 0 ]
+then
+  echo "scaffold;start;end" >"${cut_coords_full_minus}"
+
+  for f in "${results_folder}"/*_results_minus/; do
+    # Read all lines except for the first one containing headers
+    tail -n +2 "$f/cut-coords.csv" >>"${cut_coords_full_minus}"
+  done
+
+  cat "${results_folder}"/*_results_minus/pruned-*.fa* > "${pruned_assembly_minus}"
+fi

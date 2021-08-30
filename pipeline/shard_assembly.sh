@@ -33,8 +33,13 @@ then
       echo "Using default number of sequences per assembly shard $SEQ_PER_SHARD_DEFAULT"
       seqs_per_file=$SEQ_PER_SHARD_DEFAULT
 fi
-
 echo "Assembly will be split into shards with $seqs_per_file sequences each."
+
+no_fastas=$(find "$project_path" -maxdepth 1 -name "*.fasta" -o -name "*.fa" | wc -l)
+if [ "$no_fastas" -gt 1 ]; then
+  echo "Multiple FASTA files in the project directory!"
+  exit 1
+fi
 
 # Create a subdirectory in the project folder for assembly shards
 assembly_shards_path="${project_path}/${ASSEMBLY_SHARDS_DIR}"

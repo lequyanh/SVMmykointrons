@@ -281,4 +281,4 @@ cleanup
 
 mkdir -p "$results_dir"
 mv ./* "$results_dir"
-echo "Results are saved into $results_dir. \n\n"
+printf "Results are saved into %s. \n\n" "$results_dir"
