@@ -33,7 +33,7 @@ function submit_job(){
 
   # >>>> !! CHANGE ME !! <<<
   # Use this call for local execution or replace it a job submission call
-  bash pipeline "$assembly" "$dmodel" "$amodel" "$imodel" "$window_inner" "$window_outer" "$strand" "$working_dir" "$results_dir"
+  bash pipeline.sh "$assembly" "$dmodel" "$amodel" "$imodel" "$window_inner" "$window_outer" "$strand" "$working_dir" "$results_dir"
   # >>>> !! CHANGE ME !! <<<
 }
 export -f submit_job

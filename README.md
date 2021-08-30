@@ -1,9 +1,27 @@
 QUICKSTART
 ==========
+
+If cloned from Git, execute first the following command to remove 
+`find . -name "*.sh" -exec sed -i 's/\r//' {} \;`
+
 Within ./pipeline folder, run:
 
-bash batch_pipeline.sh -m svmb -l ../test/list.txt -d ../test/assemblies/ -s + -f
-bash batch_pipeline.sh -m svmb -l ../test/list.txt -d ../test/assemblies/ -s - -f
+1) **Split the assembly into smaller shards for parallel/distributed processing:**
+
+`bash shard_assembly.sh -p project_path -n seqs_per_shard`
+
+e.g. 
+`bash shard_assembly.sh -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450/ -n 1`
+2) **Process the shards:**
+
+`bash batch_pipeline.sh -m models_settings -p project_path -s strand`
+
+e.g. here we process both (sharded) strands of the test project ctg_k141_2751450:
+`bash batch_pipeline.sh -m nn100 -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450 -s both`
+
+3) **Combine results**
+
+`bash combine_results.sh -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450`
 
 Note: Path to the test assemblies might need to be absolute
 
