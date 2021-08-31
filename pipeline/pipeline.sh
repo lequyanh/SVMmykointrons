@@ -7,8 +7,8 @@ eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
 conda activate mykointron
 PYTHON=$(which python)
 
-#conda activate mykointron_shogun
-#PYTHON_SHOGUN=$(which python)
+conda activate mykointron_shogun
+PYTHON_SHOGUN=$(which python)
 #  - number of CPUs to be used in total
 #    the minimal value is 2, although 16 or more is recommended
 NUMBER_CPUS=12
