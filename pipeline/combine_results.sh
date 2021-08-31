@@ -28,11 +28,14 @@ if [ -z "$results_folder" ]; then
   exit
 fi
 
-cut_coords_full_plus="$project_path/cut-coords-plus-strand-full.csv"
-cut_coords_full_minus="$project_path/cut-coords-plus-strand-minus.csv"
+assembly_path=$(find "$project_path" -maxdepth 1 -name "*no_duplicates*.fasta" -o -name "*.fa")
+assembly_name=$(basename "$assembly_path" | cut -d '.' -f 1)
 
-pruned_assembly_plus="$project_path/pruned_assembly_plus.fa"
-pruned_assembly_minus="$project_path/pruned_assembly_minus.fa"
+cut_coords_full_plus="$project_path/cut-coords-plus-strand-full.csv"
+cut_coords_full_minus="$project_path/cut-coords-minus-strand-full.csv"
+
+pruned_assembly_plus="$project_path/pruned_${assembly_name}_plus.fa"
+pruned_assembly_minus="$project_path/pruned_${assembly_name}_minus.fa"
 
 # ASSEMBLE PLUS STRAND RESULTS IF PRESENT
 match="$(find "$project_path" -path "*results_plus*" -printf "." | wc -c)"
@@ -46,6 +49,8 @@ then
   done
 
   cat "${results_folder}"/*_results_plus/pruned-*.fa* > "${pruned_assembly_plus}"
+
+  echo "Cleaned positive strand assembly completed"
 fi
 
 # ASSEMBLE MINUS STRAND RESULTS IF PRESENT
@@ -61,4 +66,6 @@ then
   done
 
   cat "${results_folder}"/*_results_minus/pruned-*.fa* > "${pruned_assembly_minus}"
+
+  echo "Cleaned negative strand assembly completed"
 fi

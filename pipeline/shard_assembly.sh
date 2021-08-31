@@ -35,7 +35,7 @@ then
 fi
 echo "Assembly will be split into shards with $seqs_per_file sequences each."
 
-no_fastas=$(find "$project_path" -maxdepth 1 -name "*.fasta" -o -name "*.fa" | wc -l)
+no_fastas=$(find "$project_path" -maxdepth 1 -name "*.fasta" -o -name "*.fa" -not -name "*_no_duplicates.fa" | wc -l)
 if [ "$no_fastas" -gt 1 ]; then
   echo "Multiple FASTA files in the project directory!"
   exit 1
@@ -55,13 +55,13 @@ if [ "$(ls -A "$assembly_shards_path")" ]; then
         exit
     fi
 
-    rm "$assembly_shards_path/*"
+    rm "$assembly_shards_path"/*
 fi
 
 ##############################
 # SHARDING THE MAIN ASSEMBLY #
 ##############################
-assembly_path=$(find "$project_path" -maxdepth 1 -name "*.fasta" -o -name "*.fa")
+assembly_path=$(find "$project_path" -maxdepth 1 -name "*.fasta" -o -name "*.fa" -not -name "*_no_duplicates.fa")
 assembly_name=$(basename "$assembly_path" | cut -d '.' -f 1)
 
 # Remove duplicated entries (save to a separate fasta)
