@@ -11,6 +11,7 @@ The stages are following:
    * The size of the shards should be less than 70Mb for reasonable processing times
 2) *Process the shards (in parallel)*
    * Here typically the shards are submitted as a job for execution on some cluster
+   * Small assemblies can be processed locally
 3) *Combine the results*
     * Once the partial results are complete, merge them into a single cleaned assembly
 
@@ -75,7 +76,16 @@ he or she can modify this file to specify the subset required.
 └── pruned_ctg_k141_2751450_minus.fa
 ```
 Two new files appear - the pruned assembly (with non-duplicated sequences), and the CSV with cut coordinates.
-Both files are assembled from the partial results inside the `results` folder.
+Both files are assembled from the partial results inside the `results` folder. End of processing
+
+### IMPORTANT: Distributed job submission
+Though the entire pipeline can be executed locally for small assemblies, the main use-case is to send individual shards 
+as a distributed task on some high-performance cluster. We are aware that each cluster has a different infrastructure
+and different job submission policy. This particular part of the pipeline must be therefore left for the user to fill in.
+
+For convenience, we isolated the submission section into the `submit_job()` functions inside the `batch_pipeline.sh` script.
+Basically, the user only needs to modify a single line that specifies which script and with which arguments should be executed.
+The script will have had already its working directory with all necessary files prepared. 
 
 Quickstart
 ==========
@@ -112,20 +122,20 @@ the call results in two separate fastas one for each strand (named `pruned_ctg_k
 
 `bash combine_results.sh -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450`
 
-USAGE
+Details
 =====
 
 for model setting, use one of the following
-    * 'svmb' (standing for SVM models trained on Basidiomycota; very slow)
-    * 'nn100' (standing for neural net with 0-100 windows; faster)
-    * 'nn200' (standing for neural net with 200-200 windows; slower, more accurate)
+* 'svmb' (standing for SVM models trained on Basidiomycota; very slow)
+* 'nn100' (standing for neural net with 0-100 windows; faster)
+* 'nn200' (standing for neural net with 200-200 windows; slower, more accurate)
 
 The process of intron removal is roughly:
-    1) Find all donor dimers and perform splice site classification
-    2) Find all acceptor dimers, remove orphan candidates (AG with no GT in acceptable range) and perform splice site classification
-    3) Pair positively classified splice site candidates to form an intron candidate dataset
-    4) Classify the intron dataset (only for SVM models)
-    5) Cut positively classified introns. Overlaps are resolved with length prior distribution cut-off
+1) Find all donor dimers and perform splice site classification
+2) Find all acceptor dimers, remove orphan candidates (AG with no GT in acceptable range) and perform splice site classification
+3) Pair positively classified splice site candidates to form an intron candidate dataset
+4) Classify the intron dataset (only for SVM models)
+5) Cut positively classified introns. Overlaps are resolved with length prior distribution cut-off
 
 INSTALLATION
 ============
