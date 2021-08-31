@@ -1,6 +1,7 @@
-# INSTALL TENSORFLOW-KERAS ENVIRONMENT
+# Enable conda activate from shell
 eval "$(conda shell.bash hook)"
 
+# INSTALL TENSORFLOW-KERAS ENVIRONMENT
 conda create -n mykointron python=3.7.4 --yes
 conda activate mykointron
 
