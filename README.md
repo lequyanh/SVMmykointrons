@@ -29,7 +29,11 @@ conda install -c conda-forge shogun --yes
 
 * Notes: 
   * The installation script creates 2 separate environments with similar libraries, since Shogun (SVM models) and Keras (NN models) don't work together in one env.
-  * The standard way of installation through *requirements.txt* cannot be used here due to combined usage of conda and pip
+  * The standard way of installation through *requirements.txt* cannot be used here due to combined usage of conda and pip 
+  * If this project is downloaded via Git, ask for SVM models at lequyanh@fel.cvut.cz as they are too large for GitHub
+    * Save them to `./pipeline/bestmodels/basidiomycota`
+    * Applies only for SVM models, NN models are included and don't need extra download
+
 
 Overview
 ==========
