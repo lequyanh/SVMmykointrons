@@ -22,3 +22,6 @@ conda install -c anaconda biopython --yes
 conda install docopt --yes
 conda install scikit-learn --yes
 conda install -c conda-forge shogun --yes
+
+# Return to the base environment
+conda activate

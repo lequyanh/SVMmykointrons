@@ -80,7 +80,7 @@ Both files are assembled from the partial results inside the `results` folder. E
 
 ### IMPORTANT: Distributed job submission
 Though the entire pipeline can be executed locally for small assemblies, the main use-case is to send individual shards 
-as a distributed task on some high-performance cluster. We are aware that each cluster has a different infrastructure
+as a distributed task to some high-performance cluster. We are aware that each cluster has a different infrastructure
 and different job submission policy. This particular part of the pipeline must be therefore left for the user to fill in.
 
 For convenience, we isolated the submission section into the `submit_job()` functions inside the `batch_pipeline.sh` script.

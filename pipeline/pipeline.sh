@@ -1,19 +1,5 @@
 #!/bin/bash
 
-# System settings:
-#  - path to python
-eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
-
-conda activate mykointron
-PYTHON=$(which python)
-
-conda activate mykointron_shogun
-PYTHON_SHOGUN=$(which python)
-#  - number of CPUs to be used in total
-#    the minimal value is 2, although 16 or more is recommended
-NUMBER_CPUS=12
-# -------------------------------------------------------------
-
 # Pipeline settings:
 #  - splice site dimers
 DONOR="GT"
@@ -48,7 +34,7 @@ INTRON_FILE="intron-dataset.csv"
 INTRON_RESULT="intron-result.csv"
 CUT_COORDS_FILE="cut-coords.csv"
 
-# Pipeline inputs:
+## Pipeline inputs:
 #  - Assembly file (FASTA)
 assembly_filepath=$1 # ~/Desktop/mykointrons-data/data/Assembly/Kocim1_AssemblyScaffolds.fasta
 #  - donor splice site prediction model
@@ -76,7 +62,7 @@ DONOR_RWINDOW=${window_inner}
 ACCEPTOR_LWINDOW=${window_inner}
 ACCEPTOR_RWINDOW=${window_outer}
 
-# Derived variables:
+## Derived variables:
 # regex used to determine splice site sequences
 donor_regex=";[ACGT]{$WINDOW_DIAMETER}$DONOR[ACGT]{$WINDOW_DIAMETER}$"
 acceptor_regex=";[ACGT]{$WINDOW_DIAMETER}$ACCEPTOR[ACGT]{$WINDOW_DIAMETER}$"
@@ -84,6 +70,18 @@ acceptor_regex=";[ACGT]{$WINDOW_DIAMETER}$ACCEPTOR[ACGT]{$WINDOW_DIAMETER}$"
 positive_splice_sites=";1$"
 # regex to filter positively classified introns
 positive_introns=";1$"
+
+## Setting up the correct conda environment
+eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
+
+if [ "${splice_site_donor_model: -3}" == ".h5" ]; then
+  conda activate mykointron
+else
+  conda activate mykointron_shogun
+  NUMBER_CPUS=12
+fi
+
+PYTHON=$(which python)
 # -------------------------------------------------------------
 
 # The process (roughly):
@@ -155,7 +153,7 @@ function classify_splice_sites_step() {
 
     date
 
-    $PYTHON_SHOGUN classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
+    $PYTHON classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
       "${DONOR_RWINDOW}" "${DONOR_LWINDOW}" \
       "donor" -c $NUMBER_CPUS |
       grep $positive_splice_sites |
@@ -163,7 +161,7 @@ function classify_splice_sites_step() {
 
     $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
-    $PYTHON_SHOGUN classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
+    $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
       "${ACCEPTOR_LWINDOW}" "${ACCEPTOR_RWINDOW}" \
       "acceptor" -c $NUMBER_CPUS |
       grep $positive_splice_sites |
@@ -208,7 +206,7 @@ function classify_introns_step() {
     echo "Using NN models - skipping intron classification"
     $PYTHON classify-introns-stub.py $INTRON_FILE >$CLASSIFICATION_RESULTS
   else
-    $PYTHON_SHOGUN classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER >$CLASSIFICATION_RESULTS
+    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER >$CLASSIFICATION_RESULTS
   fi
 
   if grep -q $positive_introns < $CLASSIFICATION_RESULTS
