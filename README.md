@@ -1,3 +1,36 @@
+Installation
+============
+Run the `install.sh` script. 
+
+If your shell does not permit running conda from a script, execute the commands manually:
+```
+# INSTALL TENSORFLOW-KERAS ENVIRONMENT
+conda create -n mykointron python=3.7.4 --yes
+conda activate mykointron
+
+conda install pandas --yes
+conda install -c anaconda biopython --yes
+conda install docopt --yes
+conda install scikit-learn --yes
+conda install -c anaconda keras --yes
+
+pip3 install --upgrade tensorflow
+
+# INSTALL SHOGUN ENVIRONMENT 
+conda create -n mykointron_shogun python=3.6 --yes
+conda activate mykointron_shogun
+
+conda install pandas --yes
+conda install -c anaconda biopython --yes
+conda install docopt --yes
+conda install scikit-learn --yes
+conda install -c conda-forge shogun --yes
+```
+
+* Notes: 
+  * The installation script creates 2 separate environments with similar libraries, since Shogun (SVM models) and Keras (NN models) don't work together in one env.
+  * The standard way of installation through *requirements.txt* cannot be used here due to combined usage of conda and pip
+
 Overview
 ==========
 We present a pipeline for removing fungal introns from meta-genome assemblies. The output is the original assembly
@@ -136,40 +169,3 @@ The process of intron removal is roughly:
 3) Pair positively classified splice site candidates to form an intron candidate dataset
 4) Classify the intron dataset (only for SVM models)
 5) Cut positively classified introns. Overlaps are resolved with length prior distribution cut-off
-
-Installation
-============
-Run the `install.sh` script. 
-
-If your shell does not permit running conda from a script, execute the commands manually:
-```
-# INSTALL TENSORFLOW-KERAS ENVIRONMENT
-conda create -n mykointron python=3.7.4 --yes
-conda activate mykointron
-
-conda install pandas --yes
-conda install -c anaconda biopython --yes
-conda install docopt --yes
-conda install scikit-learn --yes
-conda install -c anaconda keras --yes
-
-pip3 install --upgrade tensorflow
-
-# INSTALL SHOGUN ENVIRONMENT
-conda create -n mykointron_shogun python=3.6 --yes
-conda activate mykointron_shogun
-
-conda install pandas --yes
-conda install -c anaconda biopython --yes
-conda install docopt --yes
-conda install scikit-learn --yes
-conda install -c conda-forge shogun --yes
-```
-
-* Notes: 
-  * The installation script creates 2 separate environments with similar libraries, since Shogun (SVM models) and Keras (NN models) don't work together in one env.
-  * The standard way of installation through *requirements.txt* cannot be used here due to combined usage of conda and pip
-
-2) If this project is downloaded via Git, ask for SVM models at lequyanh@fel.cvut.cz as they are too large for GitHub
-   * Save them to ./pipeline/bestmodels/basidiomycota
-   * Applies only for SVM models, NN models are included and don't need extra download

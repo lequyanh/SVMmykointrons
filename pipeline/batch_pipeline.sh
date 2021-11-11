@@ -101,23 +101,23 @@ export project_path
 # PIPELINE PARAMETER SETTINGS BASED ON MODEL  #
 ###############################################
 if [ "$models_settings" == 'svmb' ]; then
-  dmodel="${FMODEL_BASI}/dmodel-basi-intragen-d-25-C-10-win-70.hd5"
-  amodel="${FMODEL_BASI}/amodel-basi-intragen-d-25-C-10-win-70.hd5"
-  imodel="${FMODEL_BASI}/intron-model-C-6-d-4.hd5"
+  dmodel="${FMODEL_BASI}/basidio-dmodel-plusminus-C-10-d-25-70.hd5"
+  amodel="${FMODEL_BASI}/basidio-amodel-plusminus-C-10-d-25-70-subsampled.hd5"
+  imodel="${FMODEL_BASI}/intron-model-C-7-d-6.hd5"
   window_inner=70
   window_outer=70
 
 elif [ "$models_settings" == 'nn200' ]; then
   dmodel="${FMODEL_NN}/model_donor_200.h5"
   amodel="${FMODEL_NN}/model_acceptor_200.h5"
-  imodel="${FMODEL_BASI}/intron-model-C-6-d-4.hd5"
+  imodel="${FMODEL_BASI}/intron-model-C-7-d-6.hd5"
   window_inner=200
   window_outer=200
 
 elif [ "$models_settings" == 'nn100' ]; then
   dmodel="${FMODEL_NN}/model_donor_100.h5"
   amodel="${FMODEL_NN}/model_acceptor_100.h5"
-  imodel="${FMODEL_BASI}/intron-model-C-6-d-4.hd5"
+  imodel="${FMODEL_BASI}/intron-model-C-7-d-6.hd5"
   window_inner=100
   window_outer=0
 
