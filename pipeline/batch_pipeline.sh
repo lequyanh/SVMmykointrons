@@ -4,14 +4,14 @@
 #     bash batch_pipeline.sh -m models_settings -p project_path -s strand [-l #custom_shards_list]
 #
 # OPTIONS
-#     -m    model settings (nn100/svmb)
+#     -m    model settings (svmb/random)
 #     -p    project path with the fasta to clean sharded into fragments (stored in ./assembly_shards)
 #     -s    specify strand reading direction (plus/minus/both)
 #     -l    text file with the list specific assembly shards to process (e.g. to process a subset of shards)
 # EXAMPLES
-#     bash batch_pipeline.sh -m nn100 -p /home/johndoe/Desktop/project/ -s plus
+#     bash batch_pipeline.sh -m svmb -p /home/johndoe/Desktop/project/ -s plus
 #
-#     Specifying only a subset of assembly shards to process (using SVMs)
+#     Specifying only a subset of assembly shards to process
 #     bash main.sh -m svmb -p /home/johndoe/Desktop/project/ -l custom_assembly_shard_list.txt
 
 # OBSOLETE: cutting and intron validation on fungal species):
@@ -32,7 +32,7 @@ function submit_job(){
   results_dir=$3  # Partial results directory for a given shard
 
   # >>>> !! CHANGE ME !! <<<
-  # Use this call for local execution or replace it a job submission call
+  # Use this call for a local execution. Or replace it with a call to submit the job to your cluster
   bash pipeline.sh "$assembly" "$dmodel" "$amodel" "$imodel" "$window_inner" "$window_outer" "$strand" "$working_dir" "$results_dir"
   # >>>> !! CHANGE ME !! <<<
 }
@@ -43,8 +43,7 @@ export -f submit_job
 ######################
 # Location of models and the scripts
 ROOT=$(dirname "$(pwd)")
-FMODEL_NN="$(pwd)/bestmodels/nn/"
-FMODEL_BASI="$(pwd)/bestmodels/basidiomycota/"
+FMODEL_BASI="$(pwd)/models/"
 
 # Project sub-folders for partial and full results
 SHARDS_DIR="assembly_shards"
@@ -106,20 +105,6 @@ if [ "$models_settings" == 'svmb' ]; then
   imodel="${FMODEL_BASI}/intron-model-C-7-d-6.hd5"
   window_inner=70
   window_outer=70
-
-elif [ "$models_settings" == 'nn200' ]; then
-  dmodel="${FMODEL_NN}/model_donor_200.h5"
-  amodel="${FMODEL_NN}/model_acceptor_200.h5"
-  imodel="${FMODEL_BASI}/intron-model-C-7-d-6.hd5"
-  window_inner=200
-  window_outer=200
-
-elif [ "$models_settings" == 'nn100' ]; then
-  dmodel="${FMODEL_NN}/model_donor_100.h5"
-  amodel="${FMODEL_NN}/model_acceptor_100.h5"
-  imodel="${FMODEL_BASI}/intron-model-C-7-d-6.hd5"
-  window_inner=100
-  window_outer=0
 
 elif [ "$models_settings" == 'random' ]; then
   dmodel="random"

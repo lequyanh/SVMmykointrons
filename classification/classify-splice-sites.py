@@ -20,6 +20,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import shogun as sg
 from docopt import docopt
 
 from tools import performance_metrics
@@ -63,8 +64,6 @@ def main():
         model_extension = os.path.splitext(model_file)[1]
         if model_extension == '.hd5':
             input_df, predictions = get_svm_predictions(model_file, data_file, window_inner, window_outer, site, ncpus)
-        elif model_extension == '.h5':
-            input_df, predictions = get_dnn_predictions(model_file, data_file, window_inner, window_outer, site)
         else:
             logging.warning(f'Unknown model extension {model_extension}. Exiting.')
             return
@@ -114,7 +113,6 @@ def get_svm_predictions(model_file, data_file, window_inner, window_outer, site,
     # NOTE: The script expects the acceptor/donor dimer to be in the middle of the sequence
     input_df = read_data(data_file, window=window)
 
-    import shogun as sg  # import it here not to conflict with keras d-NN use
     logging.info(f'{sg.Parallel().get_num_threads()} threads')
 
     features = sg.StringCharFeatures(input_df.sequence.tolist(), sg.RAWBYTE)
@@ -122,25 +120,6 @@ def get_svm_predictions(model_file, data_file, window_inner, window_outer, site,
 
     predict = model.apply_binary(features)
     return input_df, predict.get_int_labels()
-
-
-def get_dnn_predictions(model_file, data_file, window_inner, window_outer, site):
-    window = (window_outer, window_inner - 2) if site == 'donor' else (window_inner - 2, window_outer)
-
-    os.environ['KERAS_BACKEND'] = 'tensorflow'
-    from tensorflow.keras.models import load_model
-
-    input_df = read_data(data_file, window=window)
-    model = load_model(model_file)
-
-    inputs = prepare_inputs(input_df, site)
-    predictions = model.predict(inputs)
-    predictions = np.squeeze(predictions)
-    predictions[np.where(predictions < 0.5)] = -1  # negative classes are -1 as opposed to NN output (which is 0)
-    predictions[np.where(predictions >= 0.5)] = 1
-    predictions = predictions.astype(np.int32)
-
-    return input_df, predictions
 
 
 def get_random_predictions(data_file, window_inner, window_outer, site, ):

@@ -73,13 +73,8 @@ positive_introns=";1$"
 
 ## Setting up the correct conda environment
 eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
-
-if [ "${splice_site_donor_model: -3}" == ".h5" ]; then
-  conda activate mykointron
-else
-  conda activate mykointron_shogun
-  NUMBER_CPUS=12
-fi
+conda activate mykointron_shogun
+NUMBER_CPUS=12 # TODO
 
 PYTHON=$(which python)
 # -------------------------------------------------------------
@@ -131,42 +126,24 @@ function classify_splice_sites_step() {
 
   # classify the donors and acceptors, keep only the positively classified samples
   # keep only the columns `scaffold`, and `position` (1st and 2nd)
-  if [ "${splice_site_donor_model: -3}" == ".h5" ]; then
-    echo "Classifying with NN models"
-    date
+  echo "Classifying with SVM models"
+  echo "Starting classification of splice sites with $NUMBER_CPUS CPUs..."
 
-    $PYTHON classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
-      "${DONOR_RWINDOW}" "${DONOR_LWINDOW}" "donor" |
-      grep $positive_splice_sites |
-      cut -d ';' -f -2 >>$DONOR_RESULT
+  date
 
-    $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
+  $PYTHON classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
+    "${DONOR_RWINDOW}" "${DONOR_LWINDOW}" \
+    "donor" -c $NUMBER_CPUS |
+    grep $positive_splice_sites |
+    cut -d ';' -f -2 >>$DONOR_RESULT
 
-    $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
-      "${ACCEPTOR_LWINDOW}" "${ACCEPTOR_RWINDOW}" "acceptor" |
-      grep $positive_splice_sites |
-      cut -d ';' -f -2 >>$ACCEPTOR_RESULT
+  $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
 
-  else
-    echo "Classifying with SVM models"
-    echo "Starting classification of splice sites with $NUMBER_CPUS CPUs..."
-
-    date
-
-    $PYTHON classify-splice-sites.py $DONOR_FILE "$splice_site_donor_model" \
-      "${DONOR_RWINDOW}" "${DONOR_LWINDOW}" \
-      "donor" -c $NUMBER_CPUS |
-      grep $positive_splice_sites |
-      cut -d ';' -f -2 >>$DONOR_RESULT
-
-    $PYTHON filter-orphan-acceptors.py $ACCEPTOR_FILE $DONOR_RESULT $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH
-
-    $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
-      "${ACCEPTOR_LWINDOW}" "${ACCEPTOR_RWINDOW}" \
-      "acceptor" -c $NUMBER_CPUS |
-      grep $positive_splice_sites |
-      cut -d ';' -f -2 >>$ACCEPTOR_RESULT
-  fi
+  $PYTHON classify-splice-sites.py $ACCEPTOR_FILE "$splice_site_acceptor_model" \
+    "${ACCEPTOR_LWINDOW}" "${ACCEPTOR_RWINDOW}" \
+    "acceptor" -c $NUMBER_CPUS |
+    grep $positive_splice_sites |
+    cut -d ';' -f -2 >>$ACCEPTOR_RESULT
 
   date
   echo "Positively classified donors are in [$DONOR_RESULT]."
@@ -202,12 +179,7 @@ function classify_introns_step() {
   # classify the introns
   # keep only the positively classified samples
   # keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-  if [ "${splice_site_donor_model: -3}" == ".h5" ]; then
-    echo "Using NN models - skipping intron classification"
-    $PYTHON classify-introns-stub.py $INTRON_FILE >$CLASSIFICATION_RESULTS
-  else
-    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER >$CLASSIFICATION_RESULTS
-  fi
+  $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER >$CLASSIFICATION_RESULTS
 
   if grep -q $positive_introns < $CLASSIFICATION_RESULTS
   then

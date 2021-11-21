@@ -1,8 +1,8 @@
 Installation
 ============
-Run the `install.sh` script. 
-
-If your shell does not permit running conda from a script, execute the commands manually:
+1. Run the `install.sh` script. 
+   
+   a. If your shell does not permit running conda from a script, execute the commands manually:
 ```
 # INSTALL TENSORFLOW-KERAS ENVIRONMENT
 conda create -n mykointron python=3.7.4 --yes
@@ -30,13 +30,7 @@ conda install -c conda-forge shogun --yes
 conda activate
 ```
 
-* Notes: 
-  * The installation script creates 2 separate environments with similar libraries, since Shogun (SVM models) and Keras (NN models) don't work together in one env.
-  * The standard way of installation through *requirements.txt* cannot be used here due to combined usage of conda and pip 
-  * If this project is downloaded via Git, ask for SVM models at lequyanh@fel.cvut.cz as they are too large for GitHub
-    * Save them to `./pipeline/bestmodels/basidiomycota`
-    * Applies only for SVM models, NN models are included and don't need extra download
-
+2. Download the models from TODO and place them to `pipeline/models/`
 
 Overview
 ==========
@@ -152,10 +146,10 @@ under the folder `assembly_shards`
 
 `bash shard_assembly.sh -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450/ -n 1`
 
-Next, we process the shards, removing introns from both strands. We will use the neural nets models as indicated by 
-the `nn100` argument. The computations will be performed locally:
+Next, we process the shards, removing introns from both strands. We will use SVM models trained on Basidiomycota species as indicated by 
+the `svmb` argument. The computations will be performed locally:
 
-`bash batch_pipeline.sh -m nn100 -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450 -s both`
+`bash batch_pipeline.sh -m svmb -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450 -s both`
 
 Finally, we combine the partial results into a single assembly purged from introns. As we were processing both strands, 
 the call results in two separate fastas one for each strand (named `pruned_ctg_k141_2751450_no_duplicates_minus.fa` and `pruned_ctg_k141_2751450_no_duplicates_plus.fa`)
@@ -167,8 +161,7 @@ Details
 
 for model setting, use one of the following
 * 'svmb' (standing for SVM models trained on Basidiomycota; very slow)
-* 'nn100' (standing for neural net with 0-100 windows; faster)
-* 'nn200' (standing for neural net with 200-200 windows; slower, more accurate)
+* 'random' (dummy classification; placeholder for future models)
 
 The process of intron removal is roughly:
 1) Find all donor dimers and perform splice site classification
