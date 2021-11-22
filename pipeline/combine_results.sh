@@ -28,8 +28,15 @@ if [ -z "$results_folder" ]; then
   exit
 fi
 
-assembly_path=$(find "$project_path" -maxdepth 1 -name "*no_duplicates*.fasta" -o -name "*.fa")
+# Find the name of the assembly. Get the FASTA with no duplicates ignoring already prunned files if they exist
+assembly_path=$(find "$project_path"  -maxdepth 1 -name "*no_duplicates*.fasta" -not -name "pruned*")
+# Fallback to any non-pruned FASTA
+if [ -z "$assembly_path" ]; then
+  assembly_path=$(find "$project_path"  -maxdepth 1 -name "*.fa" -not -name "pruned*")
+fi
+
 assembly_name=$(basename "$assembly_path" | cut -d '.' -f 1)
+echo "FASTA that has been pruned: ${assembly_name}"
 
 cut_coords_full_plus="$project_path/cut-coords-plus-strand-full.csv"
 cut_coords_full_minus="$project_path/cut-coords-minus-strand-full.csv"

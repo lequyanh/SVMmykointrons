@@ -1,9 +1,0 @@
-INFO:root:Validation of model /storage/praha1/home/lequyanh/results/intron-models-shuffle2/train-introns-C-6-d-4-505510.meta-pbs.metacentrum.cz//model.hd5 on testset intron-test-dataset.csv; d=4
-INFO:root:Performance metrics:
- -TP: 12189
- -FP: 37948
- -TN: 40720
- -FN: 3025
-Accuracy: 0.5635691612875737
-Precision: 0.24311386800167542
-Recall: 0.8011699750230051

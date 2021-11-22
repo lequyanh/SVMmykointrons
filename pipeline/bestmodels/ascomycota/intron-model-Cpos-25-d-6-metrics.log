@@ -1,9 +1,0 @@
-INFO:root:Validation of model ../gridsearch/ascomycota/intron/models/train-introns-25-6-14307503.arien-pro.ics.muni.cz/model.hd5 on testset ../preprocessing/intron/ascomycota/intron_candidates/intron-test-dataset.csv; d=6
-INFO:root:Performance metrics:
- -TP: 6059
- -FP: 15865
- -TN: 106568
- -FN: 1148
-Accuracy: 0.8687673557543968
-Precision: 0.2763638022258712
-Recall: 0.8407104204245872
