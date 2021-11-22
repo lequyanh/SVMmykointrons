@@ -41,10 +41,10 @@ The pipeline is separated into 3 stages, each represented by a bash script.
 
 Breaking down the steps into separate stages is necessary due to asynchronous and distributed nature of assembly processing.
 The stages are following:
-1) *Split the assembly into smaller shards*
-   * The size of the shards should be less than 70Mb for reasonable processing times
-2) *Process the shards (in parallel)*
-   * Here typically the shards are submitted as a job for execution on some cluster
+1) *Split the assembly into smaller batches*
+   * The size of the batches should be less than 70Mb for reasonable processing times
+2) *Process the batches (in parallel)*
+   * Here typically the batches are submitted as a job for execution on some cluster
    * Small assemblies can be processed locally
 3) *Combine the results*
     * Once the partial results are complete, merge them into a single cleaned assembly
@@ -67,43 +67,43 @@ The starting appearance is simply:
 1. After the first step (**assembly sharding**). :
 ```
 .
-├── assembly_shards/
+├── assembly_batches/
 │   ├── ctg_k141_2751450_0.fa
 │   ├── ctg_k141_2751450_1.fa
 │   └── ...
 ├── ctg_k141_2751450_no_duplicates.fa
 └── ctg_k141_2751450.fa
 ```
-The `assembly_shards` directory simply contains the shards themselves. The file suffix signals the index of the sequence first present in the shard
+The `assembly_batches` directory simply contains the batches themselves. The file suffix signals the index of the first sequence in the batch
 Note that the sharding process implicitly removes duplicated records from the assembly. 
 The pipeline will later work only with the non-duplicated sequences.
 
-2. After the second step (**independent intron removal from each shard**). For simplicity, we only chose to process the
+2. After the second step (**independent intron removal from each batch**). For simplicity, we only chose to process the
 negative strand (the `minus` suffix of files)
 ```
 .
-├── assembly_shards/
+├── assembly_batches/
 ├── results/
 │   ├── ctg_k141_2751450_0.fa_results_minus/
 │   ├── ctg_k141_2751450_1.fa_results_minus/
 ├── scratchdir/
-├── assembly_shards.txt
+├── assembly_batches.txt
 ├── ctg_k141_2751450_no_duplicates.fa
 └── ctg_k141_2751450.fa
 ```
-Here a few new items appear. The most important is the `results` directory with partial results for each shard.
+Here a few new items appear. The most important is the `results` directory with partial results for each batch.
 `scratchdir` contains only temporary processing files and is of no importance apart from debugging. 
-`assebmly_shards.txt` holds the list of shard names to process. In the basic scenario all shards are present; 
-In specific cases, where the user needs only a subset of shards processed (e.g. when some cluster node crashes), 
+`assembly_batches.txt` holds the list of batch names to process. In the basic scenario, all batches are present; 
+In specific cases, where the user needs only a subset of batches processed (e.g. when some cluster node crashes), 
 he or she can modify this file to specify the subset required.
 
 3. After the final step (**combining partial results**).
 ```
 .
-├── assembly_shards/
+├── assembly_batches/
 ├── results/
 ├── scratchdir/
-├── assembly_shards.txt
+├── assembly_batches.txt
 ├── ctg_k141_2751450_no_duplicates.fa
 ├── ctg_k141_2751450.fa
 ├── cut-coords-minus-strand-full.csv
@@ -113,8 +113,8 @@ Two new files appear - the pruned assembly (with non-duplicated sequences), and 
 Both files are assembled from the partial results inside the `results` folder. End of processing
 
 ### IMPORTANT: Distributed job submission
-Though the entire pipeline can be executed locally for small assemblies, the main use-case is to send individual shards 
-as a distributed task to some high-performance cluster. We are aware that each cluster has a different infrastructure
+Though the entire pipeline can be executed locally for small assemblies, the main use-case is to send individual batches 
+as distributed tasks to some high-performance cluster. We are aware that each cluster has a different infrastructure
 and different job submission policy. This particular part of the pipeline must be therefore left for the user to fill in.
 
 For convenience, we isolated the submission section into the `submit_job()` functions inside the `batch_pipeline.sh` script.
@@ -125,11 +125,11 @@ Quickstart
 ==========
 Within the `./pipeline` folder, run:
 
-1) **Split the assembly into smaller shards for parallel/distributed processing:**
+1) **Split the assembly into smaller batches for parallel/distributed processing:**
 
-`bash shard_assembly.sh -p project_path -n seqs_per_shard`
+`bash shard_assembly.sh -p project_path -n seqs_per_batch`
 
-2) **Process the shards:**
+2) **Process the batches:**
 
 `bash batch_pipeline.sh -m models_settings -p project_path -s strand`
 
@@ -141,18 +141,18 @@ Within the `./pipeline` folder, run:
 As a demonstration, we will process a test contig ctg_k141_2751450. The contig is part of the sources and is located
 in the test directory *test/projects/project_ctg_k141_2751450*.
 
-First, split the assembly into shards with 1 sequence each. The shards will be saved into the project directory
-under the folder `assembly_shards`
+First, split the assembly into batches with 1 sequence each. The batches will be saved into the project directory
+under the folder `assembly_batches`
 
 `bash shard_assembly.sh -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450/ -n 1`
 
-Next, we process the shards, removing introns from both strands. We will use SVM models trained on Basidiomycota species as indicated by 
+Next, we process the batches, removing introns from both strands. We will use SVM models trained on Basidiomycota species as indicated by 
 the `svmb` argument. The computations will be performed locally:
 
 `bash batch_pipeline.sh -m svmb -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450 -s both`
 
 Finally, we combine the partial results into a single assembly purged from introns. As we were processing both strands, 
-the call results in two separate fastas one for each strand (named `pruned_ctg_k141_2751450_no_duplicates_minus.fa` and `pruned_ctg_k141_2751450_no_duplicates_plus.fa`)
+the call results in two separate fastas one for each strand: `pruned_ctg_k141_2751450_no_duplicates_minus.fa` and `pruned_ctg_k141_2751450_no_duplicates_plus.fa`
 
 `bash combine_results.sh -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450`
 

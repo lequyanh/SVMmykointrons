@@ -1,18 +1,18 @@
 #!/bin/bash
 
 # SYNOPSIS
-#     bash batch_pipeline.sh -m models_settings -p project_path -s strand [-l #custom_shards_list]
+#     bash batch_pipeline.sh -m models_settings -p project_path -s strand [-l #custom_batches_list]
 #
 # OPTIONS
 #     -m    model settings (svmb/random)
-#     -p    project path with the fasta to clean sharded into fragments (stored in ./assembly_shards)
+#     -p    project path with the fasta to clean sharded into fragments (stored in ./assembly_batches)
 #     -s    specify strand reading direction (plus/minus/both)
-#     -l    text file with the list specific assembly shards to process (e.g. to process a subset of shards)
+#     -l    text file with the list specific assembly batches to process (e.g. to process a subset of batches)
 # EXAMPLES
 #     bash batch_pipeline.sh -m svmb -p /home/johndoe/Desktop/project/ -s plus
 #
-#     Specifying only a subset of assembly shards to process
-#     bash main.sh -m svmb -p /home/johndoe/Desktop/project/ -l custom_assembly_shard_list.txt
+#     Specifying only a subset of assembly batches to process
+#     bash main.sh -m svmb -p /home/johndoe/Desktop/project/ -l custom_assembly_batch_list.txt
 
 # OBSOLETE: cutting and intron validation on fungal species):
 # bash batch_pipeline.sh -m svmb -l basidiomycota.txt -d /storage/praha1/home/lequyanh/data/reduced/ -s minus
@@ -27,9 +27,9 @@
 #    Their order must be however preserved                         #
 ####################################################################
 function submit_job(){
-  assembly=$1     # The path to the assembly shard
+  assembly=$1     # The path to the assembly batch
   working_dir=$2  # Isolated working directory for temporary files
-  results_dir=$3  # Partial results directory for a given shard
+  results_dir=$3  # Partial results directory for a given batch
 
   # >>>> !! CHANGE ME !! <<<
   # Use this call for a local execution. Or replace it with a call to submit the job to your cluster
@@ -46,11 +46,11 @@ ROOT=$(dirname "$(pwd)")
 MODELS_DIR="$(pwd)/models/"
 
 # Project sub-folders for partial and full results
-SHARDS_DIR="assembly_shards"
+BATCHES_DIR="assembly_batches"
 SCRATCH_DIR="scratchdir"
 RESULTS_DIR="results"
 
-export SHARDS_DIR
+export BATCHES_DIR
 export SCRATCH_DIR
 export RESULTS_DIR
 
@@ -65,7 +65,7 @@ while getopts "m:p:s:l:" opt; do
     ;;
   p)
     project_path=$OPTARG
-    echo "Assembly shards from the directory ${project_path} will be processed.
+    echo "Assembly batches from the directory ${project_path} will be processed.
           Results will be saved in this directory as well."
     ;;
   l)
@@ -85,12 +85,12 @@ done
 
 if [ -z "$fasta_list_file" ]
 then
-      echo "Processing all assembly assembly_shards in $project_path"
+      echo "Processing all assembly batches in $project_path"
 
-      fasta_list_file="${project_path}/assembly_shards.txt"
-      ls "${project_path}/${SHARDS_DIR}" >"${fasta_list_file}"
+      fasta_list_file="${project_path}/assembly_batches.txt"
+      ls "${project_path}/${BATCHES_DIR}" >"${fasta_list_file}"
 else
-      echo "Using a subset of assembly assembly_shards defined in $fasta_list_file"
+      echo "Using a subset of assembly batches defined in $fasta_list_file"
 fi
 
 export strand
@@ -121,17 +121,17 @@ export window_inner
 export window_outer
 
 ##########################################################
-# Prepare a working directory for a given assembly shard #
-# for independent processing and submits the shard       #
+# Prepare a working directory for a given assembly batch #
+# for independent processing and submits the batch       #
 # for execution                                          #
 ##########################################################
-function process_assembly_shard(){
-  assembly_shard=$1
+function process_assembly_batch(){
+  assembly_batch=$1
 
   # Prepare working and results directories for independent processing
-  assembly="${project_path}/${SHARDS_DIR}/${assembly_shard}"
-  working_dir="${project_path}/${SCRATCH_DIR}/${assembly_shard}_${strand}"
-  results_dir="${project_path}/${RESULTS_DIR}/${assembly_shard}_results_${strand}"
+  assembly="${project_path}/${BATCHES_DIR}/${assembly_batch}"
+  working_dir="${project_path}/${SCRATCH_DIR}/${assembly_batch}_${strand}"
+  results_dir="${project_path}/${RESULTS_DIR}/${assembly_batch}_results_${strand}"
 
   mkdir -p "$working_dir"
   ln -s -f "$ROOT/classification/classify-splice-sites.py" "${working_dir}/classify-splice-sites.py"
@@ -154,27 +154,27 @@ function process_assembly_shard(){
   submit_job "$assembly" "$working_dir" "$results_dir"
 }
 
-function send_shards_for_execution() {
-  while read assembly_shard; do
-    echo "Sending for execution the assembly shard ${assembly_shard}"
-    process_assembly_shard "${assembly_shard}"
+function send_batches_for_execution() {
+  while read assembly_batch; do
+    echo "Sending for execution the assembly batch ${assembly_batch}"
+    process_assembly_batch "${assembly_batch}"
   done <"$fasta_list_file"
 }
 
 #############################################
 # ASSEMBLY CUTTING (FROM SHARDED FRAGMENTS) #
 #############################################
-export -f process_assembly_shard
+export -f process_assembly_batch
 
 if [ "$strand" == 'both' ]; then
   strand='plus'
   export strand
-  send_shards_for_execution
+  send_batches_for_execution
 
   strand='minus'
   export strand
-  send_shards_for_execution
+  send_batches_for_execution
 else
-  send_shards_for_execution
+  send_batches_for_execution
 fi
 

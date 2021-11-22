@@ -4,7 +4,7 @@
 #     bash combine_results.sh -p project_path
 #
 # OPTIONS
-#     -p    project path with the fasta to be sharded into fragments (stored in ./assembly_shards)
+#     -p    project path with the fasta to be sharded into fragments (stored in ./assembly_batches)
 # EXAMPLES
 #     bash combine_results.sh -p /home/johndoe/Desktop/project/
 
@@ -12,7 +12,6 @@ while getopts "p:" opt; do
   case $opt in
   p)
     project_path=$OPTARG
-    echo "Assembly FASTA for sharding will be taken from location ${project_path}"
     ;;
   *)
     echo "Invalid option or argument"

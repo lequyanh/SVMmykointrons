@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # SYNOPSIS
-#     bash shard_assembly.sh -p project_path -n seqs_per_shard
+#     bash shard_assembly.sh -p project_path -n seqs_per_batch
 #
 # OPTIONS
-#     -p    project path with the fasta to be sharded into fragments (stored in ./assembly_shards)
-#     -n    specify number of sequences per fasta shard (if not specified, defaults to 100)
+#     -p    project path with the fasta to be sharded into fragments (stored in ./assembly_batches)
+#     -n    specify number of sequences per fasta batch (if not specified, defaults to 100)
 # EXAMPLES
 #     bash shard_assembly.sh -p /home/johndoe/Desktop/project/ -n 400
 
-SEQ_PER_SHARD_DEFAULT=100
-ASSEMBLY_SHARDS_DIR='assembly_shards'
+SEQ_PER_BATCH_DEFAULT=100
+ASSEMBLY_BATCHES_DIR='assembly_batches'
 
 while getopts "p:n:" opt; do
   case $opt in
@@ -30,10 +30,10 @@ done
 
 if [ -z "$seqs_per_file" ]
 then
-      echo "Using default number of sequences per assembly shard $SEQ_PER_SHARD_DEFAULT"
-      seqs_per_file=$SEQ_PER_SHARD_DEFAULT
+      echo "Using default number of sequences per assembly batch $SEQ_PER_BATCH_DEFAULT"
+      seqs_per_file=$SEQ_PER_BATCH_DEFAULT
 fi
-echo "Assembly will be split into shards with $seqs_per_file sequences each."
+echo "Assembly will be split into batches with $seqs_per_file sequences each."
 
 no_fastas=$(find "$project_path" -maxdepth 1 -name "*.fasta" -o -name "*.fa" -not -name "*_no_duplicates.fa" | wc -l)
 if [ "$no_fastas" -gt 1 ]; then
@@ -41,12 +41,12 @@ if [ "$no_fastas" -gt 1 ]; then
   exit 1
 fi
 
-# Create a subdirectory in the project folder for assembly shards
-assembly_shards_path="${project_path}/${ASSEMBLY_SHARDS_DIR}"
-mkdir -p "${assembly_shards_path}"
+# Create a subdirectory in the project folder for assembly batches
+assembly_batches_path="${project_path}/${ASSEMBLY_BATCHES_DIR}"
+mkdir -p "${assembly_batches_path}"
 
-if [ "$(ls -A "$assembly_shards_path")" ]; then
-    echo "Directory with shards exists and is not empty: $assembly_shards_path"
+if [ "$(ls -A "$assembly_batches_path")" ]; then
+    echo "Directory with assembly batches exist and is not empty: $assembly_batches_path"
     echo "Do you wish to overwrite the files? [y/n]"
     read -r yes_no
 
@@ -55,7 +55,7 @@ if [ "$(ls -A "$assembly_shards_path")" ]; then
         exit
     fi
 
-    rm "$assembly_shards_path"/*
+    rm "$assembly_batches_path"/*
 fi
 
 ##############################
@@ -85,14 +85,14 @@ echo "Sharding the assembly..."
 
 awk -v seqs_per_file="$seqs_per_file" \
     -v assembly_name="$assembly_name" \
-    -v shards_dir="$assembly_shards_path" \
+    -v batches_dir="$assembly_batches_path" \
 'BEGIN {n_seq=0;} /^>/ {
       if(n_seq % seqs_per_file == 0)
-        { file=sprintf("%s/%s_%d.fa", shards_dir, assembly_name, n_seq); }
+        { file=sprintf("%s/%s_%d.fa", batches_dir, assembly_name, n_seq); }
       print >> file;
       n_seq++;
       next;
     }
     {print >> file;}' < "$assembly_unique"
 
-echo "Assembly shards generated to the directory $assembly_shards_path"
+echo "Assembly batches generated to the directory $assembly_batches_path"
