@@ -1,13 +1,14 @@
 #!/bin/bash
 
 # SYNOPSIS
-#     bash batch_pipeline.sh -m models_settings -p project_path -s strand [-l #custom_batches_list]
+#     bash batch_pipeline.sh -m models_settings -p project_path -s strand [-l #custom_batches_list] [-n number_cpus]
 #
 # OPTIONS
 #     -m    model settings (svmb/random)
 #     -p    project path with the fasta to clean sharded into fragments (stored in ./assembly_batches)
 #     -s    specify strand reading direction (plus/minus/both)
 #     -l    text file with the list specific assembly batches to process (e.g. to process a subset of batches)
+#     -n    number of CPUs
 # EXAMPLES
 #     bash batch_pipeline.sh -m svmb -p /home/johndoe/Desktop/project/ -s plus
 #
@@ -33,7 +34,7 @@ function submit_job(){
 
   # >>>> !! CHANGE ME !! <<<
   # Use this call for a local execution. Or replace it with a call to submit the job to your cluster
-  bash pipeline.sh "$assembly" "$dmodel" "$amodel" "$imodel" "$window_inner" "$window_outer" "$strand" "$working_dir" "$results_dir"
+  bash pipeline.sh "$assembly" "$dmodel" "$amodel" "$imodel" "$window_inner" "$window_outer" "$strand" "$working_dir" "$results_dir" "$ncpus"
   # >>>> !! CHANGE ME !! <<<
 }
 export -f submit_job
@@ -57,7 +58,7 @@ export RESULTS_DIR
 ########################
 # Processing arguments #
 ########################
-while getopts "m:p:s:l:" opt; do
+while getopts "m:p:s:l:n:" opt; do
   case $opt in
   m)
     models_settings=$OPTARG
@@ -75,6 +76,10 @@ while getopts "m:p:s:l:" opt; do
   s)
     strand=$OPTARG
     echo "Strand ${strand}"
+    ;;
+  n)
+    ncpus=$OPTARG
+    echo "Number of CPUs ${ncpus}"
     ;;
   *)
     echo "Invalid option or argument"
@@ -95,6 +100,7 @@ fi
 
 export strand
 export project_path
+export ncpus
 
 ###############################################
 # PIPELINE PARAMETER SETTINGS BASED ON MODEL  #

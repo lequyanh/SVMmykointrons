@@ -52,8 +52,16 @@ strand=$7
 working_dir=$8
 # results directory (where to put result files)
 results_dir=$9
+# number of CPUs
+number_cpus=${10}
 #  - in case of validation
-intron_source=${10} #"/home/anhvu/Desktop/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta"
+intron_source=${11} #"/home/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta"
+
+if [ -z "$number_cpus" ]; then
+    number_cpus=12
+fi
+NUMBER_CPUS=${number_cpus}
+echo "Using ${NUMBER_CPUS} CPU cores..."
 
 #  - window size used when extracting splice sites sequences
 #    the size is equal to the size of window used to train the models
@@ -74,7 +82,6 @@ positive_introns=";1$"
 ## Setting up the correct conda environment
 eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
 conda activate mykointron_shogun
-NUMBER_CPUS=12 # TODO
 
 PYTHON=$(which python)
 # -------------------------------------------------------------
