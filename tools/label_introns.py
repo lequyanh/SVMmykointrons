@@ -7,7 +7,7 @@ from Bio import SeqIO, SeqRecord
 
 logging.basicConfig(
     level=logging.INFO,
-    filename='label-introns.log',
+    filename='intron-dataset.statistics',
     filemode='w'
 )
 
@@ -22,6 +22,8 @@ def main():
     len_range_end = int(sys.argv[4])
 
     strand = sys.argv[5] if len(sys.argv) == 6 else '+'
+    if strand not in ['-', '+']:
+        strand = '-' if strand == 'minus' else '+'
 
     if not os.path.isfile(true_introns_fasta):
         logging.warning(f'Introns file {true_introns_fasta} cannot be found. '

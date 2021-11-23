@@ -27,6 +27,8 @@ if __name__ == '__main__':
     # name of the file containing the sequences
     sequences_filename = sys.argv[2]
     strand = sys.argv[3]
+    if strand not in ['-', '+']:
+        strand = '-' if strand == 'minus' else '+'
 
     scaffold_sequences = defaultdict(list)
 
@@ -48,6 +50,8 @@ if __name__ == '__main__':
                 scaffold_seq = str(scaffold.seq)
                 extracted = ''.join(scaffold_seq[positions[i] - 1:positions[i + 1]]
                                     for i in range(0, len(positions), 2))
+
+                assert extracted[:2] == 'GT' and extracted[- 2:] == 'AG'
 
                 existing = extracto_set.get(extracted, None)
                 if existing:

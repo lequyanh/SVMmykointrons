@@ -4,6 +4,7 @@ from typing import Tuple
 
 import pandas as pd
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
 from scipy import stats
 
 logging.basicConfig(
@@ -20,11 +21,16 @@ def load_length_counts_as_pdf(counts_file: str):
     return kde
 
 
-def load_as_dicts(fasta_to_purge: str, intron_locs: str):
+def load_as_dicts(fasta_to_purge: str, intron_locs: str, strand: str):
     # Load FASTA with DNA to cleanse introns from.
-    # Load as dictionary where keys are scaffold names
     with open(fasta_to_purge, 'r') as f:
-        scaffolds_input = {seq_record.id: str(seq_record.seq) for seq_record in SeqIO.parse(f, 'fasta')}
+        sequences = SeqIO.parse(f, 'fasta')
+
+        if strand == 'minus':
+            sequences = [SeqRecord(sr.seq.reverse_complement(), sr.id) for sr in sequences]
+
+        # Load as dictionary where keys are scaffold names
+        scaffolds_input = {seq_record.id: str(seq_record.seq) for seq_record in sequences}
 
     # Load intron location data
     intron_pos_df = pd.read_csv(intron_locs, delimiter=";")

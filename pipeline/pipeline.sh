@@ -55,7 +55,7 @@ results_dir=$9
 # number of CPUs
 number_cpus=${10}
 #  - in case of validation
-intron_source=${11} #"/home/mykointrons-data/new-sequences/Thega1/Thega1-introns.fasta"
+intron_source=${11}
 
 if [ -z "$number_cpus" ]; then
     number_cpus=12
@@ -173,10 +173,6 @@ function pair_splice_sites_and_extract_introns_step() {
 
   echo "Intron sequences are extracted in [$INTRON_FILE]."
   echo ""
-
-  echo "First 20 most frequent intron candidates:"
-  #  cat $INTRON_FILE | cut -d ';' -f4 | sort | uniq -c | grep -v '1 ' | sort -r | head -20
-
 }
 
 function classify_introns_step() {
@@ -186,17 +182,21 @@ function classify_introns_step() {
   # classify the introns
   # keep only the positively classified samples
   # keep only the columns `scaffold`, `start`, and `end` (1st, 2nd, and 3rd)
-  $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER >$CLASSIFICATION_RESULTS
+  if [ "${splice_site_donor_model: -3}" == ".h5" ]; then
+    echo "Using NN models - skipping intron classification"
+    $PYTHON classify-introns-stub.py $INTRON_FILE >$CLASSIFICATION_RESULTS
+  else
+    $PYTHON classify-introns.py -c $NUMBER_CPUS $INTRON_FILE "$intron_model" $SPECT_KERNEL_ORDER >$CLASSIFICATION_RESULTS
+  fi
+
+  echo "scaffold;start;end" >$INTRON_RESULT
+  echo "Detected introns are in [$INTRON_RESULT]."
 
   if grep -q $positive_introns < $CLASSIFICATION_RESULTS
   then
-    # prepare a file for the intron classification results
-    echo "scaffold;start;end" >$INTRON_RESULT
     cat $CLASSIFICATION_RESULTS | grep $positive_introns | cut -d ';' -f -3  >> $INTRON_RESULT
-    echo "Detected introns are in [$INTRON_RESULT]."
-
   else
-    echo "No positive introns found"
+    echo "No positive introns found. $INTRON_RESULT created anyway for consistency"
   fi
 }
 
@@ -205,7 +205,7 @@ function validate_introns_step() {
   $PYTHON label_introns.py "$INTRON_FILE" "$intron_source" $INTRON_MIN_LENGTH $INTRON_MAX_LENGTH "$strand"
 
   if [ "${splice_site_donor_model: -3}" == ".h5" ]; then
-    echo "Using NN models - skipping intron classification. \nValidating candidates right away"
+    echo "Using NN models - skipping intron classification. Validating candidates right away"
     $PYTHON classify-introns-stub.py $INTRON_FILE >$INTRON_RESULT
   else
     echo "Starting validation of the intron dataset using spectral kernel order ${SPECT_KERNEL_ORDER}"
@@ -218,12 +218,7 @@ function cut_introns_step() {
   echo "Cutting introns. Intron length distribution derived from file ${intron_lens_data}"
 
   echo "scaffold;start;end" >${CUT_COORDS_FILE}
-  if [[ -f  $INTRON_RESULT ]]
-  then
-    $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} "${strand}" ${intron_lens_data} >>"${CUT_COORDS_FILE}"
-  else
-    echo "No introns to cut"
-  fi
+  $PYTHON prune_probabilistic.py "${assembly_filepath}" ${INTRON_RESULT} "${strand}" ${intron_lens_data} >>"${CUT_COORDS_FILE}"
 }
 
 function cleanup(){
@@ -246,12 +241,12 @@ fi
 
 cut_introns_step
 
-echo "Pipeline log for file ${assembly_filepath}" >pipeline.output
+echo "Pipeline log for file ${assembly_filepath}" >pipeline.txt
 for p in ./*.log; do
   {
     echo "================================== ${p} =========================================="
     cat "$p"
-  } >>pipeline.output
+  } >>pipeline.txt
 done
 
 cleanup

@@ -127,13 +127,12 @@ def prune(
 
 
 if __name__ == "__main__":
-    fasta_to_purge = sys.argv[1]  # /home/anhvu/Desktop/Desktop/S21_contigs.fasta
+    fasta_to_purge = sys.argv[1]
     intron_locs = sys.argv[2]  # CSV with intron locations
     strand = sys.argv[3]
     counts_file = sys.argv[4]  # file with typical intron counts. Used to create prob. dens. function
-    # /home/anhvu/PycharmProjects/mycointrons/statistics/intron-lenghts-statistics/basidiomycota-intron-lens.txt
 
-    scaffold_sequences, intron_coords = load_as_dicts(fasta_to_purge, intron_locs)
+    scaffold_sequences, intron_coords = load_as_dicts(fasta_to_purge, intron_locs, strand)
     LENGTH_PDF = load_length_counts_as_pdf(counts_file)
     overlaps_dict = find_overlaps(intron_coords)
 
@@ -142,10 +141,7 @@ if __name__ == "__main__":
     pruned_scaffolds = dict()
     for scaffold, (non_overlap_introns, overlap_introns) in overlaps_dict.items():
         logging.info(f'Processing scaffold {scaffold}')
-
         scaffold_dna = scaffold_sequences[scaffold]
-        if strand == 'minus':
-            scaffold_dna = str(Seq(scaffold_sequences[scaffold]).reverse_complement())
 
         scaffold_prepruned = prune_non_overlap_introns(scaffold, scaffold_dna, non_overlap_introns)
         exon_fragments = prune(scaffold_prepruned, overlap_introns)
@@ -155,7 +151,7 @@ if __name__ == "__main__":
 
     assert set(pruned_scaffolds.keys()).intersection(set(no_intron_scaffolds.keys())) == set()
     assert scaffold_sequences.keys() == {**pruned_scaffolds, **no_intron_scaffolds}.keys()
-    assert len(''.join(pruned_scaffolds.values())) + len(''.join(no_intron_scaffolds.values())) < len(
+    assert len(''.join(pruned_scaffolds.values())) + len(''.join(no_intron_scaffolds.values())) <= len(
         ''.join(scaffold_sequences.values()))
 
     filename = os.path.basename(fasta_to_purge)
