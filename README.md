@@ -1,22 +1,30 @@
+Overview
+==========
+
+![Diagram](/diagram.png)
+
+We present a pipeline for removing fungal introns from meta-genome assemblies. The output is the original assembly
+cleansed of potential intron sequences. 
+
+The pipeline is separated into 3 stages, each represented by a bash script.
+
+Breaking down the steps into separate stages is necessary due to asynchronous and distributed nature of assembly processing.
+The stages are following:
+1) *Split the assembly into smaller batches*
+   * The size of the batches should be less than 70Mb for reasonable processing times
+2) *Process the batches (in parallel)*
+   * Here typically the batches are submitted as a job for execution on some cluster
+   * Small assemblies can be processed locally
+3) *Assemble the results*
+    * Once all partial results are complete, merge them into a single cleaned assembly
+    * A CSV with removed intron sequences is also included
+
 Installation
 ============
 1. Run the `install.sh` script. 
    
    a. If your shell does not permit running conda from a script, execute the commands manually:
 ```
-# INSTALL TENSORFLOW-KERAS ENVIRONMENT
-conda create -n mykointron python=3.7.4 --yes
-conda activate mykointron
-
-conda install pandas --yes
-conda install -c anaconda biopython --yes
-conda install docopt --yes
-conda install scikit-learn --yes
-conda install -c anaconda keras --yes
-
-pip3 install --upgrade tensorflow
-
-# INSTALL SHOGUN ENVIRONMENT 
 conda create -n mykointron_shogun python=3.6 --yes
 conda activate mykointron_shogun
 
@@ -32,22 +40,6 @@ conda activate
 
 2. Download the models from TODO and place them to `pipeline/models/`
 
-Overview
-==========
-We present a pipeline for removing fungal introns from meta-genome assemblies. The output is the original assembly
-purged of potential intron sequences. 
-
-The pipeline is separated into 3 stages, each represented by a bash script.
-
-Breaking down the steps into separate stages is necessary due to asynchronous and distributed nature of assembly processing.
-The stages are following:
-1) *Split the assembly into smaller batches*
-   * The size of the batches should be less than 70Mb for reasonable processing times
-2) *Process the batches (in parallel)*
-   * Here typically the batches are submitted as a job for execution on some cluster
-   * Small assemblies can be processed locally
-3) *Combine the results*
-    * Once the partial results are complete, merge them into a single cleaned assembly
 
 ### Project folders    
 The asynchronous and distributed nature of the task requires a central location where partial results are stored.
