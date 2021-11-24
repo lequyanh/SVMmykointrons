@@ -22,8 +22,6 @@ def main():
     len_range_end = int(sys.argv[4])
 
     strand = sys.argv[5] if len(sys.argv) == 6 else '+'
-    if strand not in ['-', '+']:
-        strand = '-' if strand == 'minus' else '+'
 
     if not os.path.isfile(true_introns_fasta):
         logging.warning(f'Introns file {true_introns_fasta} cannot be found. '
@@ -31,6 +29,21 @@ def main():
 
         os.remove(intron_candidates_csv)
         exit(0)
+
+    labeled_candidates = label_introns(intron_candidates_csv, true_introns_fasta, len_range_start, len_range_end,
+                                       strand)
+    labeled_candidates.to_csv(intron_candidates_csv, sep=';', index=False)
+
+
+def label_introns(
+        intron_candidates_csv,
+        true_introns_fasta,
+        len_range_start,
+        len_range_end,
+        strand
+):
+    if strand not in ['-', '+']:
+        strand = '-' if strand == 'minus' else '+'
 
     introns = get_introns_from_strand(true_introns_fasta, strand=strand)
 
@@ -41,13 +54,12 @@ def main():
 
     label = [candidate['sequence'] in introns for i, candidate in intron_candidates.iterrows()]
     no_positive = sum(label)
+    logging.info(f'{no_positive}/{len(intron_candidates)} candidates are positive introns')
 
     label = map(lambda flag: 1 if flag else -1, label)
     labeled_candidates = intron_candidates.assign(label=list(label))
 
-    labeled_candidates.to_csv(intron_candidates_csv, sep=';', index=False)
-
-    logging.info(f'{no_positive}/{len(intron_candidates)} candidates are positive introns')
+    return labeled_candidates
 
 
 def get_introns_from_strand(true_introns_fasta: str, strand: str):
