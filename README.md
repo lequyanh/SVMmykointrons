@@ -129,7 +129,7 @@ Within the `./pipeline` folder, run:
 
 `bash combine_results.sh -p project_path`
 
-
+### Example 1 (demo)
 As a demonstration, we will process a test contig ctg_k141_2751450. The contig is part of the sources and is located
 in the test directory *test/projects/project_ctg_k141_2751450*.
 
@@ -148,16 +148,32 @@ the call results in two separate fastas one for each strand: `pruned_ctg_k141_27
 
 `bash combine_results.sh -p /home/john/mycointrons/test/projects/project_ctg_k141_2751450`
 
+### Example 2 (*Kocim1*; scaffold_1)
+
+The test directory also contains a more practical example.  
+Now, we will be removing introns from the first scaffold of the *Kocim1* fungi. The process is identical to the one above:
+
+```
+bash shard_assembly.sh -p /home/john/mycointrons/test/projects/project_Kocim1_reduced/ -n 1
+
+bash batch_pipeline.sh -m svmb -p /home/john/mycointrons/test/projects/project_Kocim1_reduced -s both
+
+bash combine_results.sh -p /home/john/mycointrons/test/projects/project_Kocim1_reduced
+```
+
+The process should take approx. 1h for each strand. 
+
+We also provide reference results stored in the `ref/` subdirectory of the project for verification. 
+
 Details
 =====
-
-for model setting, use one of the following
-* 'svmb' (standing for SVM models trained on Basidiomycota; very slow)
+For model setting, use one of the following
+* 'svmb' (standing for SVM models trained on Basidiomycota)
 * 'random' (dummy classification; placeholder for future models)
 
 The process of intron removal is roughly:
 1) Find all donor dimers and perform splice site classification
 2) Find all acceptor dimers, remove orphan candidates (AG with no GT in acceptable range) and perform splice site classification
 3) Pair positively classified splice site candidates to form an intron candidate dataset
-4) Classify the intron dataset (only for SVM models)
+4) Classify the intron dataset
 5) Cut positively classified introns. Overlaps are resolved with length prior distribution cut-off
