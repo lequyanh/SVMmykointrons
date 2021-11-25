@@ -32,6 +32,8 @@ def run_diagnostics(cut_coords_file: str, intron_file: str, exon_file, strand: s
     # Result of running the pipeline (intron pruning step)
     cut_introns_df = pd.read_csv(cut_coords_file, delimiter=';')
     cut_introns_df['cut'] = 1
+
+    # Convert cut coordinates if strand is minus
     if strand == '-':
         with open(assembly_fasta) as f:
             lens = {sr.id: len(sr.seq) for sr in SeqIO.parse(f, 'fasta')}
@@ -133,35 +135,20 @@ def false_introns_exploration(
     # See, where potential mistakes of pruning can be (intron dataset before classification)
     potential_fp_candidates = joined.query('label == -1')
     potential_fp_grouped = potential_fp_candidates.groupby(by='scaffold')
-    print(f'--------------------------- DATASET ----------------------------')
+
     no_cuts = intraexonic_cuts_count(exon_scaff_grouped, potential_fp_grouped)
     print(
         f'{no_cuts}/{len(potential_fp_candidates)} false CANDIDATES are inside exon => '
         f'the ratio of exon-breaking candidates in dataset is {100 * no_cuts / len(potential_fp_candidates):.2f}%.\n'
     )
 
-    # # See, where potential mistakes of pruning can be (intron classification intra-genic FP)
-    # labeled_true_df = joined.query('prediction == 1')
-    # intron_classification_fps = labeled_true_df.query('label == -1')
-    # fps_grouped = intron_classification_fps.groupby(by='scaffold')
-    # print(f'-------------------------- CLASSIFICATION --------------------------')
-    # no_cuts = intraexonic_cuts_count(exon_scaff_grouped, fps_grouped)
-    # print(
-    #     f'{no_cuts}/{len(intron_classification_fps)} false POSITIVES are inside exon => '
-    #     f'the proportion of exon-breaking FP among all FP is {no_cuts / len(intron_classification_fps):.2f}.\n'
-    #     f'Exon-breaking FPR is {100 * no_cuts / labeled_true_df.shape[0]:.2f}%'
-    # )
-
     # See, where false intron cuts happened
     all_cuts_count = joined.query('cut == 1').shape[0]
     false_positive_cuts_df = joined.query('cut == 1 and label == -1')
     fp_cuts_grouped = false_positive_cuts_df.groupby(by='scaffold')
 
-    print(f'-------------------------- CUTTING -------------------------------------')
     no_cuts = intraexonic_cuts_count(exon_scaff_grouped, fp_cuts_grouped)
     print(
-        f'{no_cuts}/{len(false_positive_cuts_df)} false CUTS => '
-        f'the proportion of exon-breaking cuts among all false cuts is {no_cuts / len(false_positive_cuts_df):.2f}.\n'
         f'After cut exon-breaking FPR is {100 * no_cuts / all_cuts_count:.2f}% as there are {all_cuts_count} total cuts'
     )
 
