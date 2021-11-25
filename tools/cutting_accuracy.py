@@ -14,11 +14,15 @@ def main():
     intron_file = sys.argv[2]
     exon_file = sys.argv[3]
     strand = sys.argv[4]
+    assembly = sys.argv[5] if len(sys.argv) == 6 else None
 
-    run_diagnostics(cut_coords_file, intron_file, exon_file, strand)
+    if strand not in ['-', '+']:
+        strand = '-' if strand == 'minus' else '+'
+
+    run_diagnostics(cut_coords_file, intron_file, exon_file, strand, assembly)
 
 
-def run_diagnostics(cut_coords_file: str, intron_file: str, exon_file, strand: str):
+def run_diagnostics(cut_coords_file: str, intron_file: str, exon_file, strand: str, assembly_fasta: str):
     logging.basicConfig(
         level=logging.INFO,
         filename=f'cut_stats.log',
@@ -28,6 +32,20 @@ def run_diagnostics(cut_coords_file: str, intron_file: str, exon_file, strand: s
     # Result of running the pipeline (intron pruning step)
     cut_introns_df = pd.read_csv(cut_coords_file, delimiter=';')
     cut_introns_df['cut'] = 1
+    if strand == '-':
+        with open(assembly_fasta) as f:
+            lens = {sr.id: len(sr.seq) for sr in SeqIO.parse(f, 'fasta')}
+        # Create a DF from with scaffold - scaffold_length pairs
+        #      scaffold   length
+        #    scaffold_1  2013504
+        scaf_lengths = pd.DataFrame \
+            .from_dict(lens, orient='index', columns=['length']) \
+            .reset_index() \
+            .rename(columns={'index': 'scaffold'})
+        # Merge cuts with scaffold lengths and convert reverse strand coordinates
+        cut_length_df = pd.merge(cut_introns_df, scaf_lengths, on='scaffold')
+        cut_introns_df['start'] = cut_length_df['length'] - cut_length_df['end'] + 1
+        cut_introns_df['end'] = cut_length_df['length'] - cut_length_df['start'] + 1
 
     # Load true intron locations
     true_introns_df = get_introns_from_strand(intron_file, strand)
@@ -43,14 +61,12 @@ def run_diagnostics(cut_coords_file: str, intron_file: str, exon_file, strand: s
 
     # Determine intra-genic intron FP rate. We have to pass strand here as we don't know, against which exons to compare
     true_cuts, exon_cuts, all_cuts, all_introns, detectable_introns, exons = \
-        false_introns_exploration(joined_df, exon_file, intron_file, strand)
+        false_introns_exploration(joined_df, exon_file, strand)
 
     return true_cuts, exon_cuts, all_cuts, all_introns, detectable_introns, exons
 
 
 def get_introns_from_strand(true_introns_fasta: str, strand: str):
-    strand = '-' if strand == 'minus' else '+'
-
     def is_strand(seq_rec: SeqRecord, sign: str):
         return seq_rec.description.split(' ')[1] == sign
 
@@ -97,13 +113,11 @@ def get_introns_from_strand(true_introns_fasta: str, strand: str):
 def false_introns_exploration(
         joined: DataFrame,
         exon_file: str,
-        intron_file: str,
         strand: str
 ) -> (float, float):
     """
     Explores, where false introns fall into. Determines what portion of them lie inside exons.
     Prints adjusted FP intron rate, where only FP inside exons are considered.
-    :param intron_file: Filename of fungi intron sequences
     :param joined: DataFrame joined table of intron coordinates, their labels, their prediction and cut flag
     :param exon_file: Filename of fungi exon positions
     :param strand: +/- so we know, which exons to pick
