@@ -38,7 +38,10 @@ conda install -c conda-forge shogun --yes
 conda activate
 ```
 
-2. Download the models from TODO and place them to `pipeline/models/`
+2. Download the models from the following links and place them to `pipeline/models/`:
+    * http://www.biomed.cas.cz/mbu/lbwrf/svm_models/intron_model_svmb-C7-d6.hd5
+    * http://www.biomed.cas.cz/mbu/lbwrf/svm_models/model_acceptor_svmb-C10-d25-w70.hd5
+    * http://www.biomed.cas.cz/mbu/lbwrf/svm_models/model_donor_svmb-C10-d25-w70.hd5
 
 
 ### Project folders    
