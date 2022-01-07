@@ -2,7 +2,6 @@ from contextlib import closing
 
 import pandas as pd
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import StratifiedShuffleSplit
 
 
 def read_data(filename, window):
